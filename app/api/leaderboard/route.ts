@@ -58,17 +58,7 @@ export async function GET(request: NextRequest) {
 
     // Get leaderboard data
     const leaderboard = await prisma.userLeaderboard.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-      },
-      orderBy: [{ averageScore: 'desc' }, { totalPoints: 'desc' }],
+      orderBy: [{ averageScore: 'desc' }, { totalCorrectAnswers: 'desc' }],
       skip: offset,
       take: limit,
     });
@@ -76,19 +66,36 @@ export async function GET(request: NextRequest) {
     // Calculate total users for pagination
     const totalUsers = await prisma.userLeaderboard.count();
 
+    // Fetch user data separately
+    const userIds = leaderboard.map((entry) => entry.userId);
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+      },
+    });
+
+    const userMap = new Map(users.map((user) => [user.id, user]));
+
     // Add rank to each user
-    const leaderboardWithRank = leaderboard.map((entry, index) => ({
-      rank: offset + index + 1,
-      userId: entry.userId,
-      userName: entry.user.name || 'Anonymous',
-      userEmail: entry.user.email,
-      avatar: entry.user.image,
-      averageScore: parseFloat(entry.averageScore.toFixed(2)),
-      totalPoints: entry.totalPoints,
-      testsCompleted: entry.testsCompleted,
-      streak: entry.currentStreak || 0,
-      percentile: calculatePercentile(offset + index + 1, totalUsers),
-    }));
+    const leaderboardWithRank = leaderboard.map((entry, index) => {
+      const user = userMap.get(entry.userId);
+      return {
+        rank: offset + index + 1,
+        userId: entry.userId,
+        userName: user?.name || 'Anonymous',
+        userEmail: user?.email,
+        avatar: user?.avatar,
+        averageScore: parseFloat(entry.averageScore.toFixed(2)),
+        totalCorrectAnswers: entry.totalCorrectAnswers,
+        testsCompleted: entry.totalTests,
+        streak: entry.streakDays || 0,
+        percentile: calculatePercentile(offset + index + 1, totalUsers),
+      };
+    });
 
     // Calculate percentile ranks
     const leaderboardData = leaderboardWithRank.map((entry) => ({
