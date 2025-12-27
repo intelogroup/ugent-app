@@ -175,7 +175,7 @@ export default function PricingPage() {
                   </span>
                   <span className="text-primary-100">/{selectedPlan.period}</span>
                 </div>
-                {billingCycle === 'annual' && selectedPlan.monthlyEquivalent && (
+                {'monthlyEquivalent' in selectedPlan && selectedPlan.monthlyEquivalent && (
                   <p className="text-sm text-primary-100 mt-1">{selectedPlan.monthlyEquivalent}</p>
                 )}
                 <p className="text-sm text-primary-100 mt-1">Cancel anytime</p>
