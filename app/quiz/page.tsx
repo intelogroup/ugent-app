@@ -1,7 +1,7 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -81,7 +81,7 @@ interface QuizState {
   }>;
 }
 
-export default function QuizPage() {
+function QuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const testId = searchParams.get('testId');
@@ -723,5 +723,22 @@ export default function QuizPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+            <p className="text-neutral-600">Loading quiz...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <QuizContent />
+    </Suspense>
   );
 }
