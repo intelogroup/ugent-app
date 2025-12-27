@@ -156,29 +156,26 @@ export default function PricingPage() {
         </div>
 
         {/* Pricing Card */}
-        <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-24 -mb-24"></div>
-
-          <div className="relative z-10">
+        <div className="card bg-primary-600">
+          <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
               <div>
-                <h2 className="text-3xl font-bold mb-2" style={{ color: '#FFFFFF' }}>
+                <h2 className="text-3xl font-bold text-white mb-2">
                   Premium {billingCycle === 'monthly' ? 'Monthly' : 'Annual'}
                 </h2>
-                <p className="text-primary-100">Everything you need to excel in your exams</p>
+                <p className="text-white/80">Everything you need to excel in your exams</p>
               </div>
               <div className="text-left md:text-right">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold" style={{ color: '#FFFFFF' }}>
+                  <span className="text-5xl font-bold text-white">
                     ${selectedPlan.price}
                   </span>
-                  <span className="text-primary-100">/{selectedPlan.period}</span>
+                  <span className="text-white/80">/{selectedPlan.period}</span>
                 </div>
                 {'monthlyEquivalent' in selectedPlan && selectedPlan.monthlyEquivalent && (
-                  <p className="text-sm text-primary-100 mt-1">{selectedPlan.monthlyEquivalent}</p>
+                  <p className="text-sm text-white/80 mt-1">{selectedPlan.monthlyEquivalent}</p>
                 )}
-                <p className="text-sm text-primary-100 mt-1">Cancel anytime</p>
+                <p className="text-sm text-white/80 mt-1">Cancel anytime</p>
               </div>
             </div>
 
