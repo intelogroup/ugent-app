@@ -1,0 +1,2 @@
+[dotenv@17.2.3] injecting env (9) from .env.local -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+Failed to parse syntax of config file at "/Users/kalinovdameus/Developer/Ugent/ugent-app/prisma.config.ts"

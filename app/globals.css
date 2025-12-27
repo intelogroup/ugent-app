@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  /* Primary - Modern Royal Blue */
+  --color-primary-600: #2563EB;
+  --color-primary-500: #3B82F6;
+  --color-primary-50: #EFF6FF;
+  
+  /* Secondary - Vibrant & Distinct */
+  --color-secondary-blue: #06B6D4; /* Cyan */
+  --color-secondary-yellow: #F59E0B; /* Amber */
+  --color-secondary-pink: #EC4899; /* Pink */
+  --color-secondary-purple: #8B5CF6; /* Violet (kept as accent but distinct from primary) */
+  --color-secondary-green: #10B981; /* Emerald */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Pink shades for gradients and accents */
+  --color-pink-50: #FCE7F3;
+  --color-pink-100: #FBCFE8;
+  --color-pink-500: #EC4899;
+  
+  /* Neutral - Cool Slate */
+  --color-neutral-900: #0F172A;
+  --color-neutral-700: #334155;
+  --color-neutral-500: #64748B;
+  --color-neutral-300: #CBD5E1;
+  --color-neutral-200: #E2E8F0;
+  --color-neutral-100: #F1F5F9;
+  
+  /* Backgrounds */
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F8FAFC; /* Slate 50 */
+  --color-background-accent-yellow: #FFFBEB;
+  --color-background-accent-blue: #F0F9FF;
+  --color-background-accent-green: #ECFDF5;
+  
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 30px; /* Slightly tighter headings */
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px; /* Modern soft curves */
+  --radius-pill: 9999px;
+  
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background-secondary);
+  color: var(--color-neutral-900);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-neutral-900);
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--color-neutral-900);
+}
+
+h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+
+.btn-primary {
+  background-color: var(--color-primary-500);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-600);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--color-primary-500);
+  padding: 12px 24px;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  border: 2px solid var(--color-primary-500);
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-primary-50);
+}
+
+.card {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s;
+  border: 1px solid var(--color-neutral-200);
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-neutral-200);
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-600);
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.text-gradient {
+  color: var(--color-primary-600);
+}
+
+.glass-effect {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(16px);
 }
