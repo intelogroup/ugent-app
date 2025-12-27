@@ -214,22 +214,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Features Grid */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-neutral-900 text-center">What's Included</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {features.map((feature, index) => (
-              <div key={index} className="card group hover:shadow-xl transition-all">
-                <div className={`w-12 h-12 ${feature.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">{feature.title}</h3>
-                <p className="text-neutral-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Free vs Premium Comparison */}
         <div className="card">
           <h2 className="text-2xl font-bold text-neutral-900 mb-6 text-center">Free vs Premium</h2>
