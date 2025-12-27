@@ -37,21 +37,31 @@ export async function GET(request: NextRequest) {
           id: userId || 'none', // Exclude self
         },
       },
-      include: {
-        leaderboard: true,
-      },
       take: limit,
     });
 
-    const results = users.map((user) => ({
-      id: user.id,
-      name: user.name || 'Anonymous',
-      email: user.email,
-      image: user.image,
-      rank: user.leaderboard[0]?.rank || 0,
-      averageScore: user.leaderboard[0]?.averageScore || 0,
-      testsCompleted: user.leaderboard[0]?.testsCompleted || 0,
-    }));
+    // Fetch leaderboard data separately
+    const userIds = users.map((u) => u.id);
+    const leaderboardData = await prisma.userLeaderboard.findMany({
+      where: { userId: { in: userIds } },
+    });
+
+    const leaderboardMap = new Map(
+      leaderboardData.map((lb) => [lb.userId, lb])
+    );
+
+    const results = users.map((user) => {
+      const leaderboard = leaderboardMap.get(user.id);
+      return {
+        id: user.id,
+        name: user.name || 'Anonymous',
+        email: user.email,
+        avatar: user.avatar,
+        rank: leaderboard?.rank || 0,
+        averageScore: leaderboard?.averageScore || 0,
+        testsCompleted: leaderboard?.totalTests || 0,
+      };
+    });
 
     return NextResponse.json(
       {

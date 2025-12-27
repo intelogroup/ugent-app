@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true, image: true },
+          select: { id: true, name: true, email: true, avatar: true },
         },
       },
       orderBy: { createdAt: 'desc' },

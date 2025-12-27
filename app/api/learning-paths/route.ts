@@ -26,15 +26,8 @@ export async function GET(request: NextRequest) {
     // Get all subjects as predefined learning paths
     const subjects = await prisma.subject.findMany({
       include: {
-        topics: {
-          include: {
-            _count: {
-              select: { questions: true },
-            },
-          },
-        },
         _count: {
-          select: { topics: true, questions: true },
+          select: { questions: true },
         },
       },
       skip: offset,
@@ -50,14 +43,12 @@ export async function GET(request: NextRequest) {
 
     const learningPaths = subjects.map((subject) => {
       const progress = progressMap.get(subject.id);
-      const topicCount = subject._count.topics;
       const questionCount = subject._count.questions;
 
       return {
         id: subject.id,
         name: subject.name,
         description: `Master ${subject.name} medical topics`,
-        topics: topicCount,
         totalQuestions: questionCount,
         difficulty: 'MIXED',
         progress: {
@@ -66,7 +57,7 @@ export async function GET(request: NextRequest) {
           percentage: progress?.masteryLevel || 0,
         },
         estimatedHours: Math.ceil(questionCount / 20), // ~20 min per question
-        startedAt: progress?.createdAt,
+        startedAt: progress?.firstAttemptAt,
         status: (progress?.masteryLevel || 0) >= 80 ? 'completed' : 'in_progress',
       };
     });

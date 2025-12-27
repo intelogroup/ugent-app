@@ -47,8 +47,8 @@ export async function GET(
         pathId,
         percentage: progress.masteryLevel,
         topicsCompleted: 0, // Would need topic tracking
-        questionsAnswered: progress.questionsAttempted,
-        startedAt: progress.createdAt,
+        questionsAnswered: progress.totalQuestionsAttempted,
+        startedAt: progress.firstAttemptAt,
         completedAt: progress.masteryLevel >= 80 ? new Date() : null,
         status: progress.masteryLevel >= 80 ? 'completed' : 'in_progress',
       },
@@ -90,7 +90,7 @@ export async function POST(
         id: pathId,
         userId,
         masteryLevel: percentage || 0,
-        questionsAttempted: 0,
+        totalQuestionsAttempted: 0,
         correctAnswers: 0,
       },
     });
