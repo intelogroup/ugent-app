@@ -101,21 +101,17 @@ export async function POST(
     const userLeaderboard = await prisma.userLeaderboard.upsert({
       where: { userId },
       update: {
-        totalPoints: {
-          increment: totalPoints,
-        },
         averageScore: undefined, // Will be recalculated
-        testsCompleted: {
+        totalTests: {
           increment: 1,
         },
-        lastTestAt: new Date(),
+        lastActivityDate: new Date(),
       },
       create: {
         userId,
-        totalPoints,
         averageScore: finalScore,
-        testsCompleted: 1,
-        lastTestAt: new Date(),
+        totalTests: 1,
+        lastActivityDate: new Date(),
       },
     });
 
@@ -181,9 +177,8 @@ export async function POST(
           },
           userStats: {
             rank: userLeaderboard.rank,
-            totalPoints: userLeaderboard.totalPoints,
             averageScore: parseFloat(averageScore.toFixed(1)),
-            testsCompleted: userLeaderboard.testsCompleted,
+            totalTests: userLeaderboard.totalTests,
           },
         },
       },

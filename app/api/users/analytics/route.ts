@@ -66,10 +66,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Get interaction heatmap (by hour of day)
-    const interactionsByHour = await prisma.userInteraction.groupBy({
-      by: [],
+    const interactionsByHour = await prisma.userInteraction.count({
       where: { userId },
-      _count: { id: true },
     });
 
     // Get most reviewed questions
