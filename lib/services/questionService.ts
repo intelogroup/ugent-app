@@ -1,18 +1,9 @@
 /**
  * Question Service - Optimized for Performance
- * Implements caching, batching, and efficient queries
+ * Implements batching and efficient queries
  */
 
 import { PrismaClient, DifficultyLevel } from '@prisma/client';
-import {
-  cachedQuery,
-  cacheQuestionPool,
-  getQuestionPoolCache,
-  cacheQuestion,
-  getQuestionCache,
-  invalidateQuestionPools,
-  CacheTTL,
-} from '../cache';
 
 const prisma = new PrismaClient();
 
@@ -26,7 +17,7 @@ export interface QuestionFilters {
 
 /**
  * Get questions for test generation - OPTIMIZED
- * Uses caching and efficient queries
+ * Uses efficient queries
  */
 export async function getQuestionsForTest(
   filters: QuestionFilters
@@ -39,19 +30,7 @@ export async function getQuestionsForTest(
     limit = 50,
   } = filters;
 
-  // Step 1: Try to get question IDs from cache
-  if (systemId && topicId && difficulty) {
-    const cacheKey = `${systemId}:${topicId}:${difficulty}`;
-    const cachedIds = await getQuestionPoolCache(systemId, topicId, difficulty);
-
-    if (cachedIds && cachedIds.length > 0) {
-      // Cache hit! Fetch full questions
-      const questions = await getQuestionsByIds(cachedIds.slice(0, limit));
-      return questions;
-    }
-  }
-
-  // Step 2: Cache miss - Query database
+  // Query database
   const questions = await prisma.question.findMany({
     where: {
       ...(systemId && { systemId }),
@@ -67,13 +46,7 @@ export async function getQuestionsForTest(
     take: limit * 2, // Get more for randomization
   });
 
-  // Step 3: Cache the question IDs for next time
-  if (systemId && topicId && difficulty) {
-    const questionIds = questions.map((q) => q.id);
-    await cacheQuestionPool(systemId, topicId, difficulty, questionIds);
-  }
-
-  // Step 4: Randomize and limit
+  // Randomize and limit
   const shuffled = questions.sort(() => Math.random() - 0.5);
   return shuffled.slice(0, limit);
 }
@@ -83,63 +56,35 @@ export async function getQuestionsForTest(
  * More efficient than individual queries
  */
 export async function getQuestionsByIds(ids: string[]): Promise<any[]> {
-  // Try to get from cache first
-  const cached: any[] = [];
-  const uncachedIds: string[] = [];
-
-  for (const id of ids) {
-    const cachedQ = await getQuestionCache(id);
-    if (cachedQ) {
-      cached.push(cachedQ);
-    } else {
-      uncachedIds.push(id);
-    }
-  }
-
-  // Fetch uncached questions in a single query
-  if (uncachedIds.length > 0) {
-    const questions = await prisma.question.findMany({
-      where: {
-        id: { in: uncachedIds },
+  // Fetch questions in a single query
+  const questions = await prisma.question.findMany({
+    where: {
+      id: { in: ids },
+    },
+    include: {
+      options: {
+        orderBy: { displayOrder: 'asc' },
       },
-      include: {
-        options: {
-          orderBy: { displayOrder: 'asc' },
-        },
-      },
-    });
+    },
+  });
 
-    // Cache each question
-    for (const q of questions) {
-      await cacheQuestion(q.id, q);
-    }
-
-    cached.push(...questions);
-  }
-
-  return cached;
+  return questions;
 }
 
 /**
- * Get question by ID - WITH CACHING
+ * Get question by ID
  */
 export async function getQuestionById(id: string): Promise<any | null> {
-  return await cachedQuery(
-    `question:full:${id}`,
-    async () => {
-      return await prisma.question.findUnique({
-        where: { id },
-        include: {
-          options: {
-            orderBy: { displayOrder: 'asc' },
-          },
-          system: true,
-          topic: true,
-        },
-      });
+  return await prisma.question.findUnique({
+    where: { id },
+    include: {
+      options: {
+        orderBy: { displayOrder: 'asc' },
+      },
+      system: true,
+      topic: true,
     },
-    CacheTTL.COLD // Questions rarely change
-  );
+  });
 }
 
 /**
@@ -185,9 +130,6 @@ export async function updateQuestionMetrics(
           avgTimeSpent: newAvgTime,
         },
       });
-
-      // Invalidate cache for this question
-      await cacheQuestion(questionId, null as any); // Clear cache
     } catch (error) {
       console.error('Error updating question metrics:', error);
     }
@@ -232,44 +174,10 @@ export async function getAdaptiveQuestions(
 /**
  * Create question pool (background job)
  * Pre-generate shuffled question pools to avoid runtime randomization
+ * Note: Without caching, this function is a no-op
  */
 export async function generateQuestionPools() {
-  console.log('🔄 Generating question pools...');
-
-  const systems = await prisma.system.findMany({
-    include: { topics: true },
-  });
-
-  const difficulties: DifficultyLevel[] = ['EASY', 'MEDIUM', 'HARD'];
-
-  for (const system of systems) {
-    for (const topic of system.topics) {
-      for (const difficulty of difficulties) {
-        const questions = await prisma.question.findMany({
-          where: {
-            systemId: system.id,
-            topicId: topic.id,
-            difficulty,
-          },
-          select: { id: true },
-        });
-
-        if (questions.length > 0) {
-          // Shuffle and cache
-          const shuffled = questions
-            .map((q) => q.id)
-            .sort(() => Math.random() - 0.5);
-
-          await cacheQuestionPool(system.id, topic.id, difficulty, shuffled);
-          console.log(
-            `✅ Pool: ${system.name} > ${topic.name} > ${difficulty} (${shuffled.length} questions)`
-          );
-        }
-      }
-    }
-  }
-
-  console.log('✨ Question pools generated!');
+  console.log('✨ Question pools generation skipped (no caching)');
 }
 
 /**
@@ -353,35 +261,29 @@ export async function searchQuestions(
  * Get question statistics (for analytics)
  */
 export async function getQuestionStats(questionId: string) {
-  return await cachedQuery(
-    `question:stats:${questionId}`,
-    async () => {
-      const question = await prisma.question.findUnique({
-        where: { id: questionId },
-        select: {
-          totalAttempts: true,
-          correctAttempts: true,
-          successRate: true,
-          avgTimeSpent: true,
-          difficulty: true,
-        },
-      });
-
-      if (!question) return null;
-
-      return {
-        ...question,
-        difficulty: question.difficulty,
-        performanceCategory:
-          question.successRate > 80
-            ? 'Easy for users'
-            : question.successRate > 50
-            ? 'Moderate'
-            : 'Challenging',
-      };
+  const question = await prisma.question.findUnique({
+    where: { id: questionId },
+    select: {
+      totalAttempts: true,
+      correctAttempts: true,
+      successRate: true,
+      avgTimeSpent: true,
+      difficulty: true,
     },
-    CacheTTL.WARM
-  );
+  });
+
+  if (!question) return null;
+
+  return {
+    ...question,
+    difficulty: question.difficulty,
+    performanceCategory:
+      question.successRate > 80
+        ? 'Easy for users'
+        : question.successRate > 50
+        ? 'Moderate'
+        : 'Challenging',
+  };
 }
 
 export default {
