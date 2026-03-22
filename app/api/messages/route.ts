@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchMutation, fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * GET /api/messages
  * POST /api/messages
  *
- * Retrieve messages and send new messages
+ * Retrieve messages and send new messages using Convex
  */
 
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     const searchParams = request.nextUrl.searchParams;
-    const conversationId = searchParams.get('conversationId');
+    let threadId = searchParams.get('threadId') || searchParams.get('conversationId');
     const recipientId = searchParams.get('recipientId');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
@@ -24,51 +26,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!conversationId && !recipientId) {
+    // If no threadId but recipientId provided, find or create thread
+    if (!threadId && recipientId) {
+      const title = [userId, recipientId].sort().join('_');
+      threadId = await fetchMutation(api.threads.findOrCreateThread, {
+        userId,
+        title,
+      });
+    }
+
+    if (!threadId) {
       return NextResponse.json(
-        { error: 'Conversation ID or Recipient ID required' },
+        { error: 'Thread ID or Conversation ID required' },
         { status: 400 }
       );
     }
 
-    // Get messages from conversation
-    let entityId = conversationId;
-    if (!conversationId && recipientId) {
-      // Generate conversation ID from user IDs
-      entityId = [userId, recipientId].sort().join('_');
-    }
-
-    const messages = await prisma.userInteraction.findMany({
-      where: {
-        OR: [
-          {
-            userId,
-            actionType: 'message_sent',
-            entityId,
-          },
-          {
-            actionType: 'message_received',
-            entityId,
-            metadata: { contains: userId },
-          },
-        ],
-      },
-      orderBy: { createdAt: 'asc' },
-      skip: offset,
-      take: limit,
+    // Get messages from thread
+    const messages = await fetchQuery(api.threads.getMessages, {
+      threadId: threadId as Id<"threads">,
+      limit,
+      offset,
     });
 
     return NextResponse.json(
       {
         messages: messages.map((msg) => {
-          const metadata = msg.metadata ? JSON.parse(msg.metadata) : {};
           return {
-            id: msg.id,
-            senderId: msg.userId,
-            recipientId: metadata.recipientId,
-            content: metadata.message || '',
+            id: msg._id,
+            senderId: msg.role === 'user' ? userId : 'assistant',
+            content: msg.content,
             timestamp: msg.createdAt,
-            read: metadata.read || false,
+            role: msg.role,
           };
         }),
         pagination: {
@@ -92,62 +81,52 @@ export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     const body = await request.json();
-    const { recipientId, content, conversationId } = body;
+    const { recipientId, content, text, conversationId, threadId } = body;
 
-    if (!userId || !recipientId || !content) {
+    const actualContent = text || content;
+    let actualThreadId = threadId || conversationId;
+
+    if (!userId || !actualContent) {
       return NextResponse.json(
-        { error: 'User ID, recipient ID, and content are required' },
+        { error: 'User ID and content are required' },
         { status: 400 }
       );
     }
 
-    // Generate conversation ID
-    const convId = conversationId || [userId, recipientId].sort().join('_');
-
-    // Create message record
-    const message = await prisma.userInteraction.create({
-      data: {
+    // If no threadId but recipientId provided, find or create thread
+    if (!actualThreadId && recipientId) {
+      const title = [userId, recipientId].sort().join('_');
+      actualThreadId = await fetchMutation(api.threads.findOrCreateThread, {
         userId,
-        actionType: 'message_sent',
-        entityType: 'message',
-        entityId: convId,
-        metadata: JSON.stringify({
-          recipientId,
-          message: content,
-          conversationId: convId,
-        }),
-        clientIP: request.headers.get('x-forwarded-for') || '',
-        userAgent: request.headers.get('user-agent') || '',
-      },
-    });
+        title,
+      });
+    }
 
-    // Create notification for recipient
-    await prisma.userInteraction.create({
-      data: {
-        userId: recipientId,
-        actionType: 'message_received',
-        entityType: 'message',
-        entityId: convId,
-        metadata: JSON.stringify({
-          senderId: userId,
-          message: content,
-          conversationId: convId,
-        }),
-        clientIP: request.headers.get('x-forwarded-for') || '',
-        userAgent: request.headers.get('user-agent') || '',
-      },
+    if (!actualThreadId) {
+      return NextResponse.json(
+        { error: 'Thread ID or Recipient ID required' },
+        { status: 400 }
+      );
+    }
+
+    // Send message via Convex
+    const messageId = await fetchMutation(api.threads.sendMessage, {
+      threadId: actualThreadId as Id<"threads">,
+      text: actualContent,
+      userId: userId,
+      role: 'user',
     });
 
     return NextResponse.json(
       {
         success: true,
+        messageId,
         message: {
-          id: message.id,
+          id: messageId,
           senderId: userId,
-          recipientId,
-          content,
-          conversationId: convId,
-          timestamp: message.createdAt,
+          content: actualContent,
+          threadId: actualThreadId,
+          timestamp: Date.now(),
         },
       },
       { status: 201 }

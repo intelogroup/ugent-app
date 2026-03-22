@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
 
 /**
  * GET /api/messages/conversations
  *
- * List user's conversations
+ * List user's conversations (threads) using Convex
  * Query parameters:
  * - limit: number (default: 10)
  * - offset: number (default: 0)
@@ -24,42 +25,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all conversations for user (simulated via interactions)
-    const userInteractions = await prisma.userInteraction.findMany({
-      where: {
-        userId,
-        actionType: 'message_sent',
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, avatar: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      distinct: ['entityId'], // Group by conversation
-      skip: offset,
-      take: limit,
+    // Get threads from Convex
+    const { threads, total } = await fetchQuery(api.threads.getThreads, {
+      userId,
+      limit,
+      offset,
     });
 
-    // Format conversations
-    const conversations = userInteractions.map((interaction) => {
-      const metadata = interaction.metadata ? JSON.parse(interaction.metadata) : {};
+    // Format conversations to match frontend expectation
+    const conversations = threads.map((thread) => {
       return {
-        conversationId: interaction.entityId,
-        participantId: metadata.recipientId || 'unknown',
-        participantName: metadata.recipientName || 'Unknown',
-        lastMessage: metadata.message || '',
-        lastMessageAt: interaction.createdAt,
-        unreadCount: 0, // Would need message tracking
+        conversationId: thread._id,
+        threadId: thread._id,
+        participantId: 'assistant', // Default for thread-based model
+        participantName: thread.title || 'Support Chat',
+        lastMessage: thread.lastMessage || '',
+        lastMessageAt: thread.updatedAt,
+        unreadCount: 0,
       };
     });
 
     return NextResponse.json(
       {
         conversations,
+        threads, // Include raw threads as well
         pagination: {
           limit,
           offset,
+          total,
           returned: conversations.length,
         },
       },
