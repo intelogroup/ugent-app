@@ -35,13 +35,14 @@ Stores raw data blobs provided by the researcher.
 ### `extracted_patterns` (The Intelligence Layer)
 *   `questionId`: v.id("questions")
 *   `diseaseName`: string (The "Gold Standard" diagnosis)
-*   `pathophysiology`: string (The core mechanism/why behind the presentation)
-*   `clues`: array of strings (Pathognomonic terms, unique identifiers)
-*   `ruleOutLogic`: array of `{ distractor: string, discriminator: string }` (The specific fact that rules out each common misdiagnosis)
+*   `mechanism`: string (The core mechanism/pathophysiology behind the presentation)
+*   `highLeverageClues`: array of strings (Pathognomonic terms, unique identifiers)
+*   `discriminators`: array of `{ distractor: string, ruleOutFact: string }` (The specific fact that rules out each common misdiagnosis)
 *   `nextBestStep`: v.optional(string) (The management or diagnostic step most frequently tested for this condition)
-*   `clinicalContext`: object { `ageRange`, `geography`, `typicalProfessions`, `onsetPattern` }
+*   `clinicalContext`: object { `age`, `gender`, `physiologyState`, `onsetPattern` }
 *   `keySymptoms`: array of strings (Non-specific symptoms like fever/pain)
 *   `prerequisites`: array of strings (Fundamental concepts or pharmacology hooks needed to understand this question)
+*   `tableData`: v.optional(v.array(v.any())) (Structured data distilled from Markdown tables in the explanation)
 
 ### `pattern_frequencies` (The Frequency Engine)
 *   `type`: "DISEASE" | "CLUE" | "SUBJECT" | "SYSTEM" | "CONTEXT"
@@ -56,14 +57,22 @@ Stores raw data blobs provided by the researcher.
 
 ## AI Extraction Logic (GPT-5 Action)
 
-The `ai:extractIntelligence` Convex Action is the core of the pipeline. It uses GPT-5 with a **strict Zod-defined JSON schema** to ensure reliability and perform the following:
+The `ai:extractIntelligence` Convex Action is the core of the pipeline. It uses GPT-5 with a **strict Zod-defined JSON schema** to perform a **Triple-Pass Distillation**:
 
-1.  **Pattern Extraction**: Identifies the core diagnosis, the underlying **Pathophysiology**, and the **Next Best Step** in management.
-2.  **Clue Differentiation**: Separates "High-Leverage Clues" (pathognomonic findings) from "Symptomatic Noise" (fever, pain).
-3.  **Context Anchoring**: Extracts the specific demographic or geographic "anchors" used in the question stem.
-4.  **Rule-Out Logic (Discriminator Analysis)**: For each major distractor, identifies the one specific "Discriminator" fact in the question that rules it out.
-5.  **Dependency & Pharma Mapping**: Identifies the "Step 0" foundational knowledge and any **Pharmacology Hooks** (drug-class or side-effect prerequisites) required.
-6.  **Bulk Handling**: The action can process multiple questions from a single `rawText` blob by splitting on a standard delimiter (e.g., `---NEXT-QUESTION---`).
+### Pass 1: Clinical Fact Extraction (The "Stem" Pass)
+*   **Demographics**: Extracts Age, Gender, BMI, and Physiology state (e.g., "2nd Trimester Pregnancy").
+*   **Temporal Pattern**: Onset speed (acute/chronic) and duration.
+*   **Clue Classification**: Identifies "Cardinal Clues" (e.g., "nodular liver", "hard and pellet-like") and filters out "Symptomatic Noise" (e.g., "confusion", "abdominal pain").
+
+### Pass 2: Discriminator Analysis (The "Distractor" Pass)
+*   For each distractor choice (B, C, D, E), the AI must extract the **Primary Discriminator** from the explanation paragraphs.
+*   **Logic**: Identifies the specific clinical fact that rules out the distractor (e.g., "Neurologic disorders only" rules out "Parasympathetic input" in a healthy pregnant patient).
+
+### Pass 3: Systematic Synthesis (The "Knowledge" Pass)
+*   **Mechanism (Why)**: The core pathophysiology (e.g., "Progesterone inhibits colonic smooth muscle").
+*   **Dependency Mapping**: Extracts prerequisites from the "Educational Objective" and Markdown tables, creating links between concepts (e.g., `Progesterone -> Smooth Muscle -> Constipation`).
+*   **Noise Filtering**: Explicitly ignores pedagogical filler ("You're doing great!", "Keep studying!").
+*   **Bulk Handling**: The action can process multiple questions from a single `rawText` blob by splitting on a standard delimiter (e.g., `---NEXT-QUESTION---`).
 
 ## Research Dashboard Features
 A dedicated interface at `/research/ingest` for Stage 1 operations:
