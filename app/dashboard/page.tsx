@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   SparklesIcon,
@@ -13,7 +12,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/solid';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 // Mock data - replace with real API calls
 const performanceData = [
@@ -35,18 +34,9 @@ const subjectPerformance = [
 ];
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
-  const supabase = createClient();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
-
-  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'there';
+  const userName = user?.firstName || user?.email?.split('@')[0] || 'there';
 
   return (
     <DashboardLayout>

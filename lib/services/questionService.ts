@@ -1,11 +1,13 @@
 /**
  * Question Service - Optimized for Performance
- * Implements batching and efficient queries
+ * Implements batching and efficient queries using Convex
  */
 
-import { PrismaClient, DifficultyLevel } from '@prisma/client';
+import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
-const prisma = new PrismaClient();
+export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface QuestionFilters {
   systemId?: string;
@@ -30,24 +32,17 @@ export async function getQuestionsForTest(
     limit = 50,
   } = filters;
 
-  // Query database
-  const questions = await prisma.question.findMany({
-    where: {
-      ...(systemId && { systemId }),
-      ...(topicId && { topicId }),
-      ...(subjectId && { subjectId }),
-      ...(difficulty && { difficulty }),
-    },
-    include: {
-      options: {
-        orderBy: { displayOrder: 'asc' },
-      },
-    },
-    take: limit * 2, // Get more for randomization
+  // Query database using Convex
+  const questions = await fetchQuery(api.questions.getQuestions, {
+    systemId: systemId as Id<"systems"> | undefined,
+    topicId: topicId as Id<"topics"> | undefined,
+    subjectId: subjectId as Id<"subjects"> | undefined,
+    difficulty: difficulty as "EASY" | "MEDIUM" | "HARD" | undefined,
+    limit: limit * 2, // Get more for randomization
   });
 
   // Randomize and limit
-  const shuffled = questions.sort(() => Math.random() - 0.5);
+  const shuffled = [...questions].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, limit);
 }
 
@@ -57,38 +52,22 @@ export async function getQuestionsForTest(
  */
 export async function getQuestionsByIds(ids: string[]): Promise<any[]> {
   // Fetch questions in a single query
-  const questions = await prisma.question.findMany({
-    where: {
-      id: { in: ids },
-    },
-    include: {
-      options: {
-        orderBy: { displayOrder: 'asc' },
-      },
-    },
+  return await fetchQuery(api.questions.getQuestionsByIds, {
+    ids: ids as Id<"questions">[],
   });
-
-  return questions;
 }
 
 /**
  * Get question by ID
  */
 export async function getQuestionById(id: string): Promise<any | null> {
-  return await prisma.question.findUnique({
-    where: { id },
-    include: {
-      options: {
-        orderBy: { displayOrder: 'asc' },
-      },
-      system: true,
-      topic: true,
-    },
+  return await fetchQuery(api.questions.getQuestionById, {
+    id: id as Id<"questions">,
   });
 }
 
 /**
- * Update question metrics - ASYNC BATCH UPDATE
+ * Update question metrics - Convex Mutation
  * Don't block user flow for metrics update
  */
 export async function updateQuestionMetrics(
@@ -96,44 +75,15 @@ export async function updateQuestionMetrics(
   isCorrect: boolean,
   timeSpent: number
 ) {
-  // In production, use a message queue (Redis Queue, Bull, etc.)
-  // For now, just do async update
-  setImmediate(async () => {
-    try {
-      const question = await prisma.question.findUnique({
-        where: { id: questionId },
-        select: {
-          totalAttempts: true,
-          correctAttempts: true,
-          avgTimeSpent: true,
-        },
-      });
-
-      if (!question) return;
-
-      const newTotalAttempts = question.totalAttempts + 1;
-      const newCorrectAttempts = question.correctAttempts + (isCorrect ? 1 : 0);
-      const newSuccessRate =
-        newTotalAttempts > 0 ? (newCorrectAttempts / newTotalAttempts) * 100 : 0;
-
-      // Calculate new average time (rolling average)
-      const newAvgTime = Math.round(
-        (question.avgTimeSpent * question.totalAttempts + timeSpent) / newTotalAttempts
-      );
-
-      await prisma.question.update({
-        where: { id: questionId },
-        data: {
-          totalAttempts: newTotalAttempts,
-          correctAttempts: newCorrectAttempts,
-          successRate: newSuccessRate,
-          avgTimeSpent: newAvgTime,
-        },
-      });
-    } catch (error) {
-      console.error('Error updating question metrics:', error);
-    }
-  });
+  try {
+    await fetchMutation(api.questions.updateQuestionMetrics, {
+      questionId: questionId as Id<"questions">,
+      isCorrect,
+      timeSpent,
+    });
+  } catch (error) {
+    console.error('Error updating question metrics:', error);
+  }
 }
 
 /**
@@ -145,36 +95,16 @@ export async function getAdaptiveQuestions(
   systemId: string,
   count: number = 20
 ): Promise<any[]> {
-  // Get user's success rate in this system
-  const userProgress = await prisma.progress.findFirst({
-    where: { userId, systemId },
-    select: { successRate: true },
-  });
-
-  const successRate = userProgress?.successRate || 50;
-
-  // Select difficulty based on performance
-  let difficulty: DifficultyLevel;
-  if (successRate < 40) {
-    difficulty = 'EASY';
-  } else if (successRate < 70) {
-    difficulty = 'MEDIUM';
-  } else {
-    difficulty = 'HARD';
-  }
-
-  // Get questions with target difficulty
-  return await getQuestionsForTest({
-    systemId,
-    difficulty,
-    limit: count,
+  return await fetchQuery(api.questions.getAdaptiveQuestions, {
+    userId: userId as Id<"users">,
+    systemId: systemId as Id<"systems">,
+    count,
   });
 }
 
 /**
  * Create question pool (background job)
  * Pre-generate shuffled question pools to avoid runtime randomization
- * Note: Without caching, this function is a no-op
  */
 export async function generateQuestionPools() {
   console.log('✨ Question pools generation skipped (no caching)');
@@ -187,42 +117,10 @@ export async function getWeakAreasForUser(
   userId: string,
   limit: number = 30
 ): Promise<any[]> {
-  // Find topics where user has low success rate
-  const weakProgress = await prisma.progress.findMany({
-    where: {
-      userId,
-      successRate: { lt: 60 }, // Less than 60%
-      totalQuestionsAttempted: { gte: 5 }, // At least 5 attempts
-    },
-    orderBy: { successRate: 'asc' },
-    take: 5,
-    include: {
-      topic: true,
-      system: true,
-    },
+  return await fetchQuery(api.questions.getWeakAreasForUser, {
+    userId: userId as Id<"users">,
+    limit,
   });
-
-  if (weakProgress.length === 0) {
-    // No weak areas, return general questions
-    return await getQuestionsForTest({ limit });
-  }
-
-  // Get questions from weak topics
-  const allQuestions: any[] = [];
-
-  for (const progress of weakProgress) {
-    if (!progress.topicId || !progress.systemId) continue;
-
-    const questions = await getQuestionsForTest({
-      systemId: progress.systemId,
-      topicId: progress.topicId,
-      limit: Math.ceil(limit / weakProgress.length),
-    });
-
-    allQuestions.push(...questions);
-  }
-
-  return allQuestions.slice(0, limit);
 }
 
 /**
@@ -234,26 +132,12 @@ export async function searchQuestions(
 ) {
   const { systemId, topicId, difficulty, limit = 50 } = filters;
 
-  return await prisma.question.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { text: { contains: searchTerm, mode: 'insensitive' } },
-            { explanation: { contains: searchTerm, mode: 'insensitive' } },
-          ],
-        },
-        ...(systemId ? [{ systemId }] : []),
-        ...(topicId ? [{ topicId }] : []),
-        ...(difficulty ? [{ difficulty }] : []),
-      ],
-    },
-    include: {
-      options: { orderBy: { displayOrder: 'asc' } },
-      system: { select: { name: true } },
-      topic: { select: { name: true } },
-    },
-    take: limit,
+  return await fetchQuery(api.questions.searchQuestions, {
+    searchTerm,
+    systemId: systemId as Id<"systems"> | undefined,
+    topicId: topicId as Id<"topics"> | undefined,
+    difficulty: difficulty as "EASY" | "MEDIUM" | "HARD" | undefined,
+    limit,
   });
 }
 
@@ -261,29 +145,9 @@ export async function searchQuestions(
  * Get question statistics (for analytics)
  */
 export async function getQuestionStats(questionId: string) {
-  const question = await prisma.question.findUnique({
-    where: { id: questionId },
-    select: {
-      totalAttempts: true,
-      correctAttempts: true,
-      successRate: true,
-      avgTimeSpent: true,
-      difficulty: true,
-    },
+  return await fetchQuery(api.questions.getQuestionStats, {
+    questionId: questionId as Id<"questions">,
   });
-
-  if (!question) return null;
-
-  return {
-    ...question,
-    difficulty: question.difficulty,
-    performanceCategory:
-      question.successRate > 80
-        ? 'Easy for users'
-        : question.successRate > 50
-        ? 'Moderate'
-        : 'Challenging',
-  };
 }
 
 export default {

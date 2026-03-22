@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { prisma } from '@/lib/prisma';
+import { fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
@@ -37,13 +39,11 @@ export async function POST(request: NextRequest) {
             break;
           }
 
-          await prisma.user.update({
-            where: { id: userId },
-            data: {
-              stripeCustomerId: session.customer as string,
-              stripeSubscriptionId: session.subscription as string,
-              subscriptionStatus: 'ACTIVE',
-            },
+          await fetchMutation(api.users.updateUserStripeInfo, {
+            userId: userId as Id<"users">,
+            stripeCustomerId: session.customer as string,
+            stripeSubscriptionId: session.subscription as string,
+            subscriptionStatus: 'ACTIVE',
           });
         }
         break;
@@ -53,14 +53,12 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
 
-        await prisma.user.update({
-          where: { stripeCustomerId: subscription.customer as string },
-          data: {
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: subscription.items.data[0].price.id,
-            stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
-            subscriptionStatus: subscription.status.toUpperCase() as any,
-          },
+        await fetchMutation(api.users.updateUserStripeInfo, {
+          stripeCustomerId: subscription.customer as string,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: subscription.items.data[0].price.id,
+          stripeCurrentPeriodEnd: subscription.current_period_end * 1000,
+          subscriptionStatus: subscription.status.toUpperCase() as any,
         });
         break;
       }
@@ -68,12 +66,10 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
 
-        await prisma.user.update({
-          where: { stripeCustomerId: subscription.customer as string },
-          data: {
-            subscriptionStatus: 'CANCELED',
-            stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
-          },
+        await fetchMutation(api.users.updateUserStripeInfo, {
+          stripeCustomerId: subscription.customer as string,
+          subscriptionStatus: 'CANCELED',
+          stripeCurrentPeriodEnd: subscription.current_period_end * 1000,
         });
         break;
       }

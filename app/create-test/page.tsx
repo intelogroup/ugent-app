@@ -3,7 +3,8 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import {
   SparklesIcon,
   PlusCircleIcon,
@@ -11,32 +12,13 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/solid';
 
-interface Subject {
-  id: string;
-  name: string;
-  questionCount: number;
-}
-
-interface Topic {
-  id: string;
-  name: string;
-  questionCount: number;
-}
-
-interface System {
-  id: string;
-  name: string;
-  questionCount: number;
-  topics: Topic[];
-}
-
 export default function CreateTest() {
   const router = useRouter();
-  const supabase = createClient();
-  const [user, setUser] = useState<any>(null);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [systems, setSystems] = useState<System[]>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useQuery(api.users.getCurrentUser);
+  const subjects = useQuery(api.questions.listSubjects);
+  const systems = useQuery(api.questions.listSystemsWithTopics);
+  const createTestMutation = useMutation(api.tests.createTest);
+
   const [creating, setCreating] = useState(false);
 
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
@@ -49,54 +31,15 @@ export default function CreateTest() {
   const [useAI, setUseAI] = useState(true);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
-  // Get authenticated user
+  // Auth redirect
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      setUser(user);
-    };
-    getUser();
-  }, []);
-
-  // Fetch subjects and systems from database
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchData = async () => {
-      try {
-        const [subjectsRes, systemsRes] = await Promise.all([
-          fetch('/api/subjects'),
-          fetch('/api/systems')
-        ]);
-
-        const subjectsData = await subjectsRes.json();
-        const systemsData = await systemsRes.json();
-
-        setSubjects(subjectsData.subjects || []);
-        setSystems(systemsData.systems || []);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user]);
+    if (user === null) {
+      router.push('/login');
+    }
+  }, [user, router]);
 
   const toggleSubject = (id: string) => {
     setSelectedSubjects(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-    setShowValidationErrors(false);
-  };
-
-  const toggleSystem = (id: string) => {
-    setSelectedSystems(prev =>
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     );
     setShowValidationErrors(false);
@@ -116,14 +59,14 @@ export default function CreateTest() {
   };
 
   const availableQuestionsSubjects = subjects
-    .filter(s => selectedSubjects.includes(s.id))
-    .reduce((sum, s) => sum + s.questionCount, 0);
+    ?.filter(s => selectedSubjects.includes(s._id))
+    .reduce((sum, s) => sum + s.questionCount, 0) || 0;
 
   const availableQuestionsTopics = selectedTopics.length > 0
     ? systems
-        .flatMap(sys => sys.topics)
-        .filter(topic => selectedTopics.includes(topic.id))
-        .reduce((sum, topic) => sum + topic.questionCount, 0)
+        ?.flatMap(sys => sys.topics)
+        .filter(topic => selectedTopics.includes(topic._id))
+        .reduce((sum, topic) => sum + topic.questionCount, 0) || 0
     : 0;
 
   const availableQuestions = availableQuestionsSubjects + availableQuestionsTopics;
@@ -152,38 +95,25 @@ export default function CreateTest() {
     setCreating(true);
 
     try {
-      // Create test via API
-      const response = await fetch('/api/tests/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          subjects: selectedSubjects,
-          topics: selectedTopics,
-          systems: selectedSystems,
-          questionCount,
-          testMode: testMode.toUpperCase(),
-          questionMode: questionMode.toUpperCase(),
-          useAI,
-        }),
+      const result = await createTestMutation({
+        userId: user._id,
+        subjects: selectedSubjects,
+        topics: selectedTopics,
+        systems: selectedSystems,
+        questionCount,
+        mode: testMode.toUpperCase() as "TUTOR" | "TIMED",
+        questionMode: questionMode.toUpperCase() as "STANDARD" | "CUSTOM" | "PRACTICE",
+        difficulty: "MIXED", // Default to MIXED for now
+        useAI,
+        title: `Test ${new Date().toLocaleDateString()}`,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create test');
-      }
-
-      const data = await response.json();
-      const testId = data.test?.id;
-
-      if (!testId) {
+      if (!result.testId) {
         throw new Error('Test ID not received from server');
       }
 
       // Redirect to quiz page with test ID
-      router.push(`/quiz?testId=${testId}`);
+      router.push(`/quiz?testId=${result.testId}`);
     } catch (error) {
       console.error('Error creating test:', error);
       alert(error instanceof Error ? error.message : 'Failed to create test. Please try again.');
@@ -191,7 +121,7 @@ export default function CreateTest() {
     }
   };
 
-  if (loading) {
+  if (user === undefined || subjects === undefined || systems === undefined) {
     return (
       <DashboardLayout>
         <div className="max-w-6xl mx-auto flex items-center justify-center min-h-screen">
@@ -259,14 +189,14 @@ export default function CreateTest() {
                     </div>
                   ) : (
                     subjects.map((subject) => {
-                      const isSelected = selectedSubjects.includes(subject.id);
+                      const isSelected = selectedSubjects.includes(subject._id);
                       const hasQuestions = subject.questionCount > 0;
 
                       return (
                         <button
-                          key={subject.id}
+                          key={subject._id}
                           type="button"
-                          onClick={() => hasQuestions && toggleSubject(subject.id)}
+                          onClick={() => hasQuestions && toggleSubject(subject._id)}
                           disabled={!hasQuestions}
                           className={`
                             relative p-4 rounded-lg border-2 text-left transition-all group
@@ -333,15 +263,15 @@ export default function CreateTest() {
                     </div>
                   ) : (
                     systems.map((system) => {
-                      const isExpanded = expandedSystems.includes(system.id);
-                      const systemTopicCount = system.topics.filter(t => selectedTopics.includes(t.id)).length;
+                      const isExpanded = expandedSystems.includes(system._id);
+                      const systemTopicCount = system.topics.filter(t => selectedTopics.includes(t._id)).length;
                       const systemHasQuestions = system.questionCount > 0;
 
                       return (
-                        <div key={system.id}>
+                        <div key={system._id}>
                           <button
                             type="button"
-                            onClick={() => toggleSystemExpanded(system.id)}
+                            onClick={() => toggleSystemExpanded(system._id)}
                             className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all text-left group
                               ${!systemHasQuestions
                                 ? 'border-neutral-100 bg-neutral-50 opacity-50'
@@ -370,14 +300,14 @@ export default function CreateTest() {
                           {isExpanded && (
                             <div className="mt-2 ml-4 pl-4 border-l-2 border-primary-200 space-y-2">
                               {system.topics.map((topic) => {
-                                const isSelected = selectedTopics.includes(topic.id);
+                                const isSelected = selectedTopics.includes(topic._id);
                                 const hasQuestions = topic.questionCount > 0;
 
                                 return (
                                   <button
-                                    key={topic.id}
+                                    key={topic._id}
                                     type="button"
-                                    onClick={() => hasQuestions && toggleTopic(topic.id)}
+                                    onClick={() => hasQuestions && toggleTopic(topic._id)}
                                     disabled={!hasQuestions}
                                     className={`
                                       w-full flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all group

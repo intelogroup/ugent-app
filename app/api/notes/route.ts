@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery, fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * GET /api/notes
  * POST /api/notes
  *
- * Manage user study notes
+ * Manage user study notes (Convex refactored)
  */
 
 export async function GET(request: NextRequest) {
@@ -24,34 +26,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build filter
-    let filter: any = { userId };
-
-    if (search) {
-      filter.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { content: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (isPinned !== null) {
-      filter.isPinned = isPinned === 'true';
-    }
-
-    // Get notes
-    const notes = await prisma.studyNote.findMany({
-      where: filter,
-      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
-      skip: offset,
-      take: limit,
+    const result = await fetchQuery(api.notes.getNotes, {
+      userId: userId as Id<"users">,
+      limit,
+      offset,
+      search: search || undefined,
+      isPinned: isPinned !== null ? isPinned === 'true' : undefined,
     });
-
-    const total = await prisma.studyNote.count({ where: filter });
 
     return NextResponse.json(
       {
-        notes: notes.map((note) => ({
-          id: note.id,
+        notes: result.notes.map((note: any) => ({
+          id: note._id,
           title: note.title,
           content: note.content,
           tags: note.tags || [],
@@ -60,10 +46,10 @@ export async function GET(request: NextRequest) {
           updatedAt: note.updatedAt,
         })),
         pagination: {
-          total,
+          total: result.total,
           limit,
           offset,
-          returned: notes.length,
+          returned: result.notes.length,
         },
       },
       { status: 200 }
@@ -97,29 +83,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create note
-    const note = await prisma.studyNote.create({
-      data: {
-        userId,
-        title,
-        content,
-        tags: tags || [],
-        questionId,
-        systemId,
-        isPinned: false,
-      },
+    const noteId = await fetchMutation(api.notes.createNote, {
+      userId: userId as Id<"users">,
+      title,
+      content,
+      tags: tags || [],
+      questionId: questionId as Id<"questions"> | undefined,
+      systemId: systemId as Id<"systems"> | undefined,
     });
 
     return NextResponse.json(
       {
         success: true,
         note: {
-          id: note.id,
-          title: note.title,
-          content: note.content,
-          tags: note.tags || [],
-          isPinned: note.isPinned,
-          createdAt: note.createdAt,
+          id: noteId,
+          title,
+          content,
+          tags: tags || [],
+          isPinned: false,
+          createdAt: Date.now(),
         },
       },
       { status: 201 }

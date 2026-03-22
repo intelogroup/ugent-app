@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery, fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * GET /api/notifications
  * POST /api/notifications
  *
- * Manage user notifications
+ * Manage user notifications (Convex refactored)
  */
 
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id');
     const searchParams = request.nextUrl.searchParams;
-    const isRead = searchParams.get('isRead');
-    const type = searchParams.get('type');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -24,51 +24,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build filter
-    let filter: any = { userId };
-
-    if (isRead !== null) {
-      filter.read = isRead === 'true';
-    }
-
-    if (type) {
-      filter.type = type;
-    }
-
-    // Get notifications
-    const notifications = await prisma.userInteraction.findMany({
-      where: {
-        userId,
-        actionType: { startsWith: 'notification_' },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: offset,
-      take: limit,
-    });
-
-    const unreadCount = await prisma.userInteraction.count({
-      where: {
-        userId,
-        actionType: { startsWith: 'notification_' },
-      },
+    const result = await fetchQuery(api.notifications.getNotifications, {
+      userId: userId as Id<"users">,
+      limit,
+      offset,
     });
 
     return NextResponse.json(
       {
-        notifications: notifications.map((notif) => ({
-          id: notif.id,
-          type: notif.actionType.replace('notification_', ''),
-          title: notif.metadata ? JSON.parse(notif.metadata).title : 'Notification',
-          content: notif.metadata ? JSON.parse(notif.metadata).content : '',
-          read: false, // Would need notification table to track read status
+        notifications: result.notifications.map((notif: any) => ({
+          id: notif._id,
+          type: notif.type,
+          title: notif.title,
+          content: notif.content,
+          read: notif.isRead,
           createdAt: notif.createdAt,
         })),
-        unreadCount,
+        unreadCount: result.unreadCount,
         pagination: {
-          total: unreadCount,
+          total: result.total,
           limit,
           offset,
-          returned: notifications.length,
+          returned: result.notifications.length,
         },
       },
       { status: 200 }
@@ -95,32 +72,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create notification via interaction
-    const notification = await prisma.userInteraction.create({
-      data: {
-        userId,
-        actionType: `notification_${type}`,
-        entityType: relatedEntityType || 'notification',
-        entityId: relatedEntityId || '',
-        metadata: JSON.stringify({
-          title,
-          content,
-          relatedUserId,
-        }),
-        clientIP: request.headers.get('x-forwarded-for') || '',
-        userAgent: request.headers.get('user-agent') || '',
-      },
+    const notificationId = await fetchMutation(api.notifications.createNotification, {
+      userId: userId as Id<"users">,
+      type,
+      title,
+      content: content || '',
+      relatedUserId,
+      relatedEntityId,
+      relatedEntityType,
     });
 
     return NextResponse.json(
       {
         success: true,
         notification: {
-          id: notification.id,
+          id: notificationId,
           type,
           title,
           content,
-          createdAt: notification.createdAt,
+          createdAt: Date.now(),
         },
       },
       { status: 201 }
@@ -133,3 +103,9 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * PATCH /api/notifications/[id] logic is usually handled in a separate route file, 
+ * but since we are refactoring, let's see if there is one.
+ * The requirement mentions markNotificationRead.
+ */

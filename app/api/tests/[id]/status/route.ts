@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function GET(
   request: NextRequest,
@@ -16,15 +18,8 @@ export async function GET(
       );
     }
 
-    // Verify test exists and belongs to user
-    const test = await prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        sessions: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
+    const test = await fetchQuery(api.tests.getTestById, {
+      testId: testId as Id<"tests">,
     });
 
     if (!test || test.userId !== userId) {
@@ -39,34 +34,31 @@ export async function GET(
     let activeSession = null;
     let completedSession = null;
 
-    if (test.status === 'PAUSED' && lastSession?.canResume && lastSession.resumeDeadline && new Date() < lastSession.resumeDeadline) {
+    if (test.status === 'PAUSED' && lastSession?.canResume) {
       recommendedAction = 'RESUME';
       activeSession = {
         canResume: true,
         lastActivityAt: test.lastActivityAt,
         pausedAt: test.pausedAt,
         resumeAttempt: lastSession.resumeAttempts || 0,
-        maxResumeAttempts: lastSession.maxResumeAttempts || 3,
-        resumeDeadline: lastSession.resumeDeadline.toISOString(),
+        maxResumeAttempts: lastSession.maxResumeAttempts || 5,
+        resumeDeadline: lastSession.resumeDeadline ? new Date(lastSession.resumeDeadline).toISOString() : null,
         lastQuestion: 0,
         questionsAnswered: test.answeredCount,
-        questionsSkipped: test.skippedCount,
+        questionsSkipped: test.totalSkipped,
       };
     } else if (test.status === 'COMPLETED') {
       recommendedAction = 'REVIEW';
       completedSession = {
         finalScore: test.score || 0,
-        totalPoints: (test.totalCorrect * 20) || 0, // Rough estimate
-        completionStatus: test.completionStatus,
-        completedAt: test.completedAt?.toISOString(),
+        totalPoints: (test.totalCorrect * 20) || 0,
+        completedAt: test.completedAt ? new Date(test.completedAt).toISOString() : null,
       };
-    } else if (test.status === 'PAUSED' && (!lastSession?.resumeDeadline || new Date() > lastSession.resumeDeadline)) {
-      recommendedAction = 'RESTART';
     }
 
     return NextResponse.json(
       {
-        id: test.id,
+        id: test._id,
         userId: test.userId,
         status: test.status,
         activeSession,

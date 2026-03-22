@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
+import { getConvexClient } from '@/lib/convex-client';
 
 /**
  * POST /api/tests/:id/complete
@@ -15,6 +17,8 @@ export async function POST(
   try {
     const { id: testId } = await params;
     const userId = request.headers.get('x-user-id');
+    const body = await request.json().catch(() => ({}));
+    const { durationMs } = body;
 
     if (!testId || !userId) {
       return NextResponse.json(
@@ -23,171 +27,21 @@ export async function POST(
       );
     }
 
-    // Get test and answers
-    const test = await prisma.test.findUnique({
-      where: { id: testId },
-      include: {
-        questions: true,
-        answers: {
-          include: {
-            question: true,
-            questionScore: true,
-          },
-        },
-      },
+    const convex = getConvexClient();
+
+    const result = await convex.mutation(api.tests.completeSession, {
+      testId: testId as Id<"tests">,
+      userId: userId as Id<"users">,
+      durationMs: durationMs || 0,
+      clientIP: request.headers.get('x-forwarded-for') || '',
+      userAgent: request.headers.get('user-agent') || '',
     });
 
-    if (!test) {
-      return NextResponse.json({ error: 'Test not found' }, { status: 404 });
-    }
-
-    if (test.userId !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Calculate results
-    const totalQuestions = test.questions.length;
-    const correctAnswers = test.answers.filter((a) => a.isCorrect === true).length;
-    const incorrectAnswers = test.answers.filter((a) => a.isCorrect === false).length;
-    const skipped = test.answers.filter((a) => a.status === 'SKIPPED').length;
-
-    const totalPoints = test.answers.reduce((sum, answer) => {
-      return sum + (answer.questionScore?.totalPoints || 0);
-    }, 0);
-
-    const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    const totalTimeSpent = test.answers.reduce((sum, answer) => {
-      return sum + (answer.timeSpent || 0);
-    }, 0);
-
-    // Calculate final score (percentage based)
-    const finalScore = (correctAnswers / totalQuestions) * 100;
-
-    // Update test
-    const updatedTest = await prisma.test.update({
-      where: { id: testId },
-      data: {
-        completedAt: new Date(),
-      },
-    });
-
-    // Get performance by difficulty
-    const performanceByDifficulty = test.answers.reduce(
-      (acc: any, answer) => {
-        const difficulty = answer.question.difficulty;
-        if (!acc[difficulty]) {
-          acc[difficulty] = { correct: 0, total: 0, points: 0 };
-        }
-        acc[difficulty].total += 1;
-        if (answer.isCorrect) acc[difficulty].correct += 1;
-        acc[difficulty].points += answer.questionScore?.totalPoints || 0;
-        return acc;
-      },
-      {}
-    );
-
-    // Convert to array format
-    const byDifficulty: any = {};
-    Object.entries(performanceByDifficulty).forEach(([difficulty, data]: [string, any]) => {
-      byDifficulty[difficulty] = {
-        accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
-        points: data.points,
-        correct: data.correct,
-        total: data.total,
-      };
-    });
-
-    // Update or create user leaderboard entry
-    const userLeaderboard = await prisma.userLeaderboard.upsert({
-      where: { userId },
-      update: {
-        averageScore: undefined, // Will be recalculated
-        totalTests: {
-          increment: 1,
-        },
-        lastActivityDate: new Date(),
-      },
-      create: {
-        userId,
-        averageScore: finalScore,
-        totalTests: 1,
-        lastActivityDate: new Date(),
-      },
-    });
-
-    // Recalculate average score
-    const allTests = await prisma.test.findMany({
-      where: { userId, completedAt: { not: null } },
-      select: { answers: { include: { question: true } } },
-    });
-
-    const allScores = allTests.map((t) => {
-      const correct = t.answers.filter((a) => a.isCorrect === true).length;
-      return (correct / t.answers.length) * 100;
-    });
-
-    const averageScore = allScores.length > 0
-      ? allScores.reduce((a, b) => a + b) / allScores.length
-      : finalScore;
-
-    // Update average score
-    await prisma.userLeaderboard.update({
-      where: { userId },
-      data: {
-        averageScore,
-      },
-    });
-
-    // Track interaction
-    await prisma.userInteraction.create({
-      data: {
-        userId,
-        actionType: 'test_completed',
-        entityType: 'test',
-        entityId: testId,
-        testId,
-        durationMs: totalTimeSpent * 1000,
-        metadata: JSON.stringify({
-          finalScore,
-          correctAnswers,
-          totalQuestions,
-          accuracy,
-          totalPoints,
-        }),
-        clientIP: request.headers.get('x-forwarded-for') || '',
-        userAgent: request.headers.get('user-agent') || '',
-      },
-    });
-
-    return NextResponse.json(
-      {
-        success: true,
-        testResult: {
-          testId: test.id,
-          finalScore: parseFloat(finalScore.toFixed(1)),
-          totalPoints,
-          correctAnswers,
-          incorrectAnswers,
-          skipped,
-          accuracy: parseFloat(accuracy.toFixed(1)),
-          timeSpent: totalTimeSpent,
-          completedAt: updatedTest.completedAt,
-          performance: {
-            byDifficulty,
-          },
-          userStats: {
-            rank: userLeaderboard.rank,
-            averageScore: parseFloat(averageScore.toFixed(1)),
-            totalTests: userLeaderboard.totalTests,
-          },
-        },
-      },
-      { status: 200 }
-    );
-  } catch (error) {
+    return NextResponse.json(result, { status: 200 });
+  } catch (error: any) {
     console.error('Error completing test:', error);
     return NextResponse.json(
-      { error: 'Failed to complete test' },
+      { error: error.message || 'Failed to complete test' },
       { status: 500 }
     );
   }

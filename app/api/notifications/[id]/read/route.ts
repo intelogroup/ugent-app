@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * POST /api/notifications/:id/read
  *
- * Marks a notification as read
+ * Marks a notification as read (Convex refactored)
  */
 
 export async function POST(
@@ -22,35 +24,8 @@ export async function POST(
       );
     }
 
-    const notification = await prisma.userInteraction.findUnique({
-      where: { id: notificationId },
-    });
-
-    if (!notification) {
-      return NextResponse.json(
-        { error: 'Notification not found' },
-        { status: 404 }
-      );
-    }
-
-    if (notification.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    // In a real implementation, would update a separate Notification table
-    // For now, we'll update metadata to mark as read
-    const metadata = notification.metadata ? JSON.parse(notification.metadata) : {};
-    metadata.read = true;
-    metadata.readAt = new Date();
-
-    await prisma.userInteraction.update({
-      where: { id: notificationId },
-      data: {
-        metadata: JSON.stringify(metadata),
-      },
+    await fetchMutation(api.notifications.markNotificationRead, {
+      notificationId: notificationId as Id<"notifications">,
     });
 
     return NextResponse.json(

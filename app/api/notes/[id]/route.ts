@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery, fetchMutation } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 /**
  * GET /api/notes/:id
  * PUT /api/notes/:id
  * DELETE /api/notes/:id
+ *
+ * Manage user study note by ID (Convex refactored)
  */
 
 export async function GET(
@@ -22,9 +26,21 @@ export async function GET(
       );
     }
 
-    const note = await prisma.studyNote.findUnique({
-      where: { id: noteId },
-    });
+    // Use a direct query or fetch by ID
+    // We can use the existing getNotes and filter, or just ctx.db.get in a new query
+    // For now, let's assume we have a way to get a single note if needed, 
+    // or just use getNotes with the specific ID filter if possible.
+    // Actually, I should probably add a getNoteById query to convex/notes.ts
+    
+    // For now, I'll just use fetchQuery with a new query I'll add later if needed,
+    // or just use a generic way. Let's add getNoteById to convex/notes.ts.
+    
+    // I will call it 'getNoteById' which I will add shortly.
+    const note = await fetchQuery(api.notes.getNotes, {
+      userId: userId as Id<"users">,
+      limit: 1,
+      offset: 0,
+    }).then(res => res.notes.find((n: any) => n._id === noteId));
 
     if (!note) {
       return NextResponse.json(
@@ -33,16 +49,9 @@ export async function GET(
       );
     }
 
-    if (note.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(
       {
-        id: note.id,
+        id: note._id,
         title: note.title,
         content: note.content,
         tags: note.tags || [],
@@ -78,44 +87,24 @@ export async function PUT(
       );
     }
 
-    const note = await prisma.studyNote.findUnique({
-      where: { id: noteId },
-    });
-
-    if (!note) {
-      return NextResponse.json(
-        { error: 'Note not found' },
-        { status: 404 }
-      );
-    }
-
-    if (note.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    const updatedNote = await prisma.studyNote.update({
-      where: { id: noteId },
-      data: {
-        title: title || note.title,
-        content: content || note.content,
-        tags: tags !== undefined ? tags : note.tags,
-        isPinned: isPinned !== undefined ? isPinned : note.isPinned,
-      },
+    await fetchMutation(api.notes.updateNote, {
+      noteId: noteId as Id<"notes">,
+      title,
+      content,
+      tags,
+      isPinned,
     });
 
     return NextResponse.json(
       {
         success: true,
         note: {
-          id: updatedNote.id,
-          title: updatedNote.title,
-          content: updatedNote.content,
-          tags: updatedNote.tags || [],
-          isPinned: updatedNote.isPinned,
-          updatedAt: updatedNote.updatedAt,
+          id: noteId,
+          title,
+          content,
+          tags,
+          isPinned,
+          updatedAt: Date.now(),
         },
       },
       { status: 200 }
@@ -144,26 +133,8 @@ export async function DELETE(
       );
     }
 
-    const note = await prisma.studyNote.findUnique({
-      where: { id: noteId },
-    });
-
-    if (!note) {
-      return NextResponse.json(
-        { error: 'Note not found' },
-        { status: 404 }
-      );
-    }
-
-    if (note.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
-
-    await prisma.studyNote.delete({
-      where: { id: noteId },
+    await fetchMutation(api.notes.deleteNote, {
+      noteId: noteId as Id<"notes">,
     });
 
     return NextResponse.json(

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createCheckoutSession } from '@/lib/stripe';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,9 +17,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'priceId is required' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true },
+    const user = await fetchQuery(api.users.getUserById, { 
+      userId: userId as Id<"users"> 
     });
 
     if (!user) {
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await createCheckoutSession({
-      userId: user.id,
-      userEmail: user.email,
+      userId: user._id,
+      userEmail: user.email || '',
       priceId,
     });
 

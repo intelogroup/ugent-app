@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createBillingPortalSession } from '@/lib/stripe';
-import { prisma } from '@/lib/prisma';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { stripeCustomerId: true },
+    const user = await fetchQuery(api.users.getUserById, { 
+      userId: userId as Id<"users"> 
     });
 
     if (!user) {

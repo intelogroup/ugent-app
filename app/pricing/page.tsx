@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
@@ -12,22 +12,13 @@ import {
   LightBulbIcon,
   TrophyIcon
 } from '@heroicons/react/24/solid';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 export default function PricingPage() {
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const router = useRouter();
-  const supabase = createClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   const handleSubscribe = async (priceId: string) => {
     if (!user) {
@@ -41,7 +32,7 @@ export default function PricingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
+          userId: user?.id,
           priceId
         }),
       });

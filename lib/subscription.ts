@@ -1,28 +1,30 @@
-import { prisma } from './prisma';
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 export async function getUserSubscriptionStatus(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      subscriptionStatus: true,
-      stripeCurrentPeriodEnd: true,
-      stripePriceId: true,
-    },
-  });
+  try {
+    const user = await fetchQuery(api.users.getUserById, { 
+      userId: userId as Id<"users"> 
+    });
 
-  if (!user) {
+    if (!user) {
+      return null;
+    }
+
+    const isPremium = user.subscriptionStatus === 'ACTIVE' &&
+      user.stripeCurrentPeriodEnd &&
+      user.stripeCurrentPeriodEnd > Date.now();
+
+    return {
+      isPremium,
+      subscriptionStatus: user.subscriptionStatus,
+      currentPeriodEnd: user.stripeCurrentPeriodEnd,
+    };
+  } catch (error) {
+    console.error("Error fetching user subscription status from Convex:", error);
     return null;
   }
-
-  const isPremium = user.subscriptionStatus === 'ACTIVE' &&
-    user.stripeCurrentPeriodEnd &&
-    user.stripeCurrentPeriodEnd.getTime() > Date.now();
-
-  return {
-    isPremium,
-    subscriptionStatus: user.subscriptionStatus,
-    currentPeriodEnd: user.stripeCurrentPeriodEnd,
-  };
 }
 
 export async function checkPremiumAccess(userId: string): Promise<boolean> {

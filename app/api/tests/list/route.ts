@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-
-/**
- * GET /api/tests/list
- *
- * Lists all tests for the user (completed and in-progress)
- * Query parameters:
- * - status: completed|in_progress|all (default: all)
- * - limit: number (default: 10)
- * - offset: number (default: 0)
- * - sortBy: createdAt|score|accuracy (default: createdAt)
- */
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +10,6 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all';
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
 
     if (!userId) {
       return NextResponse.json(
@@ -28,72 +18,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build filter
-    let filter: any = { userId };
-
-    if (status === 'completed') {
-      filter.completedAt = { not: null };
-    } else if (status === 'in_progress') {
-      filter.completedAt = null;
-    }
-
-    // Determine sort order
-    let orderBy: any = { createdAt: 'desc' };
-    if (sortBy === 'score') {
-      // This is more complex as we need to calculate scores
-      orderBy = { completedAt: 'desc' };
-    } else if (sortBy === 'accuracy') {
-      orderBy = { completedAt: 'desc' };
-    }
-
-    // Get tests
-    const tests = await prisma.test.findMany({
-      where: filter,
-      include: {
-        questions: true,
-        answers: {
-          include: {
-            questionScore: true,
-          },
-        },
-      },
-      orderBy,
-      skip: offset,
-      take: limit,
+    const result = await fetchQuery(api.tests.listTests, {
+      userId: userId as Id<"users">,
+      status,
+      limit,
+      offset,
     });
 
-    // Get total count
-    const total = await prisma.test.count({ where: filter });
-
-    // Format response
-    const formattedTests = tests.map((test) => {
-      const correctAnswers = test.answers.filter((a) => a.isCorrect === true).length;
-      const totalQuestions = test.questions.length;
-      const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-      const totalPoints = test.answers.reduce((sum, a) => sum + (a.questionScore?.totalPoints || 0), 0);
-      const finalScore = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-
-      return {
-        id: test.id,
-        title: test.title,
-        status: test.completedAt ? 'completed' : 'in_progress',
-        score: parseFloat(finalScore.toFixed(1)),
-        totalPoints,
-        accuracy: parseFloat(accuracy.toFixed(1)),
-        totalQuestions,
-        correctAnswers,
-        mode: test.mode,
-        createdAt: test.createdAt,
-        startedAt: test.startedAt,
-        completedAt: test.completedAt,
-      };
-    });
+    const formattedTests = result.tests.map((test: any) => ({
+      id: test._id,
+      title: test.title,
+      status: test.status === 'COMPLETED' ? 'completed' : 'in_progress',
+      score: test.score || 0,
+      totalPoints: 0,
+      accuracy: test.totalQuestions > 0 ? (test.totalCorrect / test.totalQuestions) * 100 : 0,
+      totalQuestions: test.totalQuestions,
+      correctAnswers: test.totalCorrect,
+      mode: test.mode,
+      createdAt: test.createdAt,
+      startedAt: test.startedAt,
+      completedAt: test.completedAt,
+    }));
 
     return NextResponse.json(
       {
         tests: formattedTests,
         pagination: {
-          total,
+          total: result.total,
           limit,
           offset,
           returned: formattedTests.length,

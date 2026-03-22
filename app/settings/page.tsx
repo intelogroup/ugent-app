@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
@@ -10,21 +10,12 @@ import {
   ShieldCheckIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
   const router = useRouter();
-  const supabase = createClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   const tabs = [
     { id: 'account', name: 'Account', icon: UserIcon },
@@ -38,7 +29,7 @@ export default function SettingsPage() {
       const response = await fetch('/api/stripe/create-portal-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user?.id }),
       });
 
       const { url } = await response.json();
@@ -105,7 +96,7 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">Name</label>
                   <input
                     type="text"
-                    value={user?.user_metadata?.name || ''}
+                    value={user?.firstName || ''}
                     disabled
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
                   />

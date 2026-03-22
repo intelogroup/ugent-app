@@ -1,52 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { fetchMutation, fetchQuery } from 'convex/nextjs';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const difficulty = searchParams.get('difficulty');
-    const systemId = searchParams.get('systemId');
-    const topicId = searchParams.get('topicId');
-    const subjectId = searchParams.get('subjectId');
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50;
+    const subjectId = searchParams.get('subjectId') as Id<"subjects"> | null;
+    const topicId = searchParams.get('topicId') as Id<"topics"> | null;
+    const systemId = searchParams.get('systemId') as Id<"systems"> | null;
+    const difficulty = searchParams.get('difficulty') as "EASY" | "MEDIUM" | "HARD" | null;
 
-    const where: any = {};
-
-    if (difficulty) where.difficulty = difficulty;
-    if (systemId) where.systemId = systemId;
-    if (topicId) where.topicId = topicId;
-    if (subjectId) where.subjectId = subjectId;
-
-    const [questions, total] = await Promise.all([
-      prisma.question.findMany({
-        where,
-        include: {
-          options: {
-            orderBy: { displayOrder: 'asc' },
-          },
-          system: {
-            select: { id: true, name: true },
-          },
-          topic: {
-            select: { id: true, name: true },
-          },
-          subject: {
-            select: { id: true, name: true },
-          },
-        },
-        skip: offset,
-        take: limit,
-      }),
-      prisma.question.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      questions,
-      total,
+    const questions = await fetchQuery(api.questions.getQuestions, {
       limit,
-      offset,
+      subjectId: subjectId || undefined,
+      topicId: topicId || undefined,
+      systemId: systemId || undefined,
+      difficulty: difficulty || undefined,
     });
+
+    return NextResponse.json({ questions });
   } catch (error) {
     console.error('Error fetching questions:', error);
     return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
@@ -66,27 +40,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'At least 2 answer options are required' }, { status: 400 });
     }
 
-    const question = await prisma.question.create({
-      data: {
-        text,
-        explanation: explanation || null,
-        difficulty: difficulty || 'MEDIUM',
-        systemId: systemId || null,
-        topicId: topicId || null,
-        subjectId: subjectId || null,
-        options: {
-          createMany: {
-            data: options.map((opt: any, idx: number) => ({
-              text: opt.text,
-              isCorrect: opt.isCorrect || false,
-              displayOrder: idx,
-            })),
-          },
-        },
-      },
-      include: {
-        options: true,
-      },
+    const correctAnswer = options.find((opt: any) => opt.isCorrect)?.text || options[0].text;
+
+    const question = await fetchMutation(api.questions.createQuestion, {
+      text,
+      explanation: explanation || "",
+      difficulty: (difficulty as "EASY" | "MEDIUM" | "HARD") || 'MEDIUM',
+      systemId: (systemId as Id<"systems">) || undefined,
+      topicId: (topicId as Id<"topics">) || undefined,
+      subjectId: (subjectId as Id<"subjects">) || undefined,
+      options: options.map((opt: any) => ({
+        text: opt.text,
+        isCorrect: opt.isCorrect || false,
+      })),
+      correctAnswer,
     });
 
     return NextResponse.json({ question }, { status: 201 });

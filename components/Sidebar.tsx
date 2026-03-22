@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   HomeIcon,
   PlusCircleIcon,
@@ -17,7 +17,7 @@ import {
   BeakerIcon
 } from '@heroicons/react/24/outline';
 import UgentLogo from './UgentLogo';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
@@ -35,21 +35,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const supabase = createClient();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+  const handleLogout = () => {
+    router.push('/login');
   };
 
   return (
@@ -96,14 +85,14 @@ export default function Sidebar() {
         >
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
             <img
-              src={user?.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.user_metadata?.name || user?.email?.split('@')[0] || 'Medical Student')}&background=ffffff&color=2563eb&size=200&bold=true`}
-              alt={user?.user_metadata?.name || 'User'}
+              src={user?.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.firstName || user?.email?.split('@')[0] || 'Medical Student')}&background=ffffff&color=2563eb&size=200&bold=true`}
+              alt={user?.firstName || 'User'}
               className="w-full h-full rounded-full object-cover"
             />
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-medium text-neutral-900 truncate">
-              {user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+              {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email?.split('@')[0] || 'User'}
             </p>
             <p className="text-xs text-neutral-500">Medical Student</p>
           </div>

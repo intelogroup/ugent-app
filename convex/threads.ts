@@ -6,7 +6,7 @@ import { query, mutation } from "./_generated/server";
  */
 export const listRecentThreadsWithPreview = query({
   args: {
-    userId: v.id("users"),
+    userId: v.string(),
     limit: v.number(),
   },
   handler: async (ctx, args) => {
