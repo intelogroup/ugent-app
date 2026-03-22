@@ -13,13 +13,15 @@ import {
   ArrowRightOnRectangleIcon,
   ChevronUpIcon,
   Cog6ToothIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  BeakerIcon
 } from '@heroicons/react/24/outline';
 import UgentLogo from './UgentLogo';
 import { createClient } from '@/lib/supabase/client';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Research', href: '/research/ingest', icon: BeakerIcon },
   { name: 'Create Test', href: '/create-test', icon: PlusCircleIcon },
   { name: 'My Tests', href: '/tests', icon: ClipboardDocumentListIcon },
   { name: 'AI Analytics', href: '/analytics', icon: ChartBarIcon },

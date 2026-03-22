@@ -106,7 +106,8 @@ export default defineSchema({
     from: v.string(),
     to: v.string(),
     strength: v.number(),
-  }).index("by_from_to", ["from", "to"]),
+  }).index("by_from_to", ["from", "to"])
+    .index("by_strength", ["strength"]),
 
   // Legacy tables - to be removed in Task 5
   diagnosticPatterns: defineTable({
