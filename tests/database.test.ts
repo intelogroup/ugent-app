@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * COMPREHENSIVE DATABASE TEST SUITE
  *

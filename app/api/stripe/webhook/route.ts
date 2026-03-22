@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           stripeCustomerId: subscription.customer as string,
           stripeSubscriptionId: subscription.id,
           stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: subscription.current_period_end * 1000,
+          stripeCurrentPeriodEnd: (subscription as any).current_period_end * 1000,
           subscriptionStatus: subscription.status.toUpperCase() as any,
         });
         break;
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         await fetchMutation(api.users.updateUserStripeInfo, {
           stripeCustomerId: subscription.customer as string,
           subscriptionStatus: 'CANCELED',
-          stripeCurrentPeriodEnd: subscription.current_period_end * 1000,
+          stripeCurrentPeriodEnd: (subscription as any).current_period_end * 1000,
         });
         break;
       }

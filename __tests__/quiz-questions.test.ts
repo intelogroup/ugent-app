@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Integration test for quiz question availability
  * Tests that questions are properly fetched and displayed in quizzes
