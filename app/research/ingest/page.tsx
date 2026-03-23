@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useAction } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import PatternRadar from "@/components/research/PatternRadar";
 import ExtractionLiveFeed from "@/components/research/ExtractionLiveFeed";
@@ -15,7 +15,7 @@ export default function ResearchIngestPage() {
   const [error, setError] = useState<string | null>(null);
 
   const startIngestion = useMutation(api.ingest.startIngestion);
-  const extractIntelligence = useAction(api.ai.extractIntelligence);
+  const triggerBatchIfReady = useMutation(api.ingest.triggerBatchIfReady);
   const recentIngestions = useQuery(api.research.getRecentIngestions, { limit: 5 });
 
   const handleStartResearch = async () => {
@@ -38,13 +38,8 @@ export default function ResearchIngestPage() {
         totalCount,
       });
 
-      // 2. Trigger AI extraction (non-blocking)
-      extractIntelligence({
-        ingestionId,
-        rawText,
-      }).catch((err) => {
-        console.error("AI Extraction failed:", err);
-      });
+      // 2. Check if batch of 10 is ready; if so, trigger extraction for all pending
+      await triggerBatchIfReady({});
 
       setRawText("");
     } catch (err: any) {
@@ -120,16 +115,22 @@ export default function ResearchIngestPage() {
                         {new Date(ingestion.createdAt).toLocaleDateString()}
                       </span>
                       <span className={`${
-                        ingestion.status === 'completed' ? 'text-green-600' : 
-                        ingestion.status === 'failed' ? 'text-rose-600' : 'text-indigo-600 animate-pulse'
+                        ingestion.status === 'completed' ? 'text-green-600' :
+                        ingestion.status === 'skipped' ? 'text-orange-500' :
+                        ingestion.status === 'failed' ? 'text-rose-600' :
+                        ingestion.status === 'pending' ? 'text-blue-500' :
+                        'text-indigo-600 animate-pulse'
                       } uppercase tracking-wider font-bold`}>
-                        {ingestion.status}
+                        {ingestion.status === 'pending' ? 'waiting for batch' : ingestion.status}
                       </span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full transition-all duration-500 ${
-                          ingestion.status === 'completed' ? 'bg-green-500' : 'bg-indigo-500'
+                          ingestion.status === 'completed' ? 'bg-green-500' :
+                          ingestion.status === 'skipped' ? 'bg-orange-400' :
+                          ingestion.status === 'pending' ? 'bg-blue-400' :
+                          'bg-indigo-500'
                         }`}
                         style={{ width: `${(ingestion.processedCount / ingestion.totalCount) * 100}%` }}
                       />

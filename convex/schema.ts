@@ -64,12 +64,13 @@ export default defineSchema({
 
   ingestions: defineTable({
     rawText: v.string(),
-    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("failed")),
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("skipped"), v.literal("failed")),
     processedCount: v.number(),
+    skippedCount: v.optional(v.number()),
     totalCount: v.number(),
     error: v.optional(v.string()),
     createdAt: v.number(),
-  }),
+  }).index("by_status", ["status"]),
 
   systems: defineTable({
     name: v.string(),
@@ -126,6 +127,7 @@ export default defineSchema({
     correctAttempts: v.optional(v.number()),
     successRate: v.optional(v.number()),
     avgTimeSpent: v.optional(v.number()),
+    textHash: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
@@ -133,7 +135,8 @@ export default defineSchema({
     .index("by_difficulty", ["difficulty"])
     .index("by_system", ["systemId"])
     .index("by_topic", ["topicId"])
-    .index("by_subject", ["subjectId"]),
+    .index("by_subject", ["subjectId"])
+    .index("by_textHash", ["textHash"]),
 
   extracted_patterns: defineTable({
     questionId: v.id("questions"),

@@ -1,10 +1,16 @@
+"use node";
 // @ts-nocheck
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { OpenAI } from "openai";
-import { ExtractedIntelligenceSchema } from "../lib/zod-schemas";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { createHash } from "crypto";
+
+function hashBlob(blob: string): string {
+  // Normalize: lowercase + collapse whitespace, then SHA-256
+  const normalized = blob.toLowerCase().replace(/\s+/g, " ").trim();
+  return createHash("sha256").update(normalized).digest("hex");
+}
 
 const EXTRACTION_PROMPT = `
 You are a world-class medical educator and researcher. Your goal is to extract high-leverage medical intelligence from USMLE-style questions and explanations.
@@ -52,30 +58,35 @@ export const extractIntelligence = action({
     });
 
     // 3. Process based on count
+    let skippedCount = 0;
+    let processedCount = 0;
+
     if (totalCount <= 5) {
-      // Process sequentially to keep it simple for small batches
       for (const blob of questionBlobs) {
         try {
-          await ctx.runAction(internal.ai.extractSingleQuestion, {
-            ingestionId,
-            blob,
-          });
+          const result = await ctx.runAction(internal.ai.extractSingleQuestion, { ingestionId, blob });
+          if (result?.skipped) skippedCount++; else processedCount++;
         } catch (error) {
           console.error(`Failed to process question: ${error}`);
-          // Continue with next question
         }
       }
     } else {
-      // Schedule background tasks for each question
       for (const blob of questionBlobs) {
-        await ctx.scheduler.runAction(internal.ai.extractSingleQuestion, {
-          ingestionId,
-          blob,
-        });
+        await ctx.scheduler.runAfter(0, internal.ai.extractSingleQuestion, { ingestionId, blob });
       }
     }
 
-    return { totalCount };
+    // For small batches (sequential), set final status based on outcome
+    if (totalCount <= 5) {
+      const finalStatus = processedCount === 0 ? "skipped" : "completed";
+      await ctx.runMutation(api.ingest.updateIngestionStatus, {
+        ingestionId,
+        status: finalStatus,
+        skippedCount,
+      });
+    }
+
+    return { totalCount, skippedCount, processedCount };
   },
 });
 
@@ -87,13 +98,79 @@ export const extractSingleQuestion = internalAction({
   handler: async (ctx, args) => {
     const { ingestionId, blob } = args;
 
+    // Fast-path dedup: skip OpenAI call entirely if already processed
+    const textHash = hashBlob(blob);
+    const isDuplicate = await ctx.runQuery(api.ingest.isQuestionDuplicate, { textHash });
+    if (isDuplicate) {
+      console.log(`Skipping duplicate (hash: ${textHash.slice(0, 8)}...) — no OpenAI call made`);
+      // Advance ingestion counter so status reflects completion correctly
+      const ingestion = await ctx.runQuery(api.ingest.getIngestion, { ingestionId });
+      if (ingestion) {
+        const newCount = ingestion.processedCount + 1;
+        await ctx.runMutation(api.ingest.updateIngestionStatus, {
+          ingestionId,
+          processedCount: newCount,
+          status: newCount >= ingestion.totalCount ? "completed" : "processing",
+        });
+      }
+      return { skipped: true };
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY not found in environment variables");
     }
 
     const openai = new OpenAI({ apiKey });
-    const jsonSchema = zodToJsonSchema(ExtractedIntelligenceSchema);
+    const jsonSchema = {
+      type: "object",
+      properties: {
+        questionText: { type: "string" },
+        correctAnswer: { type: "string" },
+        options: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { text: { type: "string" }, isCorrect: { type: "boolean" } },
+            required: ["text", "isCorrect"],
+          },
+        },
+        explanation: { type: "string" },
+        educationalObjective: { type: "string" },
+        subject: { type: "string" },
+        system: { type: "string" },
+        diseaseName: { type: "string" },
+        mechanism: { type: "string" },
+        highLeverageClues: { type: "array", items: { type: "string" } },
+        discriminators: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { distractor: { type: "string" }, ruleOutFact: { type: "string" } },
+            required: ["distractor", "ruleOutFact"],
+          },
+        },
+        nextBestStep: { type: "string" },
+        clinicalContext: {
+          type: "object",
+          properties: {
+            age: { type: "string" },
+            gender: { type: "string" },
+            physiologyState: { type: "string" },
+            onsetPattern: { type: "string" },
+          },
+        },
+        keySymptoms: { type: "array", items: { type: "string" } },
+        prerequisites: { type: "array", items: { type: "string" } },
+        tableData: { type: "array", items: {} },
+      },
+      required: [
+        "questionText", "correctAnswer", "options", "explanation",
+        "educationalObjective", "subject", "system", "diseaseName",
+        "mechanism", "highLeverageClues", "discriminators", "clinicalContext",
+        "keySymptoms", "prerequisites",
+      ],
+    };
 
     try {
       const response = await openai.chat.completions.create({
@@ -106,7 +183,6 @@ export const extractSingleQuestion = internalAction({
           type: "json_schema",
           json_schema: {
             name: "extracted_intelligence",
-            strict: true,
             schema: jsonSchema as any,
           },
         },
@@ -120,14 +196,12 @@ export const extractSingleQuestion = internalAction({
       // Save the results
       await ctx.runMutation(api.ingest.saveExtractedIntelligence, {
         ingestionId,
-        data: result,
+        data: { ...result, textHash },
       });
 
+      return { skipped: false };
     } catch (error) {
       console.error(`Error in extractSingleQuestion: ${error}`);
-      // Update ingestion with error if needed, or just let it fail for this one
-      // Since it's a background task, we might want to log it to the ingestion record
-      // but let's keep it simple for now as per requirements.
       throw error;
     }
   },

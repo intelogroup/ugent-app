@@ -1,6 +1,23 @@
 // @ts-nocheck
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
+
+export const getIngestion = query({
+  args: { ingestionId: v.id("ingestions") },
+  handler: async (ctx, { ingestionId }) => ctx.db.get(ingestionId),
+});
+
+export const isQuestionDuplicate = query({
+  args: { textHash: v.string() },
+  handler: async (ctx, { textHash }) => {
+    const existing = await ctx.db
+      .query("questions")
+      .withIndex("by_textHash", (q) => q.eq("textHash", textHash))
+      .first();
+    return existing !== null;
+  },
+});
 
 export const startIngestion = mutation({
   args: {
@@ -21,8 +38,9 @@ export const startIngestion = mutation({
 export const updateIngestionStatus = mutation({
   args: {
     ingestionId: v.id("ingestions"),
-    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("failed")),
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("skipped"), v.literal("failed")),
     processedCount: v.optional(v.number()),
+    skippedCount: v.optional(v.number()),
     totalCount: v.optional(v.number()),
     error: v.optional(v.string()),
   },
@@ -48,6 +66,9 @@ export const saveExtractedIntelligence = mutation({
       subject: v.string(),
       system: v.string(),
 
+      // Dedup
+      textHash: v.string(),
+
       // Intelligence Layer
       diseaseName: v.string(),
       mechanism: v.string(),
@@ -71,7 +92,25 @@ export const saveExtractedIntelligence = mutation({
   handler: async (ctx, args) => {
     const { ingestionId, data } = args;
 
-    // 1. Save Question
+    // 1. Atomic dedup check — skip if this question was already processed
+    const existing = await ctx.db
+      .query("questions")
+      .withIndex("by_textHash", (q) => q.eq("textHash", data.textHash))
+      .first();
+    if (existing !== null) {
+      console.log(`Duplicate skipped (hash: ${data.textHash.slice(0, 8)}...) — OpenAI call was avoided`);
+      // Still advance the ingestion counter so status completes correctly
+      const ingestion = await ctx.db.get(ingestionId);
+      if (ingestion) {
+        await ctx.db.patch(ingestionId, {
+          processedCount: ingestion.processedCount + 1,
+          status: ingestion.processedCount + 1 >= ingestion.totalCount ? "completed" : "processing",
+        });
+      }
+      return existing._id;
+    }
+
+    // 2. Save Question
     const questionId = await ctx.db.insert("questions", {
       text: data.questionText,
       correctAnswer: data.correctAnswer,
@@ -81,9 +120,11 @@ export const saveExtractedIntelligence = mutation({
       subject: data.subject,
       system: data.system,
       ingestionId: ingestionId,
+      textHash: data.textHash,
     });
 
     // 2. Save Pattern
+    const timestamp = Date.now();
     await ctx.db.insert("extracted_patterns", {
       questionId,
       diseaseName: data.diseaseName,
@@ -95,10 +136,11 @@ export const saveExtractedIntelligence = mutation({
       keySymptoms: data.keySymptoms,
       prerequisites: data.prerequisites,
       tableData: data.tableData,
+      createdAt: timestamp,
+      updatedAt: timestamp,
     });
 
     // 3. Aggregate Pattern Frequencies
-    const timestamp = Date.now();
 
     const updateFrequency = async (type: string, name: string) => {
       if (!name) return;
@@ -170,5 +212,31 @@ export const saveExtractedIntelligence = mutation({
     }
 
     return questionId;
+  },
+});
+
+const BATCH_THRESHOLD = 10;
+
+export const triggerBatchIfReady = mutation({
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("ingestions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .order("asc")
+      .collect();
+
+    if (pending.length < BATCH_THRESHOLD) {
+      return { triggered: false, pendingCount: pending.length };
+    }
+
+    const batch = pending.slice(0, BATCH_THRESHOLD);
+    for (const ingestion of batch) {
+      await ctx.scheduler.runAfter(0, api.ai.extractIntelligence, {
+        ingestionId: ingestion._id,
+        rawText: ingestion.rawText,
+      });
+    }
+
+    return { triggered: true, count: batch.length };
   },
 });
