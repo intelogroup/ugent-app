@@ -144,10 +144,6 @@ export default function CreateTest() {
               <h1 className="text-3xl font-bold text-neutral-900 mb-2">Create New Test</h1>
               <p className="text-base text-neutral-600">Customize your quiz with AI-powered recommendations</p>
             </div>
-            <div className="ai-badge">
-              <SparklesIcon className="w-4 h-4" />
-              AI Active
-            </div>
           </div>
 
           {/* Main Content Grid */}
