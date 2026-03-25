@@ -31,7 +31,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="fixed inset-y-0 left-0 w-64 bg-white border-r border-neutral-200 flex flex-col">
+    <div className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-neutral-200 flex-col">
       {/* Logo */}
       <div className="p-5 border-b border-neutral-200">
         <div className="flex items-start gap-3">
