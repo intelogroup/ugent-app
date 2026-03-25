@@ -96,14 +96,19 @@ Step 2 — Verify code:
   → redirect('/dashboard')
 ```
 
-**Session cookie:** After successful auth (sign-in or magic code verify), set the `wos-session` cookie as follows:
-1. First check `node_modules/@workos-inc/authkit-nextjs/src/session.ts` for exported `setSession` / `updateSession` utilities — use those if available.
-2. If no public API exists: seal `{ accessToken, refreshToken, user }` using `@hapi/iron` (the same library `authkit-nextjs` uses internally) with `WORKOS_COOKIE_PASSWORD` as the password, and set a `wos-session` HttpOnly Secure SameSite=Lax cookie via Next.js `cookies()`. Cookie name and seal format must match what `withAuth()` reads exactly.
-3. Verify by calling `withAuth()` in a protected route after login — if it returns the user, the cookie is correct.
+**Session cookie:** `@workos-inc/authkit-nextjs` exports `saveSession()` specifically for custom auth flows:
+```ts
+import { saveSession } from '@workos-inc/authkit-nextjs';
 
-**CSRF protection:** Next.js App Router Server Actions include built-in CSRF protection via `Origin` header validation — the browser cannot forge a cross-origin Server Action call. No additional CSRF token needed. Document this assumption in code comments.
+// authResponse = result of authenticateWithPassword() or authenticateWithMagicAuth()
+await saveSession(authResponse, process.env.NEXT_PUBLIC_APP_URL!);
+redirect('/dashboard');
+```
+`saveSession` accepts an `AuthenticationResponse` directly, encrypts it, and sets the `wos-session` cookie. After `redirect()`, the middleware reads the cookie on the next request, sets the `x-workos-session` header, and `withAuth()` in dashboard works correctly.
 
-**Email in verify URL (magic code):** Sign the email with HMAC-SHA256 using `WORKOS_COOKIE_PASSWORD`, encode as `base64url`. Embed a 10-minute expiry timestamp in the signed payload as `<timestamp>.<email>`. URL format: `/auth/verify?token=<base64url-signed-payload>`. The Server Action decodes, verifies HMAC, checks expiry, and extracts the email.
+**CSRF protection:** Next.js App Router Server Actions include built-in CSRF protection via `Origin` header validation — the browser cannot forge a cross-origin Server Action call. No additional CSRF token needed.
+
+**Email in verify URL (magic code):** Use a dedicated `WORKOS_MAGIC_CODE_HMAC_SECRET` env var (separate from `WORKOS_COOKIE_PASSWORD` to avoid coupling). Sign `<timestamp>.<email>` with HMAC-SHA256, encode as `base64url`. URL format: `/auth/verify?token=<base64url-payload>`. Expiry: 10 minutes. Server Action decodes, verifies HMAC, checks expiry, extracts email.
 
 ---
 
@@ -116,12 +121,18 @@ Step 2 — Verify code:
 | `invalid_credentials` | Sign in | "Invalid email or password" |
 | `invalid_credentials` / `email_not_found` | Sign in | "Invalid email or password" (do NOT distinguish — prevents email enumeration) |
 | `password_too_weak` | Sign up | "Password must be at least 8 characters" |
-| `user_already_exists` | Sign up | "An account with this email already exists" |
-| `email_not_verified` | Sign in | "Please verify your email first — check your inbox" |
-| `invalid_or_expired_code` | Magic code | "Code is incorrect or expired — request a new one" |
+| `user_already_exists` | Sign up | "An account with this email already exists" *(see note below)* |
+| `email_not_verified` | Sign in | "Please verify your email first — check your inbox, or use the link below to sign in another way" |
+| `invalid_or_expired_code` | Magic code verify | "Code is incorrect or expired — request a new one" |
+| WorkOS rate limit | `sendMagicCode` | "Too many attempts — please wait a moment and try again" |
+| `email_not_found` | `sendMagicCode` | "If that email is registered, you'll receive a code shortly" *(no enumeration)* |
 | Any other error | All | "Something went wrong, please try again" |
 
-**Email enumeration:** For the password sign-in flow, `email_not_found` and `invalid_credentials` both return the same generic message to prevent account enumeration attacks.
+**Email enumeration — password sign-in:** `email_not_found` and `invalid_credentials` both return the same message to prevent account enumeration.
+
+**`user_already_exists` on sign-up:** Showing "email already exists" is a minor enumeration vector. Accepted as an intentional UX trade-off — users need to know to sign in instead. The alternative (silent re-send of a verification email) adds significant complexity for minimal security gain in this app's threat model.
+
+**`email_not_verified` on sign-in:** The "sign in another way" link in the error message points to the WorkOS hosted UI fallback — this covers the resend-verification use case without requiring a custom resend flow.
 
 ### Client-Side Validation (before submit)
 
@@ -168,7 +179,8 @@ The root cause: a client-side call to a custom endpoint (or direct WorkOS API) w
 1. **`@workos-inc/node`** minimum version: `^0.30.0` (requires `userManagement.authenticateWithPassword`, `authenticateWithMagicAuth`, `sendMagicAuthCode`, `createUser`). Check installed version before implementing.
 2. **Session cookie writing** — Before implementing Server Actions, read `node_modules/@workos-inc/authkit-nextjs/src/session.ts` to find the exact session-writing API. If no public `setSession`/`updateSession` is exported, manually seal the cookie using `@hapi/iron` (already a transitive dep of `authkit-nextjs`). This is the highest-risk implementation detail — verify it works end-to-end with `withAuth()` before building the rest.
 3. **`WORKOS_CLIENT_ID`** must be present as an env var server-side for `authenticateWithPassword` and `authenticateWithMagicAuth`.
-4. **`WORKOS_COOKIE_PASSWORD`** must be present server-side for session cookie sealing and HMAC signing of email tokens.
-5. Keep the existing WorkOS hosted-UI redirect as a fallback link ("Sign in another way") on the login page for edge cases.
-6. **Rate limiting:** WorkOS applies server-side rate limiting on `sendMagicAuthCode` and `authenticateWithPassword`. No additional middleware rate limiting is required for MVP, but consider adding it before production launch.
-7. **Files to add to Architecture table:** `app/auth/verify-email/page.tsx` — "Check your inbox" static page shown after sign-up email is sent.
+4. **`WORKOS_COOKIE_PASSWORD`** must be present server-side for session cookie sealing (used by `saveSession` internally).
+5. **`WORKOS_MAGIC_CODE_HMAC_SECRET`** — new env var required; add to `.env.local` and Vercel env config before deploying.
+6. **`NEXT_PUBLIC_APP_URL`** — required as the `request` URL argument to `saveSession()`. Set to `https://yourdomain.com` in production, `http://localhost:3000` in dev.
+7. Keep the existing WorkOS hosted-UI redirect as a fallback link ("Sign in another way") on the login page for edge cases and email verification resend.
+8. **Rate limiting:** WorkOS applies server-side rate limiting on `sendMagicAuthCode` and `authenticateWithPassword`. No additional middleware rate limiting required for MVP.
