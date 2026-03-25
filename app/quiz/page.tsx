@@ -249,7 +249,7 @@ function QuizContent() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <XCircleIcon className="w-12 h-12 text-secondary-pink mx-auto mb-4" />
+            <XCircleIcon className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
             <p className="text-neutral-900 font-semibold mb-2">
               Test not found or no test ID provided
             </p>
@@ -346,14 +346,14 @@ function QuizContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircleIcon className="w-5 h-5 text-secondary-green" />
+              <CheckCircleIcon className="w-5 h-5 text-neutral-700" />
               <div>
                 <p className="text-xs text-neutral-500">Correct</p>
                 <p className="text-sm font-semibold text-neutral-900">{testData?.totalCorrect || 0}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <XCircleIcon className="w-5 h-5 text-secondary-pink" />
+              <XCircleIcon className="w-5 h-5 text-neutral-400" />
               <div>
                 <p className="text-xs text-neutral-500">Incorrect</p>
                 <p className="text-sm font-semibold text-neutral-900">{testData?.totalIncorrect || 0}</p>
@@ -379,7 +379,7 @@ function QuizContent() {
               <button
                 onClick={handleToggleFlag}
                 className={`ml-4 p-2 rounded-lg transition-colors ${
-                  isFlagged ? 'bg-secondary-yellow text-neutral-900' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
+                  isFlagged ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
                 }`}
               >
                 <FlagIcon className="w-5 h-5" />
@@ -402,9 +402,9 @@ function QuizContent() {
                       w-full p-4 rounded-lg border-2 text-left transition-all
                       ${quizState.isSubmitted
                         ? showCorrect
-                          ? 'border-secondary-green bg-secondary-green/10'
+                          ? 'border-neutral-900 bg-neutral-50'
                           : showIncorrect
-                          ? 'border-secondary-pink bg-secondary-pink/10'
+                          ? 'border-neutral-300 bg-neutral-50'
                           : 'border-neutral-200 bg-neutral-50'
                         : isSelected
                         ? 'border-primary-500 bg-primary-50'
@@ -417,9 +417,9 @@ function QuizContent() {
                         w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm
                         ${quizState.isSubmitted
                           ? showCorrect
-                            ? 'bg-secondary-green text-white'
+                            ? 'bg-neutral-900 text-white'
                             : showIncorrect
-                            ? 'bg-secondary-pink text-white'
+                            ? 'bg-neutral-300 text-neutral-700'
                             : 'bg-neutral-200 text-neutral-700'
                           : isSelected
                           ? 'bg-primary-500 text-white'
@@ -453,21 +453,21 @@ function QuizContent() {
                 {/* Result Banner */}
                 <div className={`p-4 rounded-lg ${
                   currentAnswer?.isCorrect
-                    ? 'bg-secondary-green/10 border-2 border-secondary-green'
-                    : 'bg-secondary-pink/10 border-2 border-secondary-pink'
+                    ? 'bg-neutral-50 border-2 border-neutral-900'
+                    : 'bg-neutral-50 border-2 border-neutral-300'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     {currentAnswer?.isCorrect ? (
                       <>
-                        <CheckCircleIcon className="w-6 h-6 text-secondary-green" />
-                        <h3 className="font-semibold text-secondary-green">
+                        <CheckCircleIcon className="w-6 h-6 text-neutral-900" />
+                        <h3 className="font-semibold text-neutral-900">
                           Correct!
                         </h3>
                       </>
                     ) : (
                       <>
-                        <XCircleIcon className="w-6 h-6 text-secondary-pink" />
-                        <h3 className="font-semibold text-secondary-pink">Incorrect</h3>
+                        <XCircleIcon className="w-6 h-6 text-neutral-500" />
+                        <h3 className="font-semibold text-neutral-500">Incorrect</h3>
                       </>
                     )}
                   </div>
@@ -477,7 +477,7 @@ function QuizContent() {
 
                   {/* AI Insight - only in PRACTICE mode */}
                   {testData?.questionMode === 'PRACTICE' && (
-                    <div className="bg-gradient-to-r from-primary-500/10 to-secondary-purple/10 border border-primary-500/20 rounded-lg p-3 mt-3">
+                    <div className="bg-primary-50 border border-primary-600/20 rounded-lg p-3 mt-3">
                       <div className="flex items-start gap-2">
                         <LightBulbIcon className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
                         <div>
