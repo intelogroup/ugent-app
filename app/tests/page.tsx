@@ -86,11 +86,11 @@ export default function Tests() {
           </div>
           <div className="card">
             <p className="text-sm text-neutral-600 mb-1">Completed</p>
-            <p className="text-3xl font-bold text-secondary-green">91</p>
+            <p className="text-3xl font-bold text-neutral-900">91</p>
           </div>
           <div className="card">
             <p className="text-sm text-neutral-600 mb-1">In Progress</p>
-            <p className="text-3xl font-bold text-secondary-blue">1</p>
+            <p className="text-3xl font-bold text-primary-600">1</p>
           </div>
           <div className="card">
             <p className="text-sm text-neutral-600 mb-1">Avg Score</p>
@@ -112,12 +112,12 @@ export default function Tests() {
                     <div className="flex items-center gap-3 mb-2">
                       <h4 className="font-semibold text-neutral-900">{test.name}</h4>
                       {test.status === 'completed' ? (
-                        <span className="bg-secondary-green/10 text-secondary-green px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <span className="bg-neutral-100 text-neutral-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                           <CheckCircleIcon className="w-3 h-3" />
                           Completed
                         </span>
                       ) : (
-                        <span className="bg-secondary-blue/10 text-secondary-blue px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <span className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                           <PlayIcon className="w-3 h-3" />
                           In Progress
                         </span>
@@ -158,7 +158,7 @@ export default function Tests() {
                         </div>
                         <div className="relative w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
                           <div
-                            className="absolute top-0 left-0 h-full bg-secondary-blue transition-all"
+                            className="absolute top-0 left-0 h-full bg-primary-600 transition-all"
                             style={{ width: `${(test.progress / test.questions) * 100}%` }}
                           />
                         </div>
@@ -171,9 +171,9 @@ export default function Tests() {
                       <div className="text-right">
                         <p className="text-sm text-neutral-600 mb-1">Score</p>
                         <p className={`text-3xl font-bold ${
-                          test.score >= 80 ? 'text-secondary-green' :
-                          test.score >= 60 ? 'text-secondary-yellow' :
-                          'text-secondary-pink'
+                          test.score >= 80 ? 'text-neutral-900' :
+                          test.score >= 60 ? 'text-neutral-700' :
+                          'text-neutral-500'
                         }`}>
                           {test.score}%
                         </p>
