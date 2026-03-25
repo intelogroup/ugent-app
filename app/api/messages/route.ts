@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        messages: messages.map((msg) => {
+        messages: messages.map((msg: any) => {
           return {
             id: msg._id,
             senderId: msg.role === 'user' ? userId : 'assistant',

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Format conversations to match frontend expectation
-    const conversations = threads.map((thread) => {
+    const conversations = threads.map((thread: any) => {
       return {
         conversationId: thread._id,
         threadId: thread._id,

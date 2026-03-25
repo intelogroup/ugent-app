@@ -1,5 +1,5 @@
-"use node";
 // @ts-nocheck
+"use node";
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
@@ -37,10 +37,12 @@ Return the data according to the provided JSON schema.
 export const extractIntelligence = action({
   args: {
     ingestionId: v.id("ingestions"),
-    rawText: v.string(),
   },
   handler: async (ctx, args) => {
-    const { ingestionId, rawText } = args;
+    const { ingestionId } = args;
+    const doc = await ctx.runQuery(internal.ingest.getIngestionInternal, { ingestionId });
+    if (!doc) throw new Error(`Ingestion ${ingestionId} not found`);
+    const rawText = doc.rawText;
 
     // 1. Split text by delimiter
     const questionBlobs = rawText
