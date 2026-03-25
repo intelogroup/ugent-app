@@ -51,7 +51,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Cog6ToothIcon className="w-8 h-8 text-primary-600" />
+            <Cog6ToothIcon className="w-8 h-8 text-neutral-400" />
             <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
           </div>
           <p className="text-neutral-600">Manage your account preferences and settings</p>
