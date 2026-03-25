@@ -18,18 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 import UgentLogo from './UgentLogo';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Research', href: '/research/ingest', icon: BeakerIcon },
-  { name: 'Create Test', href: '/create-test', icon: PlusCircleIcon },
-  { name: 'My Tests', href: '/tests', icon: ClipboardDocumentListIcon },
-  { name: 'AI Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
-  { name: 'Study Notes', href: '/notes', icon: BookOpenIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
-  { name: 'Pricing', href: '/pricing', icon: CreditCardIcon },
-];
+import { navigation } from '@/lib/navigation';
 
 export default function Sidebar() {
   const pathname = usePathname();
