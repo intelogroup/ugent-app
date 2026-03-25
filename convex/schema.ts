@@ -64,14 +64,13 @@ export default defineSchema({
 
   ingestions: defineTable({
     rawText: v.string(),
-    textHash: v.optional(v.string()),
     status: v.union(v.literal("pending"), v.literal("processing"), v.literal("completed"), v.literal("skipped"), v.literal("failed")),
     processedCount: v.number(),
     skippedCount: v.optional(v.number()),
     totalCount: v.number(),
     error: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_status", ["status"]).index("by_textHash", ["textHash"]),
+  }).index("by_status", ["status"]),
 
   systems: defineTable({
     name: v.string(),

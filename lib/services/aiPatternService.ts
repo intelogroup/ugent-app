@@ -40,7 +40,7 @@ export class AIPatternService {
         throw new Error(`Question with ID ${questionId} not found`);
       }
 
-      const correctAnswer = question.options.find((opt: any) => opt.isCorrect)?.text || 'Unknown';
+      const correctAnswer = question.options.find((opt) => opt.isCorrect)?.text || 'Unknown';
 
       // 2. Call LLM to extract patterns
       const prompt = `

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NextRequest } from 'next/server';
 
 // WorkOS Magic Link (passwordless) flow:
 // 1. User enters email → WorkOS sends magic link
@@ -80,7 +79,7 @@ describe('Magic Link Auth Flow', () => {
 
   it('callback route redirects to /dashboard with valid code', async () => {
     const GET = handleAuth({ returnPathname: '/dashboard' });
-    const req = new NextRequest('http://localhost:3000/callback?code=valid_code_abc');
+    const req = new Request('http://localhost:3000/callback?code=valid_code_abc');
     const res = await GET(req);
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/dashboard');
@@ -88,7 +87,7 @@ describe('Magic Link Auth Flow', () => {
 
   it('callback route returns 400 when code is missing', async () => {
     const GET = handleAuth({ returnPathname: '/dashboard' });
-    const req = new NextRequest('http://localhost:3000/callback');
+    const req = new Request('http://localhost:3000/callback');
     const res = await GET(req);
     expect(res.status).toBe(400);
   });

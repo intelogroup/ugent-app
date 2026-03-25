@@ -59,14 +59,14 @@ export default function CreateTest() {
   };
 
   const availableQuestionsSubjects = subjects
-    ?.filter((s: any) => selectedSubjects.includes(s._id))
-    .reduce((sum: any, s: any) => sum + s.questionCount, 0) || 0;
+    ?.filter(s => selectedSubjects.includes(s._id))
+    .reduce((sum, s) => sum + s.questionCount, 0) || 0;
 
   const availableQuestionsTopics = selectedTopics.length > 0
     ? systems
-        ?.flatMap((sys: any) => sys.topics)
-        .filter((topic: any) => selectedTopics.includes(topic._id))
-        .reduce((sum: any, topic: any) => sum + topic.questionCount, 0) || 0
+        ?.flatMap(sys => sys.topics)
+        .filter(topic => selectedTopics.includes(topic._id))
+        .reduce((sum, topic) => sum + topic.questionCount, 0) || 0
     : 0;
 
   const availableQuestions = availableQuestionsSubjects + availableQuestionsTopics;
@@ -188,7 +188,7 @@ export default function CreateTest() {
                       No subjects available in the database
                     </div>
                   ) : (
-                    subjects.map((subject: any) => {
+                    subjects.map((subject) => {
                       const isSelected = selectedSubjects.includes(subject._id);
                       const hasQuestions = subject.questionCount > 0;
 
@@ -262,9 +262,9 @@ export default function CreateTest() {
                       No systems available in the database
                     </div>
                   ) : (
-                    systems.map((system: any) => {
+                    systems.map((system) => {
                       const isExpanded = expandedSystems.includes(system._id);
-                      const systemTopicCount = system.topics.filter((t: any) => selectedTopics.includes(t._id)).length;
+                      const systemTopicCount = system.topics.filter(t => selectedTopics.includes(t._id)).length;
                       const systemHasQuestions = system.questionCount > 0;
 
                       return (
@@ -299,7 +299,7 @@ export default function CreateTest() {
                           {/* Topics Sub-list */}
                           {isExpanded && (
                             <div className="mt-2 ml-4 pl-4 border-l-2 border-primary-200 space-y-2">
-                              {system.topics.map((topic: any) => {
+                              {system.topics.map((topic) => {
                                 const isSelected = selectedTopics.includes(topic._id);
                                 const hasQuestions = topic.questionCount > 0;
 

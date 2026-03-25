@@ -22,16 +22,16 @@ export default function PatternRadar() {
     limit: 6,
   });
 
-  const data = topDiseases?.map((d: any, i: any) => ({
+  const data = topDiseases?.map((d, i) => ({
     subject: d.name,
     count: d.count,
-    fullMark: Math.max(...(topDiseases.map((x: any) => x.count) || [100])),
+    fullMark: Math.max(...(topDiseases.map(x => x.count) || [100])),
   })) || [];
 
-  const clueData = topClues?.map((c: any, i: any) => ({
+  const clueData = topClues?.map((c, i) => ({
     subject: c.name,
     count: c.count,
-    fullMark: Math.max(...(topClues.map((x: any) => x.count) || [100])),
+    fullMark: Math.max(...(topClues.map(x => x.count) || [100])),
   })) || [];
 
   return (
