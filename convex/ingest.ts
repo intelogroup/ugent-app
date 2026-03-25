@@ -23,10 +23,24 @@ export const startIngestion = mutation({
   args: {
     rawText: v.string(),
     totalCount: v.number(),
+    textHash: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Block duplicates already in the pending/processing queue
+    if (args.textHash) {
+      const inQueue = await ctx.db
+        .query("ingestions")
+        .withIndex("by_textHash", (q) => q.eq("textHash", args.textHash!))
+        .filter((q) =>
+          q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "processing"))
+        )
+        .first();
+      if (inQueue) return null;
+    }
+
     return await ctx.db.insert("ingestions", {
       rawText: args.rawText,
+      textHash: args.textHash,
       status: "pending",
       processedCount: 0,
       totalCount: args.totalCount,
@@ -233,10 +247,31 @@ export const triggerBatchIfReady = mutation({
     for (const ingestion of batch) {
       await ctx.scheduler.runAfter(0, api.ai.extractIntelligence, {
         ingestionId: ingestion._id,
-        rawText: ingestion.rawText,
       });
     }
 
     return { triggered: true, count: batch.length };
+  },
+});
+
+export const purgeDuplicatePending = mutation({
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("ingestions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+
+    const seen = new Map<string, string>();
+    let purged = 0;
+    for (const ing of pending) {
+      const key = ing.textHash ?? ing.rawText;
+      if (seen.has(key)) {
+        await ctx.db.delete(ing._id);
+        purged++;
+      } else {
+        seen.set(key, ing._id);
+      }
+    }
+    return { purged };
   },
 });
