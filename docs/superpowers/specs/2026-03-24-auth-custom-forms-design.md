@@ -60,9 +60,8 @@ The current login and signup pages each render a single button that redirects to
 ```
 User submits form
   → signIn(email, password) [Server Action]
-  → workos.userManagement.authenticateWithPassword({ email, password, clientId })
-  → WorkOS returns { user, accessToken, refreshToken }
-  → Set session cookie via authkit-nextjs session utilities
+  → workos.userManagement.authenticateWithPassword({ email, password, clientId: process.env.WORKOS_CLIENT_ID })
+  → saveSession(authResponse, process.env.APP_URL!)
   → redirect('/dashboard')
 ```
 
@@ -71,15 +70,15 @@ User submits form
 ```
 User submits form
   → signUp(email, password) [Server Action]
-  → workos.userManagement.createUser({ email, password, emailVerified: false })
-  → WorkOS sends verification email automatically
+  → workos.userManagement.createUser({ email, password })
+  → workos.userManagement.sendVerificationEmail({ userId: user.id })  [explicit — don't rely on auto-send]
   → redirect('/auth/verify-email?pending=true')  [inform user to check inbox]
 
   [User clicks WorkOS verification link in email]
   → WorkOS redirects to /callback → handleAuth() sets session → redirect('/dashboard')
 ```
 
-**Note:** WorkOS requires email verification for new password accounts by default. Rather than bypassing this (which would require `emailVerified: true` and is a security risk), the sign-up flow hands off to WorkOS's email verification. The verify page shows a "Check your inbox" message.
+**Note:** WorkOS requires email verification for new password accounts. We call `sendVerificationEmail()` explicitly after `createUser()` rather than relying on any auto-send behavior (which is environment-dependent and not guaranteed). The verify page shows "Check your inbox — click the link in the email to complete sign-up."
 
 ### Magic Code (Passwordless)
 
@@ -91,20 +90,22 @@ Step 1 — Request code:
 
 Step 2 — Verify code:
   User enters 6-digit code → verifyMagicCode(email, code) [Server Action]
-  → workos.userManagement.authenticateWithMagicAuth({ email, code, clientId })
-  → Set session cookie
+  → workos.userManagement.authenticateWithMagicAuth({ email, code, clientId: process.env.WORKOS_CLIENT_ID })
+  → saveSession(authResponse, process.env.APP_URL!)
   → redirect('/dashboard')
 ```
 
-**Session cookie:** `@workos-inc/authkit-nextjs` exports `saveSession()` specifically for custom auth flows:
+**Magic code creates users:** WorkOS's `authenticateWithMagicAuth` creates a new user record if none exists for that email. This is intentional — magic code serves as both sign-in and sign-up. A user who has never registered can enter their email on the magic code tab and get access. This is acceptable behavior for this app; no additional onboarding step is required.
+
+**Session cookie:** `@workos-inc/authkit-nextjs` exports `saveSession()` specifically for custom auth flows (confirmed by reading `node_modules/@workos-inc/authkit-nextjs/src/session.ts` — it is a public named export):
 ```ts
 import { saveSession } from '@workos-inc/authkit-nextjs';
 
-// authResponse = result of authenticateWithPassword() or authenticateWithMagicAuth()
-await saveSession(authResponse, process.env.NEXT_PUBLIC_APP_URL!);
+// authResponse = AuthenticationResponse from authenticateWithPassword() or authenticateWithMagicAuth()
+await saveSession(authResponse, process.env.APP_URL!); // APP_URL = server-only env var
 redirect('/dashboard');
 ```
-`saveSession` accepts an `AuthenticationResponse` directly, encrypts it, and sets the `wos-session` cookie. After `redirect()`, the middleware reads the cookie on the next request, sets the `x-workos-session` header, and `withAuth()` in dashboard works correctly.
+`saveSession` accepts an `AuthenticationResponse` directly, encrypts it with `iron-session`, and sets the `wos-session` cookie. After `redirect()`, the middleware reads the cookie, sets the `x-workos-session` header, and `withAuth()` in the dashboard works correctly. No fallback implementation needed.
 
 **CSRF protection:** Next.js App Router Server Actions include built-in CSRF protection via `Origin` header validation — the browser cannot forge a cross-origin Server Action call. No additional CSRF token needed.
 
@@ -176,11 +177,12 @@ The root cause: a client-side call to a custom endpoint (or direct WorkOS API) w
 
 ## Implementation Notes
 
-1. **`@workos-inc/node`** minimum version: `^0.30.0` (requires `userManagement.authenticateWithPassword`, `authenticateWithMagicAuth`, `sendMagicAuthCode`, `createUser`). Check installed version before implementing.
-2. **Session cookie writing** — Before implementing Server Actions, read `node_modules/@workos-inc/authkit-nextjs/src/session.ts` to find the exact session-writing API. If no public `setSession`/`updateSession` is exported, manually seal the cookie using `@hapi/iron` (already a transitive dep of `authkit-nextjs`). This is the highest-risk implementation detail — verify it works end-to-end with `withAuth()` before building the rest.
-3. **`WORKOS_CLIENT_ID`** must be present as an env var server-side for `authenticateWithPassword` and `authenticateWithMagicAuth`.
-4. **`WORKOS_COOKIE_PASSWORD`** must be present server-side for session cookie sealing (used by `saveSession` internally).
-5. **`WORKOS_MAGIC_CODE_HMAC_SECRET`** — new env var required; add to `.env.local` and Vercel env config before deploying.
-6. **`NEXT_PUBLIC_APP_URL`** — required as the `request` URL argument to `saveSession()`. Set to `https://yourdomain.com` in production, `http://localhost:3000` in dev.
-7. Keep the existing WorkOS hosted-UI redirect as a fallback link ("Sign in another way") on the login page for edge cases and email verification resend.
-8. **Rate limiting:** WorkOS applies server-side rate limiting on `sendMagicAuthCode` and `authenticateWithPassword`. No additional middleware rate limiting required for MVP.
+1. **`@workos-inc/node`** minimum version: `^0.30.0` (requires `userManagement.authenticateWithPassword`, `authenticateWithMagicAuth`, `sendMagicAuthCode`, `createUser`, `sendVerificationEmail`). Check installed version before implementing.
+2. **Session cookie:** Use `saveSession` from `@workos-inc/authkit-nextjs` — confirmed public named export. No fallback needed.
+3. **Required env vars (server-side):**
+   - `WORKOS_CLIENT_ID` — for `authenticateWithPassword` and `authenticateWithMagicAuth` calls
+   - `WORKOS_COOKIE_PASSWORD` — used by `saveSession` internally for `iron-session` encryption
+   - `WORKOS_MAGIC_CODE_HMAC_SECRET` — new; for signing the email token in the verify URL
+   - `APP_URL` — server-only (no `NEXT_PUBLIC_` prefix); passed to `saveSession()` as the URL argument. Set to app origin in all environments.
+4. Keep the existing WorkOS hosted-UI redirect as a fallback link ("Sign in another way") on the login page for edge cases and email verification resend.
+5. **Rate limiting:** WorkOS applies server-side rate limiting on `sendMagicAuthCode` and `authenticateWithPassword`. No additional middleware rate limiting required for MVP.
