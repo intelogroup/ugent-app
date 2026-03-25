@@ -57,7 +57,7 @@ export default function Analytics() {
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">AI Study Analytics</h1>
             <p className="text-neutral-600">Comprehensive insights into your learning progress</p>
           </div>
-          <div className="ai-badge">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 text-primary-600 text-xs font-semibold rounded-full border border-primary-100">
             <SparklesIcon className="w-4 h-4" />
             AI Analysis
           </div>
@@ -80,7 +80,7 @@ export default function Analytics() {
 
           <div className="stat-card">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-secondary-green rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-neutral-700 rounded-lg flex items-center justify-center">
                 <ArrowTrendingUpIcon className="w-5 h-5 text-white" />
               </div>
               <h3 className="font-semibold text-neutral-900">Growth Rate</h3>
@@ -93,7 +93,7 @@ export default function Analytics() {
 
           <div className="stat-card">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-secondary-blue rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
                 <TrophyIcon className="w-5 h-5 text-white" />
               </div>
               <h3 className="font-semibold text-neutral-900">Estimated Readiness</h3>
@@ -214,18 +214,18 @@ export default function Analytics() {
                     <tr key={index} className="border-b border-neutral-100 hover:bg-neutral-50">
                       <td className="py-4 px-4 font-medium text-neutral-900">{topic.topic}</td>
                       <td className="py-4 px-4">
-                        <span className="bg-secondary-green/10 text-secondary-green px-3 py-1 rounded-full text-sm font-semibold">
+                        <span className="bg-neutral-100 text-neutral-700 px-3 py-1 rounded-full text-sm font-semibold">
                           {topic.correct}
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="bg-secondary-pink/10 text-secondary-pink px-3 py-1 rounded-full text-sm font-semibold">
+                        <span className="bg-neutral-50 text-neutral-500 px-3 py-1 rounded-full text-sm font-semibold">
                           {topic.incorrect}
                         </span>
                       </td>
                       <td className="py-4 px-4 font-semibold text-neutral-900">{accuracy}%</td>
                       <td className="py-4 px-4">
-                        <div className={`flex items-center gap-1 ${isImproving ? 'text-secondary-green' : 'text-secondary-pink'}`}>
+                        <div className={`flex items-center gap-1 ${isImproving ? 'text-neutral-700' : 'text-neutral-500'}`}>
                           {isImproving ? (
                             <ArrowTrendingUpIcon className="w-4 h-4" />
                           ) : (
@@ -282,7 +282,7 @@ export default function Analytics() {
 
         {/* Study Recommendations */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card bg-secondary-yellow/20 border-2 border-secondary-yellow">
+          <div className="card bg-neutral-50 border-2 border-neutral-200">
             <FireIcon className="w-8 h-8 text-neutral-900 mb-3" />
             <h3 className="font-semibold text-neutral-900 mb-2">Maintain Streak</h3>
             <p className="text-sm text-neutral-700">
@@ -290,16 +290,16 @@ export default function Analytics() {
             </p>
           </div>
 
-          <div className="card bg-secondary-blue/20 border-2 border-secondary-blue">
-            <ClockIcon className="w-8 h-8 text-secondary-blue mb-3" />
+          <div className="card bg-primary-50 border-2 border-primary-100">
+            <ClockIcon className="w-8 h-8 text-primary-600 mb-3" />
             <h3 className="font-semibold text-neutral-900 mb-2">Optimal Time</h3>
             <p className="text-sm text-neutral-700">
               Your peak performance is between 9 AM - 11 AM. Schedule difficult topics then.
             </p>
           </div>
 
-          <div className="card bg-secondary-green/20 border-2 border-secondary-green">
-            <ChartBarIcon className="w-8 h-8 text-secondary-green mb-3" />
+          <div className="card bg-neutral-100 border-2 border-neutral-200">
+            <ChartBarIcon className="w-8 h-8 text-neutral-700 mb-3" />
             <h3 className="font-semibold text-neutral-900 mb-2">Next Milestone</h3>
             <p className="text-sm text-neutral-700">
               Complete 50 more questions to reach 80% overall mastery. You're almost there!

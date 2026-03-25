@@ -155,16 +155,16 @@ export default function ResearchIngestPage() {
                         item.isDuplicate === null
                           ? "bg-slate-50 border-slate-100 text-slate-400"
                           : item.isDuplicate
-                          ? "bg-amber-50 border-amber-100 text-amber-700"
-                          : "bg-emerald-50 border-emerald-100 text-emerald-700"
+                          ? "bg-neutral-100 border-neutral-200 text-neutral-600"
+                          : "bg-primary-50 border-primary-100 text-primary-700"
                       }`}
                     >
                       <span className={`shrink-0 font-bold uppercase tracking-widest text-[10px] px-1.5 py-0.5 rounded ${
                         item.isDuplicate === null
                           ? "bg-slate-200 text-slate-500"
                           : item.isDuplicate
-                          ? "bg-amber-200 text-amber-800"
-                          : "bg-emerald-200 text-emerald-800"
+                          ? "bg-neutral-200 text-neutral-700"
+                          : "bg-primary-100 text-primary-800"
                       }`}>
                         {item.isDuplicate === null ? "…" : item.isDuplicate ? "DUPLICATE" : "NEW"}
                       </span>
@@ -181,7 +181,7 @@ export default function ResearchIngestPage() {
               )}
 
               {lastResult && (
-                <div className="p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm rounded-lg flex gap-4">
+                <div className="p-3 bg-primary-50 border border-primary-100 text-primary-700 text-sm rounded-lg flex gap-4">
                   <span>✓ <strong>{lastResult.queued}</strong> queued</span>
                   {lastResult.skipped > 0 && (
                     <span className="text-slate-500">{lastResult.skipped} duplicate{lastResult.skipped > 1 ? "s" : ""} blocked</span>

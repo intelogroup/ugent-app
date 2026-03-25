@@ -121,8 +121,8 @@ export default function LandingPage() {
 
             {/* Feature 2 */}
             <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-secondary-blue/20 rounded-xl flex items-center justify-center mb-6">
-                <ChartBarIcon className="w-7 h-7 text-secondary-blue" />
+              <div className="w-14 h-14 bg-primary-50 rounded-xl flex items-center justify-center mb-6">
+                <ChartBarIcon className="w-7 h-7 text-primary-600" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900 mb-3">Advanced Analytics</h3>
               <p className="text-neutral-600">
@@ -132,7 +132,7 @@ export default function LandingPage() {
 
             {/* Feature 3 */}
             <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-secondary-yellow/30 rounded-xl flex items-center justify-center mb-6">
+              <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-6">
                 <BoltIcon className="w-7 h-7 text-neutral-900" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900 mb-3">Adaptive Testing</h3>
@@ -143,8 +143,8 @@ export default function LandingPage() {
 
             {/* Feature 4 */}
             <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-secondary-green/20 rounded-xl flex items-center justify-center mb-6">
-                <LightBulbIcon className="w-7 h-7 text-secondary-green" />
+              <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-6">
+                <LightBulbIcon className="w-7 h-7 text-neutral-700" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900 mb-3">Smart Study Plans</h3>
               <p className="text-neutral-600">
@@ -154,8 +154,8 @@ export default function LandingPage() {
 
             {/* Feature 5 */}
             <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-secondary-pink/20 rounded-xl flex items-center justify-center mb-6">
-                <CheckCircleIcon className="w-7 h-7 text-secondary-pink" />
+              <div className="w-14 h-14 bg-neutral-50 rounded-xl flex items-center justify-center mb-6">
+                <CheckCircleIcon className="w-7 h-7 text-neutral-500" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900 mb-3">Progress Tracking</h3>
               <p className="text-neutral-600">

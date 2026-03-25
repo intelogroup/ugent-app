@@ -304,7 +304,7 @@ function QuizContent() {
             </div>
             <div className="flex items-center gap-2">
               {testData?.questionMode === 'PRACTICE' && (
-                <div className="ai-badge">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 text-primary-600 text-xs font-semibold rounded-full border border-primary-100">
                   <SparklesIcon className="w-4 h-4" />
                   AI Active
                 </div>

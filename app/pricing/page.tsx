@@ -78,25 +78,25 @@ export default function PricingPage() {
       icon: BoltIcon,
       title: 'Unlimited Practice Tests',
       description: 'Access unlimited practice tests and quizzes across all subjects',
-      color: 'bg-secondary-yellow',
+      color: 'bg-neutral-100',
     },
     {
       icon: ChartBarIcon,
       title: 'Advanced Analytics',
       description: 'Track your progress with detailed performance analytics',
-      color: 'bg-secondary-blue',
+      color: 'bg-primary-50',
     },
     {
       icon: LightBulbIcon,
       title: 'Smart Study Plans',
       description: 'AI-generated study plans tailored to your learning style',
-      color: 'bg-secondary-green',
+      color: 'bg-neutral-100',
     },
     {
       icon: TrophyIcon,
       title: 'Priority Support',
       description: 'Get help when you need it with priority email support',
-      color: 'bg-secondary-pink',
+      color: 'bg-neutral-50',
     },
   ];
 
@@ -138,7 +138,7 @@ export default function PricingPage() {
             >
               Annual
               {plans.annual.savings && (
-                <span className="absolute -top-2 -right-2 bg-secondary-green text-white text-xs px-2 py-1 rounded-full">
+                <span className="absolute -top-2 -right-2 bg-neutral-800 text-white text-xs px-2 py-1 rounded-full">
                   Save ${(plans.monthly.price * 12 - plans.annual.price)}
                 </span>
               )}
