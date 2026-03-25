@@ -112,7 +112,7 @@ export default function LeaderboardPage() {
               onClick={() => setTimeframe('week')}
               className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap ${
                 timeframe === 'week'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-neutral-900 text-white'
                   : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -122,7 +122,7 @@ export default function LeaderboardPage() {
               onClick={() => setTimeframe('month')}
               className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap ${
                 timeframe === 'month'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-neutral-900 text-white'
                   : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -132,7 +132,7 @@ export default function LeaderboardPage() {
               onClick={() => setTimeframe('all')}
               className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap ${
                 timeframe === 'all'
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-neutral-900 text-white'
                   : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
               }`}
             >
@@ -225,7 +225,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div className="flex justify-center gap-3 sm:gap-4 text-xs text-neutral-600">
                   <div className="flex items-center gap-1">
-                    <FireIcon className="w-3.5 h-3.5 text-secondary-yellow" />
+                    <FireIcon className="w-3.5 h-3.5 text-neutral-500" />
                     <span className="font-medium">{topPerformers[0].streak}d</span>
                   </div>
                   <div className="flex items-center gap-1">
