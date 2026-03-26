@@ -247,6 +247,7 @@ export const triggerBatchIfReady = mutation({
     for (const ingestion of batch) {
       await ctx.scheduler.runAfter(0, api.ai.extractIntelligence, {
         ingestionId: ingestion._id,
+        rawText: ingestion.rawText,
       });
     }
 
