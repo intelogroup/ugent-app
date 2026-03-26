@@ -255,6 +255,25 @@ export const triggerBatchIfReady = mutation({
   },
 });
 
+export const forceProcessPending = mutation({
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("ingestions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .order("asc")
+      .collect();
+
+    for (const ingestion of pending) {
+      await ctx.scheduler.runAfter(0, api.ai.extractIntelligence, {
+        ingestionId: ingestion._id,
+        rawText: ingestion.rawText,
+      });
+    }
+
+    return { triggered: true, count: pending.length };
+  },
+});
+
 export const purgeDuplicatePending = mutation({
   handler: async (ctx) => {
     const pending = await ctx.db
