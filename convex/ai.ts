@@ -60,6 +60,7 @@ export const extractIntelligence = action({
     // 3. Process based on count
     let skippedCount = 0;
     let processedCount = 0;
+    let failedCount = 0;
 
     if (totalCount <= 5) {
       for (const blob of questionBlobs) {
@@ -68,6 +69,7 @@ export const extractIntelligence = action({
           if (result?.skipped) skippedCount++; else processedCount++;
         } catch (error) {
           console.error(`Failed to process question: ${error}`);
+          failedCount++;
         }
       }
     } else {
@@ -77,8 +79,15 @@ export const extractIntelligence = action({
     }
 
     // For small batches (sequential), set final status based on outcome
+    // "skipped"   = all questions were duplicates (no new content, no errors)
+    // "failed"    = at least one new question errored (new questions lost)
+    // "completed" = at least one new question saved successfully
     if (totalCount <= 5) {
-      const finalStatus = processedCount === 0 ? "skipped" : "completed";
+      const finalStatus = failedCount > 0 && processedCount === 0
+        ? "failed"
+        : processedCount === 0
+        ? "skipped"
+        : "completed";
       await ctx.runMutation(api.ingest.updateIngestionStatus, {
         ingestionId,
         status: finalStatus,
@@ -86,7 +95,7 @@ export const extractIntelligence = action({
       });
     }
 
-    return { totalCount, skippedCount, processedCount };
+    return { totalCount, skippedCount, processedCount, failedCount };
   },
 });
 
