@@ -1,7 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,22 +8,35 @@
 !.yarn/releases
 !.yarn/versions
 
+# next.js
+/.next/
+/out/
+/build
+
 # testing
 /coverage
+.playwright-mcp/
+playwright-report/
+test-results/
 
 # Large datasets
+*.pdf
 scraped_first_aid_final/
 scraped_pathoma/
 
-# Local logs and configs
-.playwright-mcp/
+# misc
+.DS_Store
+*.pem
+.vercel/
 .superpowers/
 .claude/
-.vercel/
-.next/
+.worktrees/
 *.log
-*.pdf
 temp_scripts/
 scripts/temp/
 scripts/output/
-node_modules/
+tsconfig.tsbuildinfo
+
+# env files
+.env*
+!.env.example
