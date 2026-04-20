@@ -19,6 +19,7 @@ import type * as notifications from "../notifications.js";
 import type * as patterns from "../patterns.js";
 import type * as questions from "../questions.js";
 import type * as research from "../research.js";
+import type * as strategy from "../strategy.js";
 import type * as tests from "../tests.js";
 import type * as threads from "../threads.js";
 import type * as users from "../users.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   patterns: typeof patterns;
   questions: typeof questions;
   research: typeof research;
+  strategy: typeof strategy;
   tests: typeof tests;
   threads: typeof threads;
   users: typeof users;
