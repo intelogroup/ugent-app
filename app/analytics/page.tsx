@@ -74,7 +74,7 @@ export default function Analytics() {
             </div>
             <p className="text-3xl font-bold text-neutral-900 mb-2">87/100</p>
             <p className="text-sm text-neutral-600">
-              You're performing <strong>better than 78%</strong> of students at your level
+              You&apos;re performing <strong>better than 78%</strong> of students at your level
             </p>
           </div>
 
@@ -286,7 +286,7 @@ export default function Analytics() {
             <FireIcon className="w-8 h-8 text-neutral-900 mb-3" />
             <h3 className="font-semibold text-neutral-900 mb-2">Maintain Streak</h3>
             <p className="text-sm text-neutral-700">
-              You're on a 12-day streak! Study today to keep your momentum going.
+              You&apos;re on a 12-day streak! Study today to keep your momentum going.
             </p>
           </div>
 
@@ -302,7 +302,7 @@ export default function Analytics() {
             <ChartBarIcon className="w-8 h-8 text-neutral-700 mb-3" />
             <h3 className="font-semibold text-neutral-900 mb-2">Next Milestone</h3>
             <p className="text-sm text-neutral-700">
-              Complete 50 more questions to reach 80% overall mastery. You're almost there!
+              Complete 50 more questions to reach 80% overall mastery. You&apos;re almost there!
             </p>
           </div>
         </div>

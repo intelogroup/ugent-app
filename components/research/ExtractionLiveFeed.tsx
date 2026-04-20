@@ -69,7 +69,7 @@ export default function ExtractionLiveFeed() {
             {item.questionText && (
                 <details className="mt-4">
                     <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600">View Source Question</summary>
-                    <p className="mt-2 text-[10px] text-slate-500 line-clamp-3 italic">"{item.questionText}"</p>
+                    <p className="mt-2 text-[10px] text-slate-500 line-clamp-3 italic">&quot;{item.questionText}&quot;</p>
                 </details>
             )}
           </div>

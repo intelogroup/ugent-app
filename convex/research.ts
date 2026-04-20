@@ -31,12 +31,11 @@ export const getTopPatternsByCount = query({
   handler: async (ctx, args) => {
     const patterns = await ctx.db
       .query("pattern_frequencies")
-      .withIndex("by_count")
-      .order("desc")
-      .take(100); // Take more to filter
-    
+      .withIndex("by_type_name", (q) => q.eq("type", args.type))
+      .collect();
+
     return patterns
-      .filter((p) => p.type === args.type)
+      .sort((a, b) => b.count - a.count)
       .slice(0, args.limit || 10);
   },
 });

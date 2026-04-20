@@ -25,6 +25,15 @@ Pass 1: Clinical Fact Extraction (The "Stem" Pass)
 Pass 2: Discriminator Analysis (The "Distractor" Pass)
 - For each distractor choice, extract the Primary Discriminator from the explanation.
 - Identify the specific clinical fact or logic that rules out the distractor.
+- Identify the PRIMARY FOCAL CONCEPT being tested. This is the central topic of the question.
+  It is NOT limited to diseases. It can be any of:
+  - A disease or diagnosis → topicType: "DISEASE" (e.g., "Tuberculosis", "Myocardial Infarction")
+  - A pathogen or organism → topicType: "PATHOGEN" (e.g., "Staphylococcus aureus", "C. difficile")
+  - A physiological principle → topicType: "PRINCIPLE" (e.g., "Pulmonary gas exchange", "Starling forces")
+  - A drug or drug class → topicType: "DRUG" (e.g., "Beta blockers", "ACE inhibitors")
+  - A clinical syndrome → topicType: "SYNDROME" (e.g., "Cushing syndrome", "SIADH")
+  - A concept (biostats, ethics, epidemiology) → topicType: "CONCEPT" (e.g., "Type II error", "Sensitivity")
+  NEVER return an empty diseaseName. If no specific disease, use the primary concept being tested.
 
 Pass 3: Systematic Synthesis (The "Knowledge" Pass)
 - Mechanism: Core pathophysiology (The "Why").
@@ -149,6 +158,7 @@ export const extractSingleQuestion = internalAction({
         subject: { type: "string" },
         system: { type: "string" },
         diseaseName: { type: "string" },
+        topicType: { type: "string", enum: ["DISEASE", "PATHOGEN", "PRINCIPLE", "DRUG", "SYNDROME", "CONCEPT"] },
         mechanism: { type: "string" },
         highLeverageClues: { type: "array", items: { type: "string" } },
         discriminators: {
@@ -175,7 +185,7 @@ export const extractSingleQuestion = internalAction({
       },
       required: [
         "questionText", "correctAnswer", "options", "explanation",
-        "educationalObjective", "subject", "system", "diseaseName",
+        "educationalObjective", "subject", "system", "diseaseName", "topicType",
         "mechanism", "highLeverageClues", "discriminators", "clinicalContext",
         "keySymptoms", "prerequisites",
       ],

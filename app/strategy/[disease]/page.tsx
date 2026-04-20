@@ -8,6 +8,15 @@ import DiseaseProfileTabs from "@/components/strategy/DiseaseProfileTabs";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
+const TOPIC_TYPE_COLORS: Record<string, string> = {
+  DISEASE:   "bg-blue-50 text-blue-600 border-blue-200",
+  PATHOGEN:  "bg-orange-50 text-orange-600 border-orange-200",
+  PRINCIPLE: "bg-purple-50 text-purple-600 border-purple-200",
+  DRUG:      "bg-teal-50 text-teal-600 border-teal-200",
+  SYNDROME:  "bg-pink-50 text-pink-600 border-pink-200",
+  CONCEPT:   "bg-neutral-100 text-neutral-500 border-neutral-200",
+};
+
 type Props = { params: Promise<{ disease: string }> };
 
 export default function DiseaseMasteryPage({ params }: Props) {
@@ -36,9 +45,16 @@ export default function DiseaseMasteryPage({ params }: Props) {
             <ArrowLeftIcon className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{diseaseName}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-neutral-900">{diseaseName}</h1>
+              {profile?.topicType && (
+                <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded border ${TOPIC_TYPE_COLORS[profile.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT}`}>
+                  {profile.topicType}
+                </span>
+              )}
+            </div>
             {profile && (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-500 mt-0.5">
                 {profile.questionCount} question{profile.questionCount !== 1 ? "s" : ""} in bank
               </p>
             )}

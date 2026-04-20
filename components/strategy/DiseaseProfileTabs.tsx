@@ -16,6 +16,7 @@ type Discriminator = {
 
 type DiseaseProfile = {
   diseaseName: string;
+  topicType?: string;
   questionCount: number;
   mechanisms: string[];
   clues: string[];
@@ -131,7 +132,7 @@ export default function DiseaseProfileTabs({ profile }: Props) {
               <thead>
                 <tr className="border-b border-neutral-200">
                   <th className="text-left py-2 px-3 text-xs font-semibold text-neutral-400 uppercase tracking-wide w-1/2">Wrong answer (distractor)</th>
-                  <th className="text-left py-2 px-3 text-xs font-semibold text-neutral-400 uppercase tracking-wide w-1/2">Why it's wrong</th>
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-neutral-400 uppercase tracking-wide w-1/2">Why it&apos;s wrong</th>
                 </tr>
               </thead>
               <tbody>

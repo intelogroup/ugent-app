@@ -63,14 +63,14 @@ function QuizContent() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const [quizState, setQuizState] = useState<QuizState>({
+  const [quizState, setQuizState] = useState<QuizState>(() => ({
     currentQuestionIndex: 0,
     selectedAnswerIndex: null,
     isSubmitted: false,
     flaggedQuestions: new Set(),
     questionStartTime: Date.now(),
     answerResults: new Map(),
-  });
+  }));
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const questionTimerRef = useRef<number>(0);

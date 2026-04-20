@@ -70,6 +70,7 @@ export default defineSchema({
     skippedCount: v.optional(v.number()),
     totalCount: v.number(),
     error: v.optional(v.string()),
+    source: v.optional(v.union(v.literal("MANUAL"), v.literal("FIRSTAID_PDF"), v.literal("API"))),
     createdAt: v.number(),
   }).index("by_status", ["status"]).index("by_textHash", ["textHash"]),
 
@@ -129,6 +130,7 @@ export default defineSchema({
     successRate: v.optional(v.number()),
     avgTimeSpent: v.optional(v.number()),
     textHash: v.optional(v.string()),
+    source: v.optional(v.union(v.literal("MANUAL"), v.literal("FIRSTAID_PDF"), v.literal("API"))),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
@@ -158,6 +160,14 @@ export default defineSchema({
     keySymptoms: v.array(v.string()),
     prerequisites: v.array(v.string()),
     tableData: v.optional(v.array(v.any())),
+    topicType: v.optional(v.union(
+      v.literal("DISEASE"),
+      v.literal("PATHOGEN"),
+      v.literal("PRINCIPLE"),
+      v.literal("DRUG"),
+      v.literal("SYNDROME"),
+      v.literal("CONCEPT"),
+    )),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

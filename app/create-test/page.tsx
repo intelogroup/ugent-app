@@ -512,7 +512,7 @@ export default function CreateTest() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-neutral-700">Available Q's:</span>
+                      <span className="text-neutral-700">Available Q&apos;s:</span>
                       <span className="font-semibold text-neutral-900">{availableQuestions}</span>
                     </div>
                     <div className="flex justify-between">

@@ -68,6 +68,51 @@ export const savePattern = mutation({
   },
 });
 
+export const patchDiseaseName = mutation({
+  args: {
+    patternId: v.id("extracted_patterns"),
+    diseaseName: v.string(),
+    topicType: v.optional(v.union(
+      v.literal("DISEASE"), v.literal("PATHOGEN"), v.literal("PRINCIPLE"),
+      v.literal("DRUG"), v.literal("SYNDROME"), v.literal("CONCEPT"),
+    )),
+  },
+  handler: async (ctx, args) => {
+    const timestamp = Date.now();
+    await ctx.db.patch(args.patternId, {
+      diseaseName: args.diseaseName,
+      topicType: args.topicType,
+      updatedAt: timestamp,
+    });
+
+    // Upsert DISEASE frequency
+    if (args.diseaseName) {
+      const existing = await ctx.db
+        .query("pattern_frequencies")
+        .withIndex("by_type_name", (q) => q.eq("type", "DISEASE").eq("name", args.diseaseName))
+        .first();
+      if (existing) {
+        await ctx.db.patch(existing._id, { count: existing.count + 1, lastSeenAt: timestamp });
+      } else {
+        await ctx.db.insert("pattern_frequencies", { type: "DISEASE", name: args.diseaseName, count: 1, lastSeenAt: timestamp });
+      }
+    }
+
+    // Upsert TOPIC_TYPE frequency
+    if (args.topicType) {
+      const existing = await ctx.db
+        .query("pattern_frequencies")
+        .withIndex("by_type_name", (q) => q.eq("type", "TOPIC_TYPE").eq("name", args.topicType!))
+        .first();
+      if (existing) {
+        await ctx.db.patch(existing._id, { count: existing.count + 1, lastSeenAt: timestamp });
+      } else {
+        await ctx.db.insert("pattern_frequencies", { type: "TOPIC_TYPE", name: args.topicType!, count: 1, lastSeenAt: timestamp });
+      }
+    }
+  },
+});
+
 export const updateFrequencies = mutation({
   args: {
     frequencies: v.array(v.object({

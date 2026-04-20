@@ -2,65 +2,102 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 
+const DEMOGRAPHIC_RE = /^\d+-year-old|^(male|female|man|woman|boy|girl)\b/i;
+
+function pickBestClue(clues: string[]): string | undefined {
+  if (!clues?.length) return undefined;
+  return clues.find((c) => c && !DEMOGRAPHIC_RE.test(c.trim())) ?? clues[0];
+}
+
 export const getDiseasePriorityList = query({
   args: {
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     limit: v.optional(v.number()),
+    topicTypeFilter: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 30;
 
-    // Get all disease frequencies
-    const diseaseFreqs = await ctx.db
+    // 2 DB reads total — no N+1
+    const allDiseaseFreqs = await ctx.db
       .query("pattern_frequencies")
-      .withIndex("by_count")
-      .order("desc")
-      .take(500);
-    const diseases = diseaseFreqs.filter((p) => p.type === "DISEASE");
-
-    // Get user progress rows
-    const progressRows = await ctx.db
-      .query("progress")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_type_name", (q) => q.eq("type", "DISEASE"))
       .collect();
+    const diseases = allDiseaseFreqs
+      .filter((p) => p.name !== "N/A" && p.name.trim().length > 2)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 500);
 
-    // Build topicId/systemId → successRate map
-    const progressMap = new Map<string, number>();
-    for (const row of progressRows) {
-      if (row.topicId) progressMap.set(row.topicId, row.successRate);
-      if (row.systemId) progressMap.set(row.systemId, row.successRate);
-    }
+    const allPatterns = await ctx.db.query("extracted_patterns").collect();
 
-    // Score each disease
-    const scored = [];
-    for (const disease of diseases) {
-      // Get one extracted_pattern for this disease to resolve questionId → topicId
-      const pattern = await ctx.db
-        .query("extracted_patterns")
-        .withIndex("by_diseaseName", (q) => q.eq("diseaseName", disease.name))
-        .first();
-
-      let userSuccessRate = 0;
-      if (pattern) {
-        const question = await ctx.db.get(pattern.questionId);
-        if (question) {
-          const key = question.topicId ?? question.systemId;
-          if (key) userSuccessRate = progressMap.get(key) ?? 0;
+    // Build: diseaseName → { topicType, clueFreq }
+    type PatternMeta = { topicType?: string; clueFreq: Map<string, number> };
+    const patternMap = new Map<string, PatternMeta>();
+    for (const p of allPatterns) {
+      if (!p.diseaseName || p.diseaseName === "N/A") continue;
+      let meta = patternMap.get(p.diseaseName);
+      if (!meta) {
+        meta = { topicType: p.topicType ?? undefined, clueFreq: new Map() };
+        patternMap.set(p.diseaseName, meta);
+      }
+      if (!meta.topicType && p.topicType) meta.topicType = p.topicType;
+      for (const clue of p.highLeverageClues ?? []) {
+        if (clue && !DEMOGRAPHIC_RE.test(clue.trim())) {
+          meta.clueFreq.set(clue, (meta.clueFreq.get(clue) ?? 0) + 1);
         }
       }
+    }
 
-      const priorityScore = disease.count * (1 - userSuccessRate / 100);
+    const scored = [];
+    for (const disease of diseases) {
+      const meta = patternMap.get(disease.name);
+      let topClue: string | undefined;
+      if (meta?.clueFreq.size) {
+        topClue = [...meta.clueFreq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      }
       scored.push({
         diseaseName: disease.name,
+        topicType: meta?.topicType,
+        topClue,
         frequency: disease.count,
-        userSuccessRate,
-        priorityScore: Math.round(priorityScore * 10) / 10,
+        userSuccessRate: 0,
+        priorityScore: Math.round(disease.count * 10) / 10,
       });
     }
 
-    return scored
-      .sort((a, b) => b.priorityScore - a.priorityScore)
-      .slice(0, limit);
+    const sorted = scored.sort((a, b) => b.priorityScore - a.priorityScore);
+    const filtered = args.topicTypeFilter
+      ? sorted.filter((r) => r.topicType === args.topicTypeFilter)
+      : sorted;
+
+    return filtered.slice(0, limit);
+  },
+});
+
+export const getMostConfusableTopics = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const allPatterns = await ctx.db.query("extracted_patterns").collect();
+
+    const countMap = new Map<string, { discriminatorCount: number; topicType?: string }>();
+    for (const p of allPatterns) {
+      if (!p.diseaseName || p.diseaseName.trim() === "" || p.diseaseName === "N/A") continue;
+      const existing = countMap.get(p.diseaseName);
+      countMap.set(p.diseaseName, {
+        discriminatorCount: (existing?.discriminatorCount ?? 0) + (p.discriminators?.length ?? 0),
+        topicType: existing?.topicType ?? p.topicType ?? undefined,
+      });
+    }
+
+    return Array.from(countMap.entries())
+      .filter(([, v]) => v.discriminatorCount > 0)
+      .sort((a, b) => b[1].discriminatorCount - a[1].discriminatorCount)
+      .slice(0, args.limit ?? 10)
+      .map(([diseaseName, data]) => ({
+        diseaseName,
+        discriminatorCount: data.discriminatorCount,
+        topicType: data.topicType,
+      }));
   },
 });
 
@@ -94,8 +131,11 @@ export const getDiseaseProfile = query({
       }
     }
 
+    const topicType = patterns.find((p) => p.topicType)?.topicType ?? undefined;
+
     return {
       diseaseName: args.diseaseName,
+      topicType,
       questionCount: patterns.length,
       mechanisms: Array.from(mechanismsSet),
       clues: Array.from(cluesSet),

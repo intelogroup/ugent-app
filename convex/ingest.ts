@@ -24,6 +24,7 @@ export const startIngestion = mutation({
     rawText: v.string(),
     totalCount: v.number(),
     textHash: v.optional(v.string()),
+    source: v.optional(v.union(v.literal("MANUAL"), v.literal("FIRSTAID_PDF"), v.literal("API"))),
   },
   handler: async (ctx, args) => {
     // Block duplicates already in the pending/processing queue
@@ -44,6 +45,7 @@ export const startIngestion = mutation({
       status: "pending",
       processedCount: 0,
       totalCount: args.totalCount,
+      source: args.source,
       createdAt: Date.now(),
     });
   },
@@ -85,6 +87,10 @@ export const saveExtractedIntelligence = mutation({
 
       // Intelligence Layer
       diseaseName: v.string(),
+      topicType: v.optional(v.union(
+        v.literal("DISEASE"), v.literal("PATHOGEN"), v.literal("PRINCIPLE"),
+        v.literal("DRUG"), v.literal("SYNDROME"), v.literal("CONCEPT"),
+      )),
       mechanism: v.string(),
       highLeverageClues: v.array(v.string()),
       discriminators: v.array(v.object({
@@ -125,6 +131,7 @@ export const saveExtractedIntelligence = mutation({
     }
 
     // 2. Save Question
+    const ingestion = await ctx.db.get(ingestionId);
     const questionId = await ctx.db.insert("questions", {
       text: data.questionText,
       correctAnswer: data.correctAnswer,
@@ -135,13 +142,15 @@ export const saveExtractedIntelligence = mutation({
       system: data.system,
       ingestionId: ingestionId,
       textHash: data.textHash,
+      source: ingestion?.source,
     });
 
-    // 2. Save Pattern
+    // 3. Save Pattern
     const timestamp = Date.now();
     await ctx.db.insert("extracted_patterns", {
       questionId,
       diseaseName: data.diseaseName,
+      topicType: data.topicType,
       mechanism: data.mechanism,
       highLeverageClues: data.highLeverageClues,
       discriminators: data.discriminators,
@@ -181,6 +190,9 @@ export const saveExtractedIntelligence = mutation({
     // DISEASE
     await updateFrequency("DISEASE", data.diseaseName);
 
+    // TOPIC_TYPE
+    if (data.topicType) await updateFrequency("TOPIC_TYPE", data.topicType);
+
     // CLUE
     for (const clue of data.highLeverageClues) {
       await updateFrequency("CLUE", clue);
@@ -217,11 +229,11 @@ export const saveExtractedIntelligence = mutation({
     }
 
     // 5. Progress Ingestion
-    const ingestion = await ctx.db.get(ingestionId);
-    if (ingestion) {
+    const latestIngestion = await ctx.db.get(ingestionId);
+    if (latestIngestion) {
       await ctx.db.patch(ingestionId, {
-        processedCount: ingestion.processedCount + 1,
-        status: ingestion.processedCount + 1 === ingestion.totalCount ? "completed" : "processing",
+        processedCount: latestIngestion.processedCount + 1,
+        status: latestIngestion.processedCount + 1 === latestIngestion.totalCount ? "completed" : "processing",
       });
     }
 
