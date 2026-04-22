@@ -22,9 +22,12 @@ Pass 1: Clinical Fact Extraction (The "Stem" Pass)
 - Identify the temporal pattern (Onset speed and duration).
 - Identify "Cardinal Clues" (Pathognomonic terms, unique identifiers) vs "Symptomatic Noise".
 
-Pass 2: Discriminator Analysis (The "Distractor" Pass)
-- For each distractor choice, extract the Primary Discriminator from the explanation.
-- Identify the specific clinical fact or logic that rules out the distractor.
+Pass 2: Discriminator Analysis (The "Strategic Trap" Pass)
+- Identify HIGH-YIELD STRATEGIC TRAPS: These are distractors that a student is likely to choose due to a specific clinical confusion (e.g., "Atenolol" for Pheo because it's a beta-blocker, even though it causes unopposed alpha).
+- IGNORE NOISE: Do not extract "filler" distractors that are obviously wrong or physiologically unrelated (e.g., anatomy distractors like "Esophagus" for an endocrine question).
+- For each Strategic Trap:
+  - Extract the Primary Discriminator from the explanation.
+  - Identify the specific clinical fact or logic that rules out the distractor.
 - Identify the PRIMARY FOCAL CONCEPT being tested. This is the central topic of the question.
   It is NOT limited to diseases. It can be any of:
   - A disease or diagnosis → topicType: "DISEASE" (e.g., "Tuberculosis", "Myocardial Infarction")
@@ -211,6 +214,12 @@ export const extractSingleQuestion = internalAction({
       if (!content) throw new Error("AI returned empty response");
 
       const result = JSON.parse(content);
+
+      // Derive correctAnswer if AI omitted it (answer is in options array)
+      if (!result.correctAnswer) {
+        const correctOpt = result.options?.find((o: any) => o.isCorrect);
+        result.correctAnswer = correctOpt?.text?.slice(0, 1) ?? "";
+      }
 
       // Save the results
       await ctx.runMutation(api.ingest.saveExtractedIntelligence, {

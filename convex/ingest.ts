@@ -307,3 +307,17 @@ export const purgeDuplicatePending = mutation({
     return { purged };
   },
 });
+
+export const resetFailedToPending = mutation({
+  handler: async (ctx) => {
+    const failed = await ctx.db
+      .query("ingestions")
+      .withIndex("by_status", (q) => q.eq("status", "failed"))
+      .collect();
+
+    for (const ing of failed) {
+      await ctx.db.patch(ing._id, { status: "pending" });
+    }
+    return { reset: failed.length };
+  },
+});
