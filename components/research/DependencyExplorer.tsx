@@ -1,9 +1,21 @@
-// @ts-nocheck
 "use client";
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useMemo } from "react";
+
+type GraphNode = {
+  id: string;
+  type: "prerequisite" | "disease";
+  x: number;
+  y: number;
+};
+
+type GraphLink = {
+  source: string;
+  target: string;
+  strength: number;
+};
 
 export default function DependencyExplorer() {
   const dependencies = useQuery(api.research.getKnowledgeDependencies, { limit: 20 });
@@ -11,8 +23,8 @@ export default function DependencyExplorer() {
   const graph = useMemo(() => {
     if (!dependencies) return { nodes: [], links: [] };
 
-    const nodesMap = new Map();
-    const links = [];
+    const nodesMap = new Map<string, Omit<GraphNode, "x" | "y">>();
+    const links: GraphLink[] = [];
 
     dependencies.forEach((d) => {
       if (!nodesMap.has(d.from)) {
@@ -28,7 +40,11 @@ export default function DependencyExplorer() {
       });
     });
 
-    const nodes = Array.from(nodesMap.values());
+    const nodes: GraphNode[] = Array.from(nodesMap.values()).map((node) => ({
+      ...node,
+      x: 0,
+      y: 0,
+    }));
     
     // Assign simple positions (circular)
     const centerX = 200;

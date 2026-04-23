@@ -1,0 +1,7 @@
+interface:
+  display_name: "Medicospira Ingestion"
+  short_description: "Run Medicospira blocks into research batches"
+  default_prompt: "Use $medicospira-ingestion-flow with one of: create_test, answer_and_queue_one, speedrun_q1_q5, or end_block. Default to one-by-one typed, strategy-grade ingestion entries."
+
+policy:
+  allow_implicit_invocation: true

@@ -23,6 +23,10 @@ type BlobStatus = {
   isDuplicate: boolean | null;
 };
 
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Failed to start ingestion";
+}
+
 export default function ResearchIngestPage() {
   const [rawText, setRawText] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
@@ -113,8 +117,8 @@ export default function ResearchIngestPage() {
       setLastResult({ queued, skipped });
       setRawText("");
       setBlobStatuses([]);
-    } catch (err: any) {
-      setError(err.message || "Failed to start ingestion");
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setIsIngesting(false);
     }
@@ -222,7 +226,7 @@ export default function ResearchIngestPage() {
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-4">
               <h2 className="text-xl font-bold text-slate-800">Recent Ingestions</h2>
               <div className="flex flex-col gap-4">
-                {recentIngestions?.map((ingestion: any) => (
+                {recentIngestions?.map((ingestion) => (
                   <div key={ingestion._id} className="flex flex-col gap-2">
                     <div className="flex justify-between text-xs font-medium">
                       <span className="text-slate-500 truncate max-w-[120px]">

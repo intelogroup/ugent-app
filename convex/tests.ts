@@ -137,7 +137,7 @@ export const createTest = mutation({
       updatedAt: Date.now(),
     });
 
-    return { testId, sessionId, questions: selectedQuestions };
+    return { testId, sessionId };
   },
 });
 
@@ -184,6 +184,81 @@ export const getTestById = query({
       questions,
       answers,
       sessions,
+    };
+  },
+});
+
+/**
+ * Get the minimal quiz payload needed for the live quiz UI.
+ */
+export const getQuizById = query({
+  args: { testId: v.id("tests") },
+  handler: async (ctx, args) => {
+    const test = await ctx.db.get(args.testId);
+    if (!test) return null;
+
+    const testQuestions = await ctx.db
+      .query("test_questions")
+      .withIndex("by_test", (q) => q.eq("testId", args.testId))
+      .collect();
+
+    const questions = await Promise.all(
+      testQuestions.map(async (tq) => {
+        const question = await ctx.db.get(tq.questionId);
+        if (!question) return null;
+
+        return {
+          _id: question._id,
+          text: question.text,
+          difficulty: question.difficulty,
+          options: question.options,
+          displayOrder: tq.displayOrder,
+        };
+      })
+    );
+
+    const orderedQuestions = questions
+      .filter((question): question is NonNullable<typeof question> => question !== null)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+
+    return {
+      _id: test._id,
+      title: test.title,
+      questionMode: test.questionMode,
+      totalCorrect: test.totalCorrect,
+      totalIncorrect: test.totalIncorrect,
+      questions: orderedQuestions,
+    };
+  },
+});
+
+/**
+ * Get the minimal state required for test status checks.
+ */
+export const getTestStatusById = query({
+  args: { testId: v.id("tests") },
+  handler: async (ctx, args) => {
+    const test = await ctx.db.get(args.testId);
+    if (!test) return null;
+
+    const lastSession = await ctx.db
+      .query("test_sessions")
+      .withIndex("by_test", (q) => q.eq("testId", args.testId))
+      .order("desc")
+      .first();
+
+    return {
+      _id: test._id,
+      userId: test.userId,
+      status: test.status,
+      lastActivityAt: test.lastActivityAt,
+      pausedAt: test.pausedAt,
+      completedAt: test.completedAt,
+      answeredCount: test.answeredCount,
+      totalCorrect: test.totalCorrect,
+      totalSkipped: test.totalSkipped,
+      score: test.score,
+      lastSession,
     };
   },
 });
@@ -766,4 +841,3 @@ export const listTests = query({
     };
   },
 });
-

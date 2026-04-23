@@ -111,6 +111,49 @@ export const getQuestions = query({
   },
 });
 
+export const patchSystemAndTopic = mutation({
+  args: {
+    questionId: v.id("questions"),
+    systemId: v.optional(v.id("systems")),
+    topicId: v.optional(v.id("topics")),
+    subjectId: v.optional(v.id("subjects")),
+  },
+  handler: async (ctx, args) => {
+    const { questionId, ...updates } = args;
+    await ctx.db.patch(questionId, {
+      ...updates,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const seedSystem = mutation({
+  args: { name: v.string(), description: v.optional(v.string()), displayOrder: v.number() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("systems").withIndex("by_name", q => q.eq("name", args.name)).first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("systems", { ...args, questionCount: 0, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+});
+
+export const seedTopic = mutation({
+  args: { name: v.string(), systemId: v.id("systems"), description: v.optional(v.string()), displayOrder: v.number() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("topics").withIndex("by_system", q => q.eq("systemId", args.systemId)).filter(q => q.eq(q.field("name"), args.name)).first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("topics", { ...args, questionCount: 0, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+});
+
+export const seedSubject = mutation({
+  args: { name: v.string(), description: v.optional(v.string()), displayOrder: v.number() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.query("subjects").withIndex("by_name", q => q.eq("name", args.name)).first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("subjects", { ...args, questionCount: 0, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+});
+
 export const getQuestionById = query({
   args: { id: v.id("questions") },
   handler: async (ctx, args) => {
@@ -125,6 +168,32 @@ export const getQuestionById = query({
       ...question,
       system,
       topic,
+    };
+  },
+});
+
+export const getQuestionExplanationById = query({
+  args: { id: v.id("questions") },
+  handler: async (ctx, args) => {
+    const question = await ctx.db.get(args.id);
+    if (!question) return null;
+
+    return {
+      _id: question._id,
+      explanation: question.explanation,
+    };
+  },
+});
+
+export const getQuestionTextById = query({
+  args: { id: v.id("questions") },
+  handler: async (ctx, args) => {
+    const question = await ctx.db.get(args.id);
+    if (!question) return null;
+
+    return {
+      _id: question._id,
+      text: question.text,
     };
   },
 });
@@ -326,10 +395,16 @@ export const getQuestionStats = query({
 export const listSubjects = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db
+    const subjects = await ctx.db
       .query("subjects")
       .withIndex("by_display_order")
       .collect();
+
+    return subjects.map((subject) => ({
+      _id: subject._id,
+      name: subject.name,
+      questionCount: subject.questionCount,
+    }));
   },
 });
 
@@ -352,8 +427,14 @@ export const listSystemsWithTopics = query({
         topics.sort((a, b) => a.displayOrder - b.displayOrder);
         
         return {
-          ...system,
-          topics,
+          _id: system._id,
+          name: system.name,
+          questionCount: system.questionCount,
+          topics: topics.map((topic) => ({
+            _id: topic._id,
+            name: topic.name,
+            questionCount: topic.questionCount,
+          })),
         };
       })
     );

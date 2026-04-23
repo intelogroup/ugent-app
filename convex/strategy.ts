@@ -18,29 +18,50 @@ export const getDiseasePriorityList = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 30;
 
-    // 2 DB reads total — no N+1
+    // 1. Fetch user performance if available
+    const questionStats = new Map<string, { total: number; correct: number }>();
+    if (args.userId) {
+      const userAnswers = await ctx.db
+        .query("answers")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+      
+      for (const ans of userAnswers) {
+        const stats = questionStats.get(ans.questionId) || { total: 0, correct: 0 };
+        stats.total++;
+        if (ans.isCorrect) stats.correct++;
+        questionStats.set(ans.questionId, stats);
+      }
+    }
+
+    // 2. Fetch all frequencies
     const allDiseaseFreqs = await ctx.db
       .query("pattern_frequencies")
       .withIndex("by_type_name", (q) => q.eq("type", "DISEASE"))
       .collect();
+    
     const diseases = allDiseaseFreqs
       .filter((p) => p.name !== "N/A" && p.name.trim().length > 2)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 500);
+      .sort((a, b) => b.count - a.count);
 
+    // 3. Map patterns to topics
     const allPatterns = await ctx.db.query("extracted_patterns").collect();
-
-    // Build: diseaseName → { topicType, clueFreq }
-    type PatternMeta = { topicType?: string; clueFreq: Map<string, number> };
+    
+    type PatternMeta = { 
+      topicType?: string; 
+      clueFreq: Map<string, number>;
+      questionIds: Set<string>;
+    };
     const patternMap = new Map<string, PatternMeta>();
     for (const p of allPatterns) {
       if (!p.diseaseName || p.diseaseName === "N/A") continue;
       let meta = patternMap.get(p.diseaseName);
       if (!meta) {
-        meta = { topicType: p.topicType ?? undefined, clueFreq: new Map() };
+        meta = { topicType: p.topicType ?? undefined, clueFreq: new Map(), questionIds: new Set() };
         patternMap.set(p.diseaseName, meta);
       }
       if (!meta.topicType && p.topicType) meta.topicType = p.topicType;
+      meta.questionIds.add(p.questionId);
       for (const clue of p.highLeverageClues ?? []) {
         if (clue && !DEMOGRAPHIC_RE.test(clue.trim())) {
           meta.clueFreq.set(clue, (meta.clueFreq.get(clue) ?? 0) + 1);
@@ -48,29 +69,52 @@ export const getDiseasePriorityList = query({
       }
     }
 
+    // 4. Score and filter
     const scored = [];
     for (const disease of diseases) {
       const meta = patternMap.get(disease.name);
+      
+      // Calculate performance for this topic
+      let totalAtt = 0;
+      let totalCorr = 0;
+      if (meta) {
+        for (const qId of meta.questionIds) {
+          const stats = questionStats.get(qId);
+          if (stats) {
+            totalAtt += stats.total;
+            totalCorr += stats.correct;
+          }
+        }
+      }
+      const successRate = totalAtt > 0 ? (totalCorr / totalAtt) : undefined;
+      
+      // Calculate priority: Frequency * (1 - successRate)
+      // If no attempts, assume 0% success for priority purposes (highest priority)
+      const priorityFactor = successRate !== undefined ? (1 - successRate) : 1;
+      const priorityScore = Math.round(disease.count * priorityFactor * 10) / 10;
+
       let topClue: string | undefined;
       if (meta?.clueFreq.size) {
         topClue = [...meta.clueFreq.entries()].sort((a, b) => b[1] - a[1])[0][0];
       }
+
       scored.push({
         diseaseName: disease.name,
-        topicType: meta?.topicType,
+        topicType: meta?.topicType || "CONCEPT", // Fallback for filtered view
         topClue,
         frequency: disease.count,
-        userSuccessRate: 0,
-        priorityScore: Math.round(disease.count * 10) / 10,
+        userSuccessRate: successRate !== undefined ? Math.round(successRate * 100) : null,
+        priorityScore,
       });
     }
 
-    const sorted = scored.sort((a, b) => b.priorityScore - a.priorityScore);
     const filtered = args.topicTypeFilter
-      ? sorted.filter((r) => r.topicType === args.topicTypeFilter)
-      : sorted;
+      ? scored.filter((r) => r.topicType === args.topicTypeFilter)
+      : scored;
 
-    return filtered.slice(0, limit);
+    const sorted = filtered.sort((a, b) => b.priorityScore - a.priorityScore);
+
+    return sorted.slice(0, limit);
   },
 });
 
@@ -115,7 +159,7 @@ export const getDiseaseProfile = query({
     const symptomsSet = new Set<string>();
     const mechanismsSet = new Set<string>();
     const prerequisitesSet = new Set<string>();
-    const discriminators: { distractor: string; ruleOutFact: string }[] = [];
+    const discriminatorMap = new Map<string, { ruleOutFact: string; count: number }>();
     const clinicalContexts: object[] = [];
 
     for (const p of patterns) {
@@ -125,11 +169,36 @@ export const getDiseaseProfile = query({
         mechanismsSet.add(p.mechanism);
       }
       p.prerequisites.forEach((r) => prerequisitesSet.add(r));
-      p.discriminators.forEach((d) => discriminators.push(d));
+      
+      for (const d of p.discriminators ?? []) {
+        // Clean prefix like "A. ", "B. ", "1) "
+        const cleanDistractor = d.distractor.replace(/^[A-Z][.\)]\s+|^[0-9][.\)]\s+/i, "").trim();
+        if (!cleanDistractor) continue;
+        
+        const existing = discriminatorMap.get(cleanDistractor);
+        if (existing) {
+          existing.count++;
+          // Keep the longest explanation as it's usually the most detailed
+          if (d.ruleOutFact.length > existing.ruleOutFact.length) {
+            existing.ruleOutFact = d.ruleOutFact;
+          }
+        } else {
+          discriminatorMap.set(cleanDistractor, { ruleOutFact: d.ruleOutFact, count: 1 });
+        }
+      }
+
       if (p.clinicalContext && Object.values(p.clinicalContext).some(Boolean)) {
         clinicalContexts.push(p.clinicalContext);
       }
     }
+
+    const discriminators = Array.from(discriminatorMap.entries())
+      .map(([distractor, data]) => ({
+        distractor,
+        ruleOutFact: data.ruleOutFact,
+        count: data.count,
+      }))
+      .sort((a, b) => b.count - a.count);
 
     const topicType = patterns.find((p) => p.topicType)?.topicType ?? undefined;
 
@@ -163,4 +232,71 @@ export const getQuestionsForDisease = query({
     }
     return results;
   },
+});
+
+export const backFixDiscriminators = mutation({
+  args: { 
+    dryRun: v.boolean()
+  },
+  handler: async (ctx, args) => {
+    const patterns = await ctx.db.query("extracted_patterns").collect();
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let removedCount = 0;
+
+    const LOW_YIELD_KEYWORDS = [
+      "Esophagus", "Trachea", "Pharynx", "Larynx", "Branchial pouch", "Branchial arch",
+      "Surface ectoderm", "Neuroectoderm", "Mesoderm", "Endoderm"
+    ];
+
+    for (const p of patterns) {
+      const originalCount = p.discriminators?.length ?? 0;
+      const newDiscriminators = [];
+      const seen = new Set<string>();
+
+      for (const d of p.discriminators ?? []) {
+        // 1. Clean prefix like "A. ", "B. ", "1) "
+        const cleanDistractor = d.distractor.replace(/^[A-Z][.\)]\s+|^[0-9][.\)]\s+/i, "").trim();
+        
+        // 2. Skip if empty or low-yield keyword (anatomy noise)
+        const isLowYield = LOW_YIELD_KEYWORDS.some(k => 
+          cleanDistractor.toLowerCase().includes(k.toLowerCase())
+        );
+        
+        if (!cleanDistractor || isLowYield) {
+          removedCount++;
+          continue;
+        }
+
+        // 3. Simple Deduplication
+        if (!seen.has(cleanDistractor.toLowerCase())) {
+          newDiscriminators.push({
+            distractor: cleanDistractor,
+            ruleOutFact: d.ruleOutFact.trim()
+          });
+          seen.add(cleanDistractor.toLowerCase());
+        }
+      }
+
+      if (newDiscriminators.length !== (originalCount)) {
+        if (!args.dryRun) {
+          await ctx.db.patch(p._id, { 
+            discriminators: newDiscriminators,
+            updatedAt: Date.now()
+          });
+        }
+        updatedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    return {
+      totalPatterns: patterns.length,
+      updatedPatterns: updatedCount,
+      skippedPatterns: skippedCount,
+      removedTotalDistractors: removedCount,
+      dryRun: args.dryRun
+    };
+  }
 });

@@ -1,8 +1,7 @@
-// @ts-nocheck
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -28,13 +27,8 @@ interface AnswerOption {
 interface Question {
   _id: Id<"questions">;
   text: string;
-  explanation: string;
   difficulty?: string;
   options: AnswerOption[];
-}
-
-interface TestQuestion extends Question {
-  displayOrder: number;
 }
 
 interface QuizState {
@@ -49,50 +43,67 @@ interface QuizState {
   }>;
 }
 
-function QuizContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const testId = searchParams.get('testId') as Id<"tests"> | null;
-  
-  const user = useQuery(api.users.getCurrentUser);
-  const testData = useQuery(api.tests.getTestById, testId ? { testId } : "skip");
-  const submitAnswerMutation = useMutation(api.tests.submitAnswer);
-  const completeSessionMutation = useMutation(api.tests.completeSession);
-  const updateTestStatusMutation = useMutation(api.tests.updateTestStatus);
-
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  const [quizState, setQuizState] = useState<QuizState>(() => ({
+function createDefaultQuizState(): QuizState {
+  return {
     currentQuestionIndex: 0,
     selectedAnswerIndex: null,
     isSubmitted: false,
     flaggedQuestions: new Set(),
     questionStartTime: Date.now(),
     answerResults: new Map(),
-  }));
+  };
+}
+
+function loadSavedQuizState(testId: Id<"tests"> | null): QuizState {
+  if (!testId || typeof window === 'undefined') {
+    return createDefaultQuizState();
+  }
+
+  const savedState = window.localStorage.getItem(`quiz-state-${testId}`);
+  if (!savedState) {
+    return createDefaultQuizState();
+  }
+
+  try {
+    const parsed = JSON.parse(savedState) as {
+      currentQuestionIndex?: number;
+      selectedAnswerIndex?: number | null;
+      isSubmitted?: boolean;
+      flaggedQuestions?: string[];
+      questionStartTime?: number;
+      answerResults?: Array<[string, { isCorrect: boolean; explanation?: string }]>;
+    };
+
+    return {
+      currentQuestionIndex: parsed.currentQuestionIndex ?? 0,
+      selectedAnswerIndex: parsed.selectedAnswerIndex ?? null,
+      isSubmitted: parsed.isSubmitted ?? false,
+      flaggedQuestions: new Set(parsed.flaggedQuestions ?? []),
+      questionStartTime: parsed.questionStartTime ?? Date.now(),
+      answerResults: new Map(parsed.answerResults ?? []),
+    };
+  } catch (err) {
+    console.error('[QUIZ] Failed to load saved state:', err);
+    return createDefaultQuizState();
+  }
+}
+
+function QuizContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const testId = searchParams.get('testId') as Id<"tests"> | null;
+  
+  const user = useQuery(api.users.getCurrentUser);
+  const testData = useQuery(api.tests.getQuizById, testId ? { testId } : "skip");
+  const submitAnswerMutation = useMutation(api.tests.submitAnswer);
+  const completeSessionMutation = useMutation(api.tests.completeSession);
+
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [quizState, setQuizState] = useState<QuizState>(() => loadSavedQuizState(testId));
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const questionTimerRef = useRef<number>(0);
-
-  // Load saved progress from localStorage
-  useEffect(() => {
-    if (!testId) return;
-
-    const savedState = localStorage.getItem(`quiz-state-${testId}`);
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setQuizState({
-          ...parsed,
-          flaggedQuestions: new Set(parsed.flaggedQuestions),
-          answerResults: new Map(parsed.answerResults),
-        });
-      } catch (err) {
-        console.error('[QUIZ] Failed to load saved state:', err);
-      }
-    }
-  }, [testId]);
 
   // Save progress to localStorage
   useEffect(() => {
@@ -132,6 +143,10 @@ function QuizContent() {
 
   const questions = testData?.questions || [];
   const currentQuestion = questions[quizState.currentQuestionIndex];
+  const explanationData = useQuery(
+    api.questions.getQuestionExplanationById,
+    quizState.isSubmitted && currentQuestion?._id ? { id: currentQuestion._id } : "skip"
+  );
 
   // Submit answer
   const handleSubmit = async () => {
@@ -152,7 +167,6 @@ function QuizContent() {
         isSubmitted: true,
         answerResults: new Map(prev.answerResults).set(currentQuestion._id!, {
           isCorrect: result.isCorrect || false,
-          explanation: currentQuestion.explanation,
         }),
       }));
     } catch (err) {
@@ -471,8 +485,8 @@ function QuizContent() {
                       </>
                     )}
                   </div>
-                  {currentQuestion.explanation && (
-                    <p className="text-neutral-700 mb-3">{currentQuestion.explanation}</p>
+                  {explanationData?.explanation && (
+                    <p className="text-neutral-700 mb-3">{explanationData.explanation}</p>
                   )}
 
                   {/* AI Insight - only in PRACTICE mode */}

@@ -38,6 +38,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function StrategyHub() {
   const [activeFilter, setActiveFilter] = useState<string | undefined>(undefined);
+  const [displayLimit, setDisplayLimit] = useState(30);
 
   const currentUser = useQuery(api.users.getCurrentUser);
   const diseasePriority = useQuery(
@@ -45,7 +46,7 @@ export default function StrategyHub() {
     currentUser !== undefined
       ? {
           userId: currentUser?._id ?? undefined,
-          limit: 30,
+          limit: displayLimit,
           topicTypeFilter: activeFilter,
         }
       : "skip"
@@ -140,33 +141,47 @@ export default function StrategyHub() {
                   : "No topic data yet. Ingest questions in Research."}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-neutral-100">
-                      <th className="text-left py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">#</th>
-                      <th className="text-left py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Topic</th>
-                      <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Freq</th>
-                      <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Your %</th>
-                      <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Priority</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {diseasePriority.map((d, i) => (
-                      <DiseasePriorityRow
-                        key={d.diseaseName}
-                        rank={i + 1}
-                        diseaseName={d.diseaseName}
-                        topicType={d.topicType}
-                        topClue={d.topClue}
-                        frequency={d.frequency}
-                        userSuccessRate={d.userSuccessRate}
-                        priorityScore={d.priorityScore}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-neutral-100">
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">#</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Topic</th>
+                        <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Freq</th>
+                        <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Your %</th>
+                        <th className="text-center py-2 px-4 text-xs font-semibold text-neutral-400 uppercase tracking-wide">Priority</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diseasePriority.map((d, i) => (
+                        <DiseasePriorityRow
+                          key={d.diseaseName}
+                          rank={i + 1}
+                          diseaseName={d.diseaseName}
+                          topicType={d.topicType}
+                          topClue={d.topClue}
+                          frequency={d.frequency}
+                          userSuccessRate={d.userSuccessRate}
+                          priorityScore={d.priorityScore}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* See More Button */}
+                {diseasePriority.length >= displayLimit && (
+                  <div className="p-4 border-t border-neutral-100 flex justify-center">
+                    <button
+                      onClick={() => setDisplayLimit((prev) => prev + 100)}
+                      className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:bg-primary-50 px-6 py-2 rounded-lg transition-colors"
+                    >
+                      See More (+100)
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const test = await fetchQuery(api.tests.getTestById, {
+    const test = await fetchQuery(api.tests.getTestStatusById, {
       testId: testId as Id<"tests">,
     });
 
@@ -29,7 +29,7 @@ export async function GET(
       );
     }
 
-    const lastSession = test.sessions[0];
+    const lastSession = test.lastSession;
     let recommendedAction = 'NONE';
     let activeSession = null;
     let completedSession = null;

@@ -12,6 +12,7 @@ node_modules/
 /.next/
 /out/
 /build
+tsconfig.tsbuildinfo
 
 # testing
 /coverage
@@ -31,11 +32,11 @@ scraped_pathoma/
 .superpowers/
 .claude/
 .worktrees/
+/*.png
 *.log
 temp_scripts/
 scripts/temp/
 scripts/output/
-tsconfig.tsbuildinfo
 
 # env files
 .env*

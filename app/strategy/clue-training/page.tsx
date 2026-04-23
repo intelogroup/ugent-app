@@ -35,6 +35,10 @@ export default function ClueTrainingPage() {
 
   const current = cards[index];
   const total = cards.length;
+  const questionText = useQuery(
+    api.questions.getQuestionTextById,
+    revealed && current?.questionId ? { id: current.questionId } : "skip"
+  );
 
   const goNext = () => {
     setRevealed(false);
@@ -90,7 +94,7 @@ export default function ClueTrainingPage() {
                 mechanism: current.mechanism,
                 keySymptoms: current.keySymptoms,
                 clinicalContext: current.clinicalContext,
-                questionText: current.questionText,
+                questionText: questionText?.text,
               }}
               isRevealed={revealed}
               onReveal={() => setRevealed(true)}

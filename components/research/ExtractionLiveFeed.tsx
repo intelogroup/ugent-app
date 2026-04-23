@@ -1,9 +1,7 @@
-// @ts-nocheck
 "use client";
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Skeleton } from "@/components/ui/skeleton"; // Assuming project has it or I'll just use a fallback
 
 export default function ExtractionLiveFeed() {
   const extractionFeed = useQuery(api.research.getExtractionFeed, { limit: 10 });
@@ -46,7 +44,7 @@ export default function ExtractionLiveFeed() {
               <div>
                 <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">High-Leverage Clues</span>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {item.highLeverageClues.map((clue, idx) => (
+                  {(item.highLeverageClues ?? []).map((clue, idx) => (
                     <span key={idx} className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] rounded-full border border-amber-100">
                       {clue}
                     </span>
@@ -57,7 +55,7 @@ export default function ExtractionLiveFeed() {
               <div>
                 <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">Discriminators</span>
                 <ul className="mt-2 space-y-1">
-                  {item.discriminators.slice(0, 3).map((d, idx) => (
+                  {(item.discriminators ?? []).slice(0, 3).map((d, idx) => (
                     <li key={idx} className="text-[10px] text-slate-600 list-disc list-inside">
                       <span className="font-semibold">{d.distractor}:</span> {d.ruleOutFact}
                     </li>

@@ -61,10 +61,13 @@ export const getExtractionFeed = query({
     
     const feed = [];
     for (const extraction of extractions) {
-      const question = await ctx.db.get(extraction.questionId);
       feed.push({
-        ...extraction,
-        questionText: question?.text,
+        _id: extraction._id,
+        questionId: extraction.questionId,
+        diseaseName: extraction.diseaseName,
+        mechanism: extraction.mechanism,
+        keySymptoms: extraction.keySymptoms,
+        clinicalContext: extraction.clinicalContext,
       });
     }
     return feed;

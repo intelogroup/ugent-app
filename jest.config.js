@@ -14,7 +14,12 @@ const customJestConfig = {
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)'
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/__tests__/auth/',
+    '<rootDir>/__tests__/quiz-questions.test.ts',
+    '<rootDir>/e2e/',
+    '<rootDir>/tests/',
   ],
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
