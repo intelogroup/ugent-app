@@ -23,6 +23,7 @@ import type * as strategy from "../strategy.js";
 import type * as tests from "../tests.js";
 import type * as threads from "../threads.js";
 import type * as users from "../users.js";
+import type * as verify from "../verify.js";
 
 import type {
   ApiFromModules,
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   tests: typeof tests;
   threads: typeof threads;
   users: typeof users;
+  verify: typeof verify;
 }>;
 
 /**

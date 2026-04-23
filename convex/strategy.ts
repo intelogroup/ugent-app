@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 const DEMOGRAPHIC_RE = /^\d+-year-old|^(male|female|man|woman|boy|girl)\b/i;
 
