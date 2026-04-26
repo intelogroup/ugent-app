@@ -2,6 +2,8 @@ import { getSignInUrl, withAuth } from '@workos-inc/authkit-nextjs';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SparklesIcon } from '@heroicons/react/24/solid';
+import { signIn } from '@/app/actions/auth';
+import { AuthForm } from '@/components/auth/AuthForm';
 
 export default async function LoginPage() {
   const { user } = await withAuth();
@@ -24,24 +26,19 @@ export default async function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-neutral-800 mb-6 text-center">Sign in to your account</h2>
-          <a
-            href={signInUrl}
-            className="block w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors text-center"
-          >
-            Sign In
-          </a>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-neutral-600">
-              Don&apos;t have an account?{' '}
-              <Link href="/signup" className="text-primary-600 font-semibold hover:text-primary-700">
-                Sign up
-              </Link>
-            </p>
-          </div>
-        </div>
+        <AuthForm
+          mode="sign-in"
+          action={signIn}
+          title="Sign in to your account"
+          subtitle="Use your email and password. The hosted WorkOS flow remains available as a fallback."
+          submitLabel="Sign in"
+          pendingLabel="Signing in..."
+          alternateHref="/signup"
+          alternateLabel="Don't have an account?"
+          alternateCta="Sign up"
+          fallbackHref={signInUrl}
+          fallbackLabel="Sign in another way"
+        />
 
         {/* Back to home */}
         <div className="text-center mt-6">

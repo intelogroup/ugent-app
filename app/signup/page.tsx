@@ -2,6 +2,8 @@ import { getSignUpUrl, withAuth } from '@workos-inc/authkit-nextjs';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { SparklesIcon } from '@heroicons/react/24/solid';
+import { signUp } from '@/app/actions/auth';
+import { AuthForm } from '@/components/auth/AuthForm';
 
 export default async function SignupPage() {
   const { user } = await withAuth();
@@ -24,24 +26,19 @@ export default async function SignupPage() {
         </div>
 
         {/* Signup Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-neutral-800 mb-6 text-center">Create your account</h2>
-          <a
-            href={signUpUrl}
-            className="block w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors text-center"
-          >
-            Create Account
-          </a>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-neutral-600">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary-600 font-semibold hover:text-primary-700">
-                Sign in
-              </Link>
-            </p>
-          </div>
-        </div>
+        <AuthForm
+          mode="sign-up"
+          action={signUp}
+          title="Create your account"
+          subtitle="We'll send a verification email after you create your password."
+          submitLabel="Create account"
+          pendingLabel="Creating account..."
+          alternateHref="/login"
+          alternateLabel="Already have an account?"
+          alternateCta="Sign in"
+          fallbackHref={signUpUrl}
+          fallbackLabel="Use WorkOS hosted sign up"
+        />
 
         {/* Back to home */}
         <div className="text-center mt-6">
