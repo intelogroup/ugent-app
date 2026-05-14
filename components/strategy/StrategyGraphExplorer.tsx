@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -74,6 +74,9 @@ function successDot(rate: number | null): string {
 
 export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
   const router = useRouter();
+  const data = useQuery(api.strategy.getStrategyGraphData, {
+    userId: userId as any,
+  });
 
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
   const [selectedTopicType, setSelectedTopicType] = useState<string | null>(null);
@@ -96,6 +99,108 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
     () => activeSystem?.topicTypes.find((t) => t.topicType === selectedTopicType) ?? null,
     [activeSystem, selectedTopicType]
   );
+
+  // Level 1 collision-packed layout
+  const CONTAINER_R = 320;
+  const computeSize = useCallback((total: number): number => {
+    if (!data) return 100;
+    const maxTotal = Math.max(...data.map((s) => s.total));
+    const minS = 85;
+    const maxS = 150;
+    const t = Math.log10(1 + (total / maxTotal) * 9);
+    return minS + t * (maxS - minS);
+  }, [data]);
+
+  const placements = useMemo(() => {
+    if (!data) return new Map<string, { x: number; y: number }>();
+    const GOLDEN_ANGLE = 137.508 * (Math.PI / 180);
+    const PADDING = 6;
+    const sorted = [...data].sort((a, b) => b.total - a.total);
+
+    const sizes = new Map<string, number>();
+    for (const s of data) sizes.set(s.system, computeSize(s.total));
+
+    // Initial positions: golden spiral
+    const pos = new Map<string, { x: number; y: number }>();
+    sorted.forEach((s, i) => {
+      const angle = i * GOLDEN_ANGLE;
+      const dist = Math.sqrt(i + 0.5) * (CONTAINER_R * 0.22);
+      pos.set(s.system, { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
+    });
+
+    // Relaxation: push overlapping pairs apart, clamp to container
+    for (let iter = 0; iter < 150; iter++) {
+      const damp = 1 - iter / 150;
+      let moved = 0;
+      for (const [sys1, p1] of pos) {
+        const r1 = sizes.get(sys1)! / 2;
+        let fx = 0;
+        let fy = 0;
+        for (const [sys2, p2] of pos) {
+          if (sys1 === sys2) continue;
+          const r2 = sizes.get(sys2)! / 2;
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = r1 + r2 + PADDING;
+          if (dist < minDist && dist > 0.01) {
+            const force = (minDist - dist) * 0.55 * damp + 0.3 * damp;
+            fx += (dx / dist) * Math.min(force, 8);
+            fy += (dy / dist) * Math.min(force, 8);
+          }
+        }
+        if (Math.abs(fx) > 0.01 || Math.abs(fy) > 0.01) {
+          p1.x += fx;
+          p1.y += fy;
+          moved++;
+        }
+        const edgeMax = CONTAINER_R - r1 - PADDING;
+        const cDist = Math.hypot(p1.x, p1.y);
+        if (cDist > edgeMax && cDist > 0.01) {
+          const ratio = edgeMax / cDist;
+          p1.x *= ratio;
+          p1.y *= ratio;
+        }
+      }
+      if (moved === 0 && iter > 30) break;
+    }
+
+    // Final separation pass: hard push for remaining overlaps
+    for (let pass = 0; pass < 50; pass++) {
+      let anyOverlap = false;
+      for (const [sys1, p1] of pos) {
+        for (const [sys2, p2] of pos) {
+          if (sys1 >= sys2) continue;
+          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          const min = sizes.get(sys1)! / 2 + sizes.get(sys2)! / 2 + PADDING;
+          if (dist < min && dist > 0.01) {
+            anyOverlap = true;
+            const push = (min - dist) * 0.5 / dist;
+            const dx = (p1.x - p2.x) * push;
+            const dy = (p1.y - p2.y) * push;
+            p1.x += dx; p1.y += dy;
+            p2.x -= dx; p2.y -= dy;
+          }
+        }
+      }
+      for (const [sys, p] of pos) {
+        const edgeMax = CONTAINER_R - sizes.get(sys)! / 2 - PADDING;
+        const d = Math.hypot(p.x, p.y);
+        if (d > edgeMax && d > 0.01) {
+          const r = edgeMax / d;
+          p.x *= r; p.y *= r;
+        }
+      }
+      if (!anyOverlap) break;
+    }
+
+    const result = new Map<string, { x: number; y: number }>();
+    for (const s of data) {
+      const p = pos.get(s.system);
+      result.set(s.system, { x: p?.x ?? 0, y: p?.y ?? 0 });
+    }
+    return result;
+  }, [data, computeSize]);
 
   const handleSystemClick = (system: string) => {
     if (selectedSystem === system) {
@@ -125,19 +230,40 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
 
   // ── Level 1: System Constellation ──────────────────────────────────────────
   if (!selectedSystem) {
+
     return (
-      <div className="space-y-6">
-        <div className="flex justify-center flex-wrap gap-4 py-8">
-          {data.map((s) => (
-            <button
-              key={s.system}
-              onClick={() => handleSystemClick(s.system)}
-              className={`flex flex-col items-center justify-center w-32 h-32 rounded-full border-2 text-center transition-all hover:shadow-xl hover:scale-105 active:scale-95 ${systemColorMap[s.system]}`}
-            >
-              <span className="text-sm font-bold leading-tight px-3">{s.system}</span>
-              <span className="text-[10px] mt-1 opacity-70">{s.total} topics</span>
-            </button>
-          ))}
+      <div className="flex items-center justify-center py-12">
+        <div
+          className="relative rounded-full border-4 border-neutral-100 bg-neutral-50/30 shadow-inner flex items-center justify-center"
+          style={{ width: CONTAINER_R * 2, height: CONTAINER_R * 2 }}
+        >
+          {data.map((s) => {
+            const pos = placements.get(s.system);
+            if (!pos) return null;
+            const size = computeSize(s.total);
+            return (
+              <button
+                key={s.system}
+                onClick={() => handleSystemClick(s.system)}
+                style={{
+                  width: size,
+                  height: size,
+                  transform: `translate(${pos.x}px, ${pos.y}px)`,
+                }}
+                className={`absolute flex flex-col items-center justify-center rounded-full border-2 text-center shadow-sm transition-all hover:shadow-xl hover:scale-110 active:scale-95 z-10 ${systemColorMap[s.system]}`}
+              >
+                <span
+                  className="font-black leading-tight px-3 uppercase tracking-tighter"
+                  style={{ fontSize: Math.max(10, size * 0.08) }}
+                >
+                  {s.system}
+                </span>
+                <span className="text-[10px] font-bold mt-1 opacity-60">
+                  {s.total}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     );
