@@ -112,24 +112,7 @@ export default function StrategyHub() {
           </div>
         </div>
 
-        {/* How it works */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { step: "1", title: "Identify the Focal Concept", desc: "Each question tests one thing: a disease, pathogen, drug, physiological principle, or concept" },
-            { step: "2", title: "Know What Aspect Is Tested", desc: "Same topic, different dimension: mechanism, epidemiology, treatment, genetics" },
-            { step: "3", title: "Frequency × Your Weakness", desc: "Study high-yield topics where you score lowest — that's your fastest grade lift" },
-          ].map((item) => (
-            <div key={item.step} className="card p-4 flex gap-3 items-start">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary-100 text-primary-700 text-sm font-bold flex items-center justify-center">
-                {item.step}
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-neutral-900">{item.title}</p>
-                <p className="text-xs text-neutral-500 mt-0.5">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="h-4"></div>
 
         {/* Graph Explorer View */}
         {view === "graph" && (
