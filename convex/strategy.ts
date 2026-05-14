@@ -234,9 +234,35 @@ export const getQuestionsForDisease = query({
   },
 });
 
+function mapSystem(rawSystem: string): string {
+  const s = rawSystem.toLowerCase();
+  
+  // Specific overrides to match sketch precisely
+  if (s.includes("pulmonary") || s.includes("respiratory") || s.includes("pulmonology")) return "Pulmo nary";
+  if (s.includes("cardio") || s.includes("cardiac") || s.includes("vascular") || s.includes("circulatory")) return "Cardiovascular";
+  if (s.includes("gastro") || s.includes("digestive") || s.includes("gi") || s.includes("hepatic") || s.includes("liver") || s.includes("biliary") || s.includes("gallbladder") || s.includes("pancreas")) return "Gastro Intestinal";
+  if (s.includes("endocrine") || s.includes("metabolic") || s.includes("metabolism") || s.includes("thyroid") || s.includes("adrenal") || s.includes("pituitary") || s.includes("hypothalamus")) return "Endo crine";
+  if (s.includes("renal") || s.includes("urinary") || s.includes("urology") || s.includes("genitourinary")) return "Renal";
+  if (s.includes("hematologic") || s.includes("hematology") || s.includes("oncology") || s.includes("neoplasm") || s.includes("blood") || s.includes("heme") || s.includes("coagulation") || s.includes("lymphatic")) return "Hemato ONCO";
+  if (s.includes("rheum") || s.includes("ortho") || s.includes("musculo") || s.includes("skeletal") || s.includes("connective tissue")) return "Rheum + ORTHO";
+  if (s.includes("nervous") || s.includes("neuro") || s.includes("cns")) return "System Nervous";
+  if (s.includes("psych") || s.includes("behavioral") || s.includes("mental")) return "Psychiatry";
+  if (s.includes("derm") || s.includes("skin") || s.includes("integumentary")) return "Dermato";
+  if (s.includes("female") || s.includes("breast")) return "Female System";
+  if (s.includes("male") && !s.includes("female")) return "MALE System";
+  if (s.includes("ob") || s.includes("gyn") || s.includes("reproductive")) return "OB GYN";
+  if (s.includes("infectious") || s.includes("microbiology") || s.includes("bacteriology") || s.includes("viral")) return "Infectious Diseases";
+  if (s.includes("allergy") || s.includes("immuno") || s.includes("immune") || s.includes("autoimmune")) return "Allergy Imm.";
+  if (s.includes("poison") || s.includes("toxic")) return "Poisoning";
+  if (s.includes("ent") || s.includes("ear") || s.includes("nose") || s.includes("throat") || s.includes("auditory") || s.includes("head and neck") || s.includes("oral")) return "ENT";
+  if (s.includes("ophthal") || s.includes("eye") || s.includes("visual") || s.includes("retina")) return "Ophtal mo";
+  
+  return "Infectious Diseases"; // Default catch-all for USMLE if unsure, or "Other"
+}
+
 export const getStrategyGraphData = query({
   args: {
-    userId: v.optional(v.id("users")),
+    userId: v.optional(v.union(v.id("users"), v.null())),
   },
   handler: async (ctx, args) => {
     // 1. Fetch user performance if available
@@ -267,7 +293,7 @@ export const getStrategyGraphData = query({
       const question = await ctx.db.get(p.questionId);
       if (!question) continue;
 
-      const system = (question.system ?? "Other").trim();
+      const system = mapSystem(question.system ?? "Other");
       const topicType = p.topicType;
       const disease = p.diseaseName.trim();
 

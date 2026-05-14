@@ -28,39 +28,39 @@ type SystemNode = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const TOPIC_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
-  DISEASE:   { bg: "bg-blue-50",    border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-400" },
-  PATHOGEN:  { bg: "bg-orange-50",  border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-400" },
-  SYNDROME:  { bg: "bg-pink-50",    border: "border-pink-200",   text: "text-pink-700",   dot: "bg-pink-400" },
-  PRINCIPLE: { bg: "bg-purple-50",  border: "border-purple-200", text: "text-purple-700", dot: "bg-purple-400" },
-  DRUG:      { bg: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700",   dot: "bg-teal-400" },
-  CONCEPT:   { bg: "bg-neutral-50", border: "border-neutral-200",text: "text-neutral-600",dot: "bg-neutral-400" },
+const TOPIC_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; shadow: string }> = {
+  DISEASE:   { bg: "bg-blue-50",    border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-400",   shadow: "shadow-blue-100" },
+  PATHOGEN:  { bg: "bg-orange-50",  border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-400", shadow: "shadow-orange-100" },
+  SYNDROME:  { bg: "bg-pink-50",    border: "border-pink-200",   text: "text-pink-700",   dot: "bg-pink-400",   shadow: "shadow-pink-100" },
+  PRINCIPLE: { bg: "bg-purple-50",  border: "border-purple-200", text: "text-purple-700", dot: "bg-purple-400", shadow: "shadow-purple-100" },
+  DRUG:      { bg: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700",   dot: "bg-teal-400",   shadow: "shadow-teal-100" },
+  CONCEPT:   { bg: "bg-neutral-50", border: "border-neutral-200",text: "text-neutral-600",dot: "bg-neutral-400", shadow: "shadow-neutral-100" },
 };
 
 const SYSTEM_COLORS = [
-  "bg-indigo-100 text-indigo-800 border-indigo-200 hover:bg-indigo-200",
-  "bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-200",
-  "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200",
-  "bg-violet-100 text-violet-800 border-violet-200 hover:bg-violet-200",
-  "bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-200",
-  "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200",
-  "bg-cyan-100 text-cyan-800 border-cyan-200 hover:bg-cyan-200",
-  "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 hover:bg-fuchsia-200",
-  "bg-lime-100 text-lime-800 border-lime-200 hover:bg-lime-200",
-  "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
-  "bg-pink-100 text-pink-800 border-pink-200 hover:bg-pink-200",
-  "bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200",
-  "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
-  "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
-  "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
-  "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+  "bg-indigo-50 text-indigo-800 border-indigo-100 hover:bg-indigo-100",
+  "bg-sky-50 text-sky-800 border-sky-100 hover:bg-sky-100",
+  "bg-emerald-50 text-emerald-800 border-emerald-100 hover:bg-emerald-100",
+  "bg-violet-50 text-violet-800 border-violet-100 hover:bg-violet-100",
+  "bg-rose-50 text-rose-800 border-rose-100 hover:bg-rose-100",
+  "bg-amber-50 text-amber-800 border-amber-100 hover:bg-amber-100",
+  "bg-cyan-50 text-cyan-800 border-cyan-100 hover:bg-cyan-100",
+  "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-100 hover:bg-fuchsia-100",
+  "bg-lime-50 text-lime-800 border-lime-100 hover:bg-lime-100",
+  "bg-orange-50 text-orange-800 border-orange-100 hover:bg-orange-100",
+  "bg-pink-50 text-pink-800 border-pink-100 hover:bg-pink-100",
+  "bg-teal-50 text-teal-800 border-teal-100 hover:bg-teal-100",
+  "bg-blue-50 text-blue-800 border-blue-100 hover:bg-blue-100",
+  "bg-red-50 text-red-800 border-red-100 hover:bg-red-100",
+  "bg-purple-50 text-purple-800 border-purple-100 hover:bg-purple-100",
+  "bg-green-50 text-green-800 border-green-100 hover:bg-green-100",
 ];
 
 function successColor(rate: number | null): string {
-  if (rate === null) return "bg-neutral-100 text-neutral-500 border-neutral-200";
-  if (rate >= 75) return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (rate >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-rose-50 text-rose-700 border-rose-200";
+  if (rate === null) return "bg-white text-neutral-500 border-neutral-200";
+  if (rate >= 75) return "bg-emerald-50 text-emerald-800 border-emerald-200";
+  if (rate >= 50) return "bg-amber-50 text-amber-800 border-amber-200";
+  return "bg-rose-50 text-rose-800 border-rose-200";
 }
 
 function successDot(rate: number | null): string {
@@ -70,76 +70,10 @@ function successDot(rate: number | null): string {
   return "bg-rose-400";
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function LeafList({ diseases }: { diseases: LeafNode[] }) {
-  const router = useRouter();
-  return (
-    <div className="flex flex-col gap-1.5 mt-2 max-h-[420px] overflow-y-auto pr-1">
-      {diseases.map((d) => (
-        <button
-          key={d.diseaseName}
-          onClick={() => router.push(`/strategy/${encodeURIComponent(d.diseaseName)}`)}
-          className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left text-xs font-medium transition-all hover:shadow-sm hover:-translate-y-px ${successColor(d.successRate)}`}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className={`flex-shrink-0 w-2 h-2 rounded-full ${successDot(d.successRate)}`} />
-            <span className="truncate">{d.diseaseName}</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className="text-[10px] opacity-60">{d.count}q</span>
-            {d.successRate !== null && (
-              <span className="text-[10px] font-semibold">{d.successRate}%</span>
-            )}
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function TopicTypeGrid({
-  topicTypes,
-  selectedTopicType,
-  onSelect,
-}: {
-  topicTypes: TopicTypeNode[];
-  selectedTopicType: string | null;
-  onSelect: (t: string | null) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {topicTypes.map((tt) => {
-        const colors = TOPIC_TYPE_COLORS[tt.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT;
-        const isActive = selectedTopicType === tt.topicType;
-        return (
-          <button
-            key={tt.topicType}
-            onClick={() => onSelect(isActive ? null : tt.topicType)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-semibold transition-all hover:shadow-md hover:-translate-y-0.5 ${
-              isActive
-                ? `${colors.bg} ${colors.border} ${colors.text} shadow-md scale-105`
-                : `bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300`
-            }`}
-          >
-            <span className={`w-2.5 h-2.5 rounded-full ${isActive ? colors.dot : "bg-neutral-300"}`} />
-            <span>{tt.topicType}</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${isActive ? "bg-white/60" : "bg-neutral-100"}`}>
-              {tt.count}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
-  const data = useQuery(api.strategy.getStrategyGraphData, {
-    userId: userId as any,
-  });
+  const router = useRouter();
 
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
   const [selectedTopicType, setSelectedTopicType] = useState<string | null>(null);
@@ -192,113 +126,131 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
   // ── Level 1: System Constellation ──────────────────────────────────────────
   if (!selectedSystem) {
     return (
-      <div className="space-y-4">
-        <div>
-          <p className="text-xs text-neutral-400">
-            Select a system to explore its topics
-          </p>
+      <div className="space-y-6">
+        <div className="flex justify-center flex-wrap gap-4 py-8">
+          {data.map((s) => (
+            <button
+              key={s.system}
+              onClick={() => handleSystemClick(s.system)}
+              className={`flex flex-col items-center justify-center w-32 h-32 rounded-full border-2 text-center transition-all hover:shadow-xl hover:scale-105 active:scale-95 ${systemColorMap[s.system]}`}
+            >
+              <span className="text-sm font-bold leading-tight px-3">{s.system}</span>
+              <span className="text-[10px] mt-1 opacity-70">{s.total} topics</span>
+            </button>
+          ))}
         </div>
-        <div className="relative flex items-center justify-center">
-          {/* Outer ring hint */}
-          <div className="absolute inset-0 rounded-full border-2 border-dashed border-neutral-100 pointer-events-none" style={{ margin: "10px" }} />
-          <div className="flex flex-wrap gap-3 justify-center py-6 px-4">
-            {data.map((s) => (
-              <button
-                key={s.system}
-                onClick={() => handleSystemClick(s.system)}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 rounded-full border-2 font-semibold text-sm text-center transition-all hover:shadow-lg hover:scale-105 active:scale-95 ${systemColorMap[s.system]}`}
-              >
-                <span className="leading-tight px-2">{s.system}</span>
-                <span className="text-[10px] mt-1 opacity-60">{s.total} topics</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <p className="text-center text-[11px] text-neutral-300">
-          {data.reduce((a, s) => a + s.total, 0)} total topics across {data.length} systems
-        </p>
       </div>
     );
   }
 
   // ── Level 2 & 3: System Hub + Topic Type + Leaves ──────────────────────────
   return (
-    <div className="space-y-5">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleBack}
-          className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4" />
-        </button>
-        <div className="flex items-center gap-1.5 text-sm">
-          <button
-            onClick={() => { setSelectedSystem(null); setSelectedTopicType(null); }}
-            className="text-neutral-400 hover:text-neutral-700 transition-colors"
-          >
-            All Systems
-          </button>
-          <span className="text-neutral-300">/</span>
-          <button
-            onClick={() => setSelectedTopicType(null)}
-            className={`font-semibold transition-colors ${selectedTopicType ? "text-neutral-500 hover:text-neutral-800" : "text-neutral-900"}`}
-          >
-            {selectedSystem}
-          </button>
-          {selectedTopicType && (
-            <>
-              <span className="text-neutral-300">/</span>
-              <span className="font-semibold text-neutral-900">{selectedTopicType}</span>
-            </>
-          )}
+    <div className="space-y-8 min-h-[500px]">
+      {/* Breadcrumb / Back */}
+      <button
+        onClick={handleBack}
+        className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
+      >
+        <ArrowLeftIcon className="w-4 h-4" />
+        <span>Back to {selectedTopicType ? selectedSystem : "All Systems"}</span>
+      </button>
+
+      <div className="flex flex-col lg:flex-row gap-12 items-start justify-center">
+        {/* Level 2: The Hub (System + Surrounding Types) */}
+        <div className="relative flex-shrink-0 flex items-center justify-center w-[300px] h-[300px]">
+          {/* Central System Circle */}
+          <div className={`flex flex-col items-center justify-center w-32 h-32 rounded-full border-4 shadow-lg text-center z-10 ${systemColorMap[selectedSystem]}`}>
+            <span className="text-base font-black leading-tight px-4 uppercase tracking-tighter">
+              {selectedSystem}
+            </span>
+          </div>
+
+          {/* Topic Type Circles (Surrounding the central one) */}
+          {activeSystem?.topicTypes.map((tt, i) => {
+            const colors = TOPIC_TYPE_COLORS[tt.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT;
+            const isActive = selectedTopicType === tt.topicType;
+            
+            // Calculate position in circle
+            const angle = (i / activeSystem.topicTypes.length) * 2 * Math.PI - Math.PI / 2;
+            const radius = 100;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+
+            return (
+              <button
+                key={tt.topicType}
+                onClick={() => setSelectedTopicType(isActive ? null : tt.topicType)}
+                style={{ transform: `translate(${x}px, ${y}px)` }}
+                className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
+                  isActive
+                    ? `${colors.bg} ${colors.border} ${colors.text} ${colors.shadow} ring-4 ring-white`
+                    : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
+                }`}
+              >
+                <span className="text-[10px] font-bold leading-none">{tt.topicType}</span>
+                <span className="text-[9px] opacity-60 mt-1">{tt.count}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      {/* System Header Badge */}
-      <div className={`inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 ${systemColorMap[selectedSystem]}`}>
-        <span className="text-base font-bold">{selectedSystem}</span>
-        <span className="text-xs opacity-70">{activeSystem?.total} topics</span>
-      </div>
-
-      {/* Topic Type Selector (Level 2) */}
-      {activeSystem && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-            Topic Categories
-          </p>
-          <TopicTypeGrid
-            topicTypes={activeSystem.topicTypes}
-            selectedTopicType={selectedTopicType}
-            onSelect={setSelectedTopicType}
-          />
-        </div>
-      )}
-
-      {/* Leaf Nodes (Level 3) */}
-      {activeTopicType && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">
-              {activeTopicType.topicType} — {activeTopicType.count} topics
-            </p>
-            <div className="flex items-center gap-3 text-[10px] text-neutral-400">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"/>≥75%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>50-74%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block"/>below 50%</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-neutral-300 inline-block"/>not attempted</span>
+        {/* Level 3: The List (Connected to Active Type) */}
+        {activeTopicType && (
+          <div className="flex-1 w-full max-w-md animate-in slide-in-from-right-4 duration-300">
+            <div className="bg-neutral-50/50 rounded-3xl border border-neutral-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
+                  {activeTopicType.topicType}
+                </h3>
+                <span className="text-xs text-neutral-400">{activeTopicType.count} results</span>
+              </div>
+              
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <style jsx>{`
+                  .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e5e5e5;
+                    border-radius: 10px;
+                  }
+                  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #d4d4d4;
+                  }
+                `}</style>
+                {activeTopicType.diseases.map((d) => (
+                  <button
+                    key={d.diseaseName}
+                    onClick={() => router.push(`/strategy/${encodeURIComponent(d.diseaseName)}`)}
+                    className={`group w-full flex items-center justify-between gap-4 p-3 rounded-xl border transition-all hover:translate-x-1 ${successColor(d.successRate)}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${successDot(d.successRate)}`} />
+                      <span className="text-sm font-bold truncate">{d.diseaseName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-black italic">DRIL-DOWN →</span>
+                    </div>
+                    {d.successRate !== null && (
+                      <span className="text-xs font-black flex-shrink-0">{d.successRate}%</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <LeafList diseases={activeTopicType.diseases} />
-        </div>
-      )}
+        )}
 
-      {/* Prompt if no topic type selected yet */}
-      {!selectedTopicType && activeSystem && (
-        <p className="text-xs text-neutral-400 italic">
-          Select a category above to see the topics inside it
-        </p>
-      )}
+        {/* Level 3 Placeholder */}
+        {!activeTopicType && (
+          <div className="flex-1 hidden lg:flex items-center justify-center text-neutral-300 italic text-sm border-2 border-dashed border-neutral-100 rounded-3xl h-[300px]">
+            Select a category circle to view topics
+          </div>
+        )}
+      </div>
     </div>
   );
 }
