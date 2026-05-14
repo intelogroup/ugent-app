@@ -256,7 +256,9 @@ function mapSystem(rawSystem: string): string {
   if (s.includes("poison") || s.includes("toxic")) return "Poisoning";
   if (s.includes("ent") || s.includes("ear") || s.includes("nose") || s.includes("throat") || s.includes("auditory") || s.includes("head and neck") || s.includes("oral")) return "ENT";
   if (s.includes("ophthal") || s.includes("eye") || s.includes("visual") || s.includes("retina")) return "Ophtal mo";
-  
+  if (s.includes("biostat") || s.includes("epidemiol") || s.includes("statistics") || s.includes("public health") || s.includes("preventive") || s.includes("population health")) return "Biostatistics & Epidemiology";
+  if (s.includes("ethic") || s.includes("legal") || s.includes("professional") || s.includes("social") || s.includes("humanities") || s.includes("jurisprudence") || s.includes("bioethic") || s.includes("law")) return "Social Sciences";
+
   return "Infectious Diseases"; // Default catch-all for USMLE if unsure, or "Other"
 }
 

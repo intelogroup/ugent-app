@@ -54,6 +54,9 @@ const SYSTEM_COLORS = [
   "bg-red-50 text-red-800 border-red-100 hover:bg-red-100",
   "bg-purple-50 text-purple-800 border-purple-100 hover:bg-purple-100",
   "bg-green-50 text-green-800 border-green-100 hover:bg-green-100",
+  "bg-yellow-50 text-yellow-800 border-yellow-100 hover:bg-yellow-100",
+  "bg-stone-50 text-stone-800 border-stone-100 hover:bg-stone-100",
+  "bg-gray-50 text-gray-800 border-gray-100 hover:bg-gray-100",
 ];
 
 function successColor(rate: number | null): string {
@@ -101,7 +104,7 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
   );
 
   // Level 1 collision-packed layout
-  const CONTAINER_R = 320;
+  const CONTAINER_R = 350;
   const computeSize = useCallback((total: number): number => {
     if (!data) return 100;
     const maxTotal = Math.max(...data.map((s) => s.total));
