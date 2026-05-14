@@ -131,6 +131,11 @@ export default defineSchema({
     avgTimeSpent: v.optional(v.number()),
     textHash: v.optional(v.string()),
     source: v.optional(v.union(v.literal("MANUAL"), v.literal("FIRSTAID_PDF"), v.literal("API"))),
+    choicePercentages: v.optional(v.array(v.object({
+      letter: v.string(),
+      text: v.string(),
+      percentage: v.number(),
+    }))),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })

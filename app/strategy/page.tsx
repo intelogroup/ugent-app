@@ -5,8 +5,9 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import DashboardLayout from "@/components/DashboardLayout";
 import DiseasePriorityRow from "@/components/strategy/DiseasePriorityRow";
+import StrategyGraphExplorer from "@/components/strategy/StrategyGraphExplorer";
 import Link from "next/link";
-import { AcademicCapIcon, BeakerIcon } from "@heroicons/react/24/outline";
+import { AcademicCapIcon, BeakerIcon, TableCellsIcon, CircleStackIcon } from "@heroicons/react/24/outline";
 import {
   BarChart,
   Bar,
@@ -37,6 +38,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function StrategyHub() {
+  const [view, setView] = useState<"table" | "graph">("table");
   const [activeFilter, setActiveFilter] = useState<string | undefined>(undefined);
   const [displayLimit, setDisplayLimit] = useState(30);
 
@@ -74,13 +76,40 @@ export default function StrategyHub() {
               Reverse-engineered study priority based on your question bank
             </p>
           </div>
-          <Link
-            href="/strategy/clue-training"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
-          >
-            <BeakerIcon className="w-4 h-4" />
-            Clue Training
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center bg-neutral-100 rounded-lg p-1 gap-1">
+              <button
+                onClick={() => setView("table")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  view === "table"
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                }`}
+              >
+                <TableCellsIcon className="w-3.5 h-3.5" />
+                Priority
+              </button>
+              <button
+                onClick={() => setView("graph")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  view === "graph"
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                }`}
+              >
+                <CircleStackIcon className="w-3.5 h-3.5" />
+                Explorer
+              </button>
+            </div>
+            <Link
+              href="/strategy/clue-training"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              <BeakerIcon className="w-4 h-4" />
+              Clue Training
+            </Link>
+          </div>
         </div>
 
         {/* How it works */}
@@ -102,7 +131,14 @@ export default function StrategyHub() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Graph Explorer View */}
+        {view === "graph" && (
+          <div className="card p-6">
+            <StrategyGraphExplorer userId={currentUser?._id as string | undefined} />
+          </div>
+        )}
+
+        {view === "table" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Topic Priority Table */}
           <div className="lg:col-span-2 card">
             <div className="p-4 border-b border-neutral-100">
@@ -265,7 +301,7 @@ export default function StrategyHub() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </DashboardLayout>
   );

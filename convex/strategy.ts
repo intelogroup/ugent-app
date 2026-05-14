@@ -234,6 +234,90 @@ export const getQuestionsForDisease = query({
   },
 });
 
+export const getStrategyGraphData = query({
+  args: {
+    userId: v.optional(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    // 1. Fetch user performance if available
+    const questionStats = new Map<string, { total: number; correct: number }>();
+    if (args.userId) {
+      const userAnswers = await ctx.db
+        .query("answers")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .collect();
+      for (const ans of userAnswers) {
+        const stats = questionStats.get(ans.questionId) || { total: 0, correct: 0 };
+        stats.total++;
+        if (ans.isCorrect) stats.correct++;
+        questionStats.set(ans.questionId, stats);
+      }
+    }
+
+    // 2. Fetch all patterns and join to questions to get the system
+    const allPatterns = await ctx.db.query("extracted_patterns").collect();
+
+    // system -> topicType -> diseaseName -> { count, successRate }
+    type LeafData = { count: number; totalAtt: number; totalCorr: number };
+    const tree = new Map<string, Map<string, Map<string, LeafData>>>();
+
+    for (const p of allPatterns) {
+      if (!p.diseaseName || p.diseaseName === "N/A" || !p.topicType) continue;
+
+      const question = await ctx.db.get(p.questionId);
+      if (!question) continue;
+
+      const system = (question.system ?? "Other").trim();
+      const topicType = p.topicType;
+      const disease = p.diseaseName.trim();
+
+      if (!tree.has(system)) tree.set(system, new Map());
+      const systemMap = tree.get(system)!;
+
+      if (!systemMap.has(topicType)) systemMap.set(topicType, new Map());
+      const typeMap = systemMap.get(topicType)!;
+
+      const existing = typeMap.get(disease) ?? { count: 0, totalAtt: 0, totalCorr: 0 };
+      existing.count++;
+
+      const perf = questionStats.get(p.questionId);
+      if (perf) {
+        existing.totalAtt += perf.total;
+        existing.totalCorr += perf.correct;
+      }
+
+      typeMap.set(disease, existing);
+    }
+
+    // 3. Serialize into a clean array structure
+    const result = [];
+    for (const [system, systemMap] of tree.entries()) {
+      const topicTypes = [];
+      let systemTotal = 0;
+
+      for (const [topicType, typeMap] of systemMap.entries()) {
+        const diseases = [];
+        for (const [diseaseName, data] of typeMap.entries()) {
+          const successRate =
+            data.totalAtt > 0
+              ? Math.round((data.totalCorr / data.totalAtt) * 100)
+              : null;
+          diseases.push({ diseaseName, count: data.count, successRate });
+        }
+        diseases.sort((a, b) => b.count - a.count);
+        topicTypes.push({ topicType, count: diseases.length, diseases });
+        systemTotal += diseases.length;
+      }
+
+      topicTypes.sort((a, b) => b.count - a.count);
+      result.push({ system, total: systemTotal, topicTypes });
+    }
+
+    result.sort((a, b) => b.total - a.total);
+    return result;
+  },
+});
+
 export const backFixDiscriminators = mutation({
   args: { 
     dryRun: v.boolean()

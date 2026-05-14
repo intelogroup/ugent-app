@@ -308,6 +308,20 @@ export const purgeDuplicatePending = mutation({
   },
 });
 
+export const resetProcessingToPending = mutation({
+  handler: async (ctx) => {
+    const stuck = await ctx.db
+      .query("ingestions")
+      .withIndex("by_status", (q) => q.eq("status", "processing"))
+      .collect();
+
+    for (const ing of stuck) {
+      await ctx.db.patch(ing._id, { status: "pending" });
+    }
+    return { reset: stuck.length };
+  },
+});
+
 export const resetFailedToPending = mutation({
   handler: async (ctx) => {
     const failed = await ctx.db
@@ -319,5 +333,33 @@ export const resetFailedToPending = mutation({
       await ctx.db.patch(ing._id, { status: "pending" });
     }
     return { reset: failed.length };
+  },
+});
+
+export const fixExtractedPatterns = mutation({
+  args: {
+    patches: v.array(v.object({
+      _id: v.id("extracted_patterns"),
+      diseaseName: v.optional(v.string()),
+      topicType: v.optional(v.union(
+        v.literal("DISEASE"),
+        v.literal("PATHOGEN"),
+        v.literal("PRINCIPLE"),
+        v.literal("DRUG"),
+        v.literal("SYNDROME"),
+        v.literal("CONCEPT"),
+      )),
+      keySymptoms: v.optional(v.array(v.string())),
+    })),
+  },
+  handler: async (ctx, args) => {
+    for (const patch of args.patches) {
+      const update: any = { updatedAt: Date.now() };
+      if (patch.diseaseName !== undefined) update.diseaseName = patch.diseaseName;
+      if (patch.topicType !== undefined) update.topicType = patch.topicType;
+      if (patch.keySymptoms !== undefined) update.keySymptoms = patch.keySymptoms;
+      await ctx.db.patch(patch._id, update);
+    }
+    return { fixed: args.patches.length };
   },
 });

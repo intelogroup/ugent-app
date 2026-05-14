@@ -117,11 +117,17 @@ export const patchSystemAndTopic = mutation({
     systemId: v.optional(v.id("systems")),
     topicId: v.optional(v.id("topics")),
     subjectId: v.optional(v.id("subjects")),
+    difficulty: v.optional(v.union(v.literal("EASY"), v.literal("MEDIUM"), v.literal("HARD"))),
   },
   handler: async (ctx, args) => {
     const { questionId, ...updates } = args;
+    // Remove undefined values so we don't overwrite with null
+    const cleanUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) cleanUpdates[key] = value;
+    }
     await ctx.db.patch(questionId, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: Date.now(),
     });
   },
@@ -438,6 +444,42 @@ export const listSystemsWithTopics = query({
         };
       })
     );
+  },
+});
+
+export const patchQuestionFields = mutation({
+  args: {
+    questionId: v.id("questions"),
+    educationalObjective: v.optional(v.string()),
+    choicePercentages: v.optional(v.array(v.object({
+      letter: v.string(),
+      text: v.string(),
+      percentage: v.number(),
+    }))),
+  },
+  handler: async (ctx, args) => {
+    const patch: any = {};
+    if (args.educationalObjective !== undefined) patch.educationalObjective = args.educationalObjective;
+    if (args.choicePercentages !== undefined) patch.choicePercentages = args.choicePercentages;
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.questionId, patch);
+    }
+  },
+});
+
+export const fixCorrectAnswer = mutation({
+  args: {
+    questionId: v.id("questions"),
+    correctAnswer: v.string(),
+    fixedOptions: v.optional(v.array(v.object({
+      text: v.string(),
+      isCorrect: v.boolean(),
+    }))),
+  },
+  handler: async (ctx, args) => {
+    const patch: any = { correctAnswer: args.correctAnswer };
+    if (args.fixedOptions) patch.options = args.fixedOptions;
+    await ctx.db.patch(args.questionId, patch);
   },
 });
 
