@@ -45,3 +45,6 @@ scripts/output/
 # local MCP config (may contain plaintext API keys)
 .mcp.json
 .gstack/
+
+# Local question data (medicospira exports)
+data/
