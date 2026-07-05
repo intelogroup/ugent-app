@@ -28,4 +28,8 @@
 ## Simplified Medical Explanations
 - When the user requests simplified explanations (e.g., "for a 15yo"), explain complex anatomical/pathological mechanisms using concrete, mechanical metaphors (e.g., internet cables, power steering, brakes, hybrid engines, plumbing, or electric guitars).
 
+## Strategy Explorer Design Principle
+- For any updates, configurations, or references in the Strategy Graph Explorer, align closely with the structure, chapters, page ranges, and content of the official study books (First Aid and Pathoma), rather than inventing terms or relying solely on raw Qbank fields.
+
+
 
