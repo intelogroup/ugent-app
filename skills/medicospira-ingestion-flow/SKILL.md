@@ -8,7 +8,7 @@ description: Use when working through Medicospira question blocks and transferri
 ## Overview
 
 Use this skill for the repeatable Medicospira -> Ugent research-ingestion workflow in this workspace.
-It is optimized for Playwright MCP and the local Next app at `http://localhost:3000/research/ingest`.
+It is optimized for Playwright MCP and the production app at `https://ugent-app.vercel.app/research/ingest`.
 
 Operate in one of these procedures depending on the user's request:
 - `create_test`
@@ -21,8 +21,8 @@ Operate in one of these procedures depending on the user's request:
 1. Open Medicospira login at `https://www.medicospira.com/uworld1/login.php`.
 2. Log in, then follow `Continue Free` on the PayPal step.
 3. Create a test by selecting subjects/systems and setting the question count.
-4. Work through questions with Playwright, capturing metadata plus strategy-grade paraphrased signals.
-5. Type paraphrased ingestion entries into the Research Ingestion Dashboard and queue them.
+4. Work through questions with Playwright, capturing metadata.
+5. Send raw or paraphrased ingestion entries into the Research Ingestion Dashboard as requested.
 6. End the block with the confirmation fallback when the visible footer control is flaky.
 
 After every navigation or major state change, always run:
@@ -50,7 +50,7 @@ For every completed question, produce a compact result record with:
 1. Open Medicospira and authenticate.
 2. If the PayPal interstitial appears, click `Continue Free`.
 3. Navigate to create-test using the DOM-driven flow below.
-4. Select all available `subject[]` and `System[]` options unless the user requests a narrower scope.
+4. Select available `subject[]` and `System[]` options.
 5. Set `#number_qbox` to the requested count.
 6. Submit with `#create_test_btn`.
 7. Verify the resulting URL contains `exam.php?e_id=` and capture the `exam_id`.
@@ -60,8 +60,8 @@ For every completed question, produce a compact result record with:
 1. Answer one question.
 2. Submit and wait for the review state.
 3. Extract metadata from the review page.
-4. Prepare one structured paraphrased ingestion entry with clues, symptoms, context, and distractor rule-outs.
-5. Type it into `http://localhost:3000/research/ingest`.
+4. Prepare one structured ingestion entry (raw or paraphrased).
+5. Type it into `https://ugent-app.vercel.app/research/ingest`.
 6. Wait for `Queue 1 new question`.
 7. Click the queue button.
 7. Verify the dashboard shows `1 queued` before reporting success.
@@ -69,10 +69,10 @@ For every completed question, produce a compact result record with:
 ### `speedrun_q1_q5`
 
 1. Start from question 1 review or question 1 unanswered state.
-2. Answer, submit, paraphrase, and queue each question through question 5.
+2. Answer, submit, and queue each question through question 5.
 3. Prefer numbered tabs to advance between questions.
 4. Default to one-by-one ingestion, not a single bulk paste.
-5. For each question: clear the textarea, type one structured paraphrased entry, wait for `Queue 1 new question`, click it, and verify `1 queued` or a new `WAITING FOR BATCH` row.
+5. For each question: clear the textarea, type one structured entry, wait for `Queue 1 new question`, click it, and verify `1 queued` or a new `WAITING FOR BATCH` row.
 6. Keep one result record per question.
 
 ### `end_block`
@@ -114,7 +114,7 @@ document.body?.classList?.add('sidebar-main');
 document.querySelector('#v-pills-create-tab')?.click();
 ```
 
-Then check all available:
+Then check available:
 - `input[name="subject[]"]`
 - `input[name="System[]"]`
 
@@ -126,8 +126,7 @@ Submit with:
 
 ### Research ingestion
 
-- The local ingestion target is `http://localhost:3000/research/ingest`.
-- If the app is not running, start it from the repo root with `npm run dev`.
+- The production ingestion target is `https://ugent-app.vercel.app/research/ingest`.
 - The ingestion textarea uses `---NEXT-QUESTION---` as the delimiter.
 - Prefer one entry at a time even though the dashboard supports delimiters.
 - Do not rely on setting `textarea.value = ...` alone. The React state may not update.
@@ -137,165 +136,56 @@ Submit with:
 
 ## Content Policy Guardrail
 
-Do not paste full question text, answer sets, or explanations from Medicospira into another system.
-
-Only transfer:
+Transfer:
 - source metadata
 - question id
 - exam id
 - subject guess
 - system guess
 - topic guess
-- paraphrased stem with decisive facts preserved
+- question stem (raw or paraphrased as requested)
 - normalized answer labels
 - selected answer letter
 - correct answer letter
 - clinical context
 - key symptoms
 - high-leverage clues
-- paraphrased distractor rule-outs
+- distractor rule-outs
 - prerequisites
-- paraphrased explanation
+- explanation (raw or paraphrased as requested)
 - educational objective
 
-Keep each entry in original wording. Summarize medical reasoning instead of copying.
+## Automated Loop (Self-Solver Mode)
 
-## Recommended Entry Format
+To populate the local question database efficiently in bulk, you can run the automated batch loop script in self-solving mode where the current active agent (Antigravity) solves each question.
 
-Use this exact structure for each queued item:
+### Execution
+1. **Start the Loop**: Run the loop script in the background:
+   ```bash
+   node scripts/medicospira-loop.mjs
+   ```
+   *Note: `AI_PROVIDER` now defaults to `self`.*
+2. **Clear Stale Files**: Before launching, ensure temp directories are clean:
+   ```bash
+   rm -f data/temp/question_*.json data/temp/answer_*.json
+   ```
 
-```text
-SOURCE: Medicospira Step 1
-QUESTION_ID: <id>
-EXAM_ID: <id>
-SOURCE_URL: https://www.medicospira.com/uworld1/exam.php?e_id=<id>
-SUBJECT_GUESS: <subject>
-SYSTEM_GUESS: <system>
-TOPIC_GUESS: <topic>
-TOPIC_TYPE_GUESS: <DISEASE | PATHOGEN | PRINCIPLE | DRUG | SYNDROME | CONCEPT>
+### Autonomous Agent Solver Loop
+Since the agent runs turn-by-turn inside a chat session, you can execute a fully autonomous solver loop without user interaction:
 
-CLINICAL_CONTEXT:
-- Age: <if known>
-- Gender: <if known>
-- Physiology State: <if known>
-- Onset Pattern: <acute/subacute/chronic/intermittent/etc>
+1. **Scheduled Waking**: Schedule a progress-check timer (e.g., 10 seconds) using the `schedule` tool, then yield your turn.
+2. **Polling active questions**: On wake-up, run the active question helper:
+   ```bash
+   python3 scripts/get-active-question.py
+   ```
+3. **Reasoning Protocol**:
+   - **No Web Search**: You MUST NOT use any web search tool to predict the correct choice. Rely entirely on your own extensive medical training data and clinical knowledge.
+   - **Visuals**: If the question contains images, inspect them using `view_file` to verify relevant clinical findings (e.g., histology, CT scans, rashes).
+4. **Answer Submission**: Submit the answer letter using the solve-question script:
+   ```bash
+   python3 scripts/solve-question.py B
+   ```
+5. **Next Tick**: Schedule the next 10-second timer and yield the turn. Repeat this cycle until the scraper task finishes.
 
-PARAPHRASED_STEM:
-<2-4 sentence paraphrase preserving the decisive facts, not just the theme>
 
-KEY_SYMPTOMS:
-- ...
-- ...
 
-HIGH_LEVERAGE_CLUES:
-- ...
-- ...
-
-ANSWER_OPTIONS_NORMALIZED:
-A. ...
-B. ...
-
-USER_SELECTED_ANSWER: <letter>
-CORRECT_ANSWER: <letter>
-
-DISTRACTOR_RULE_OUTS:
-- <distractor label>: <short paraphrased reason it is wrong>
-- <distractor label>: <short paraphrased reason it is wrong>
-
-MECHANISM_SUMMARY:
-<core pathophysiology or tested principle in 1-2 sentences>
-
-PREREQUISITES:
-- ...
-- ...
-
-PARAPHRASED_EXPLANATION:
-<2-4 sentence paraphrase of why the correct answer is right>
-
-EDUCATIONAL_OBJECTIVE:
-<one-line teaching point>
-
-INGESTION_NOTES:
-This entry is intentionally paraphrased and condensed for downstream extraction.
-```
-
-If the user explicitly wants bulk mode, separate entries with:
-
-```text
----NEXT-QUESTION---
-```
-
-## Useful Playwright Patterns
-
-### Extract current question metadata
-
-```js
-const text = document.body.innerText || '';
-const qid = (text.match(/Question Id:\s*(\d+)/) || [])[1] || '';
-const correct = (text.match(/The Correct Answer\s+([A-Z])/i) || [])[1] || '';
-```
-
-### Random answer submission
-
-```js
-const radios = page.locator('input[type="radio"]:not([disabled])');
-const count = await radios.count();
-const index = Math.floor(Math.random() * count);
-await radios.nth(index).click();
-await page.getByRole('button', { name: 'Submit' }).click();
-```
-
-### Queue one ingestion entry
-
-Prefer this exact interaction pattern:
-- click the textarea
-- `ControlOrMeta+A`
-- `Backspace`
-- type one paraphrased entry
-- wait for `Queue 1 new question`
-- click the queue button
-- verify `1 queued`
-
-## Strategy Quality Bar
-
-The downstream strategy system depends heavily on:
-- `diseaseName` / focal concept
-- `highLeverageClues`
-- `mechanism`
-- `discriminators`
-- `prerequisites`
-
-Therefore, every entry should preserve:
-- the decisive patient context
-- the unique clue phrases in paraphrased form
-- why the right answer wins
-- why at least 2 strong distractors lose
-- the prerequisite knowledge a learner needed to solve it
-
-Avoid overly thin summaries like:
-- one-line stem paraphrases with no context
-- answer lists without rule-out logic
-- explanation summaries that omit the actual mechanism
-
-Good entries are short, but dense with differentiating signal.
-
-## Retry Rules
-
-- If the right-arrow fails, switch immediately to numbered question tabs.
-- If the visible end-block control fails, reveal `#endform` and click `#end_confirm`.
-- If the queue button stays disabled after text insertion, clear the textarea and re-enter one item by typing.
-- If queueing does not show `1 queued`, confirm a new `WAITING FOR BATCH` row before retrying.
-- If Medicospira reaches `test_result.php` but not `welcome.php`, click the `Home` link and verify again.
-
-## Validation
-
-A successful run should end with:
-- all handled questions answered and recorded
-- ingestion entries queued one by one
-- Medicospira back on `welcome.php`
-- end-block flow passing through `test_result.php?id=<exam_id>`
-- ingestion dashboard showing queued items in `Recent Ingestions`
-- no console errors on the local dashboard
-- every handled question having a result record with answer/result/ingestion metadata
-
-Medicospira itself may still emit site-side JS errors. Treat those as expected unless they block the flow.

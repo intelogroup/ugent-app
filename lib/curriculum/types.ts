@@ -1,5 +1,10 @@
 export type TopicType = 'DISEASE' | 'PRINCIPLE' | 'DRUG' | 'PATHOGEN' | 'SYNDROME' | 'CONCEPT';
 
+export interface SubChapterNode {
+  title: string;
+  items?: string[];
+}
+
 export type Subject =
   | 'Physiology' | 'Pathology' | 'Anatomy' | 'Pharmacology'
   | 'Microbiology' | 'Immunology' | 'Biostatistics & Epidemiology'
@@ -50,6 +55,8 @@ export interface TopicNode {
   type: TopicType;
   subject: string;
   system: string;
+  systems?: string[];
+  subjects?: string[];
   questionCount: number;
   prerequisites: string[]; // IDs of prerequisite topics
   dependsOn: string[];     // same as prerequisites, for graph edges

@@ -1,8 +1,6 @@
 "use client";
 
-import { use } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { use, useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DiseaseProfileTabs from "@/components/strategy/DiseaseProfileTabs";
 import Link from "next/link";
@@ -23,10 +21,26 @@ export default function DiseaseMasteryPage({ params }: Props) {
   const { disease } = use(params);
   const diseaseName = decodeURIComponent(disease);
 
-  const profile = useQuery(api.strategy.getDiseaseProfile, { diseaseName });
-  const questionsData = useQuery(api.strategy.getQuestionsForDisease, { diseaseName });
+  const [profile, setProfile] = useState<any>(null);
+  const [questionsData, setQuestionsData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isLoading = profile === undefined || questionsData === undefined;
+  useEffect(() => {
+    async function fetchDisease() {
+      try {
+        const res = await fetch(`/api/strategy/${encodeURIComponent(diseaseName)}`);
+        if (!res.ok) throw new Error("Failed to load disease profile");
+        const data = await res.json();
+        setProfile(data.profile);
+        setQuestionsData(data.questions || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchDisease();
+  }, [diseaseName]);
 
   const difficultyColor = (d?: string) => {
     if (d === "HARD") return "bg-rose-100 text-rose-700";

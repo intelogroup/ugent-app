@@ -438,6 +438,9 @@ export const extractSingleQuestion = internalAction({
           result.correctAnswer = correctOpt?.text?.slice(0, 1) ?? "";
         }
 
+        // Normalize disease name casing
+        result.diseaseName = result.diseaseName?.trim().replace(/\b\w/g, (c: string) => c.toUpperCase());
+
         // Save the results
         await ctx.runMutation(api.ingest.saveExtractedIntelligence, {
           ingestionId,

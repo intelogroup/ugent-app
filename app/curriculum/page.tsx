@@ -42,6 +42,7 @@ export default function CurriculumPage() {
     return new Set();
   });
   const [activePhase, setActivePhase] = useState<string>('FOUNDATIONS');
+  const [sortAlpha, setSortAlpha] = useState(true);
 
   useEffect(() => {
     localStorage.setItem('curriculum-completed-blocks', JSON.stringify([...completedBlocks]));
@@ -240,8 +241,19 @@ export default function CurriculumPage() {
         {/* === TOP DISEASES REFERENCE === */}
         <details className="card p-4 mb-8">
           <summary className="text-sm font-semibold text-neutral-700 cursor-pointer">Top Tested Diseases in Your Databank</summary>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {data.overview.topDiseases.map(d => (
+          <div className="mt-3 flex items-center gap-2 mb-2">
+            <button
+              onClick={() => setSortAlpha(d => !d)}
+              className="text-xs text-primary-600 hover:text-primary-500 font-medium border border-primary-200 rounded px-2 py-0.5"
+            >
+              Sort: {sortAlpha ? 'A-Z' : 'Frequency'}
+            </button>
+            <span className="text-xs text-neutral-400">{data.overview.topDiseases.length} conditions</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[...data.overview.topDiseases]
+              .sort((a, b) => sortAlpha ? a.name.localeCompare(b.name) : b.count - a.count)
+              .map(d => (
               <span key={d.name} className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded">
                 {d.name} ({d.count}x)
               </span>

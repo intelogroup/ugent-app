@@ -115,7 +115,7 @@ function resolvePathomaRef(system: string): string {
   const parts = system.split(/ \+ |, | & /);
   const refs = parts.map(p => {
     const ref = PATHOMA_MAP[p.trim()];
-    return ref || null;
+    return ref ? ref.chapter : null;
   }).filter(Boolean);
   return refs.join('; ') || 'Ch. 1 – Cell Injury, Ch. 2 – Inflammation';
 }

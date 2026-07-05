@@ -48,3 +48,14 @@ scripts/output/
 
 # Local question data (medicospira exports)
 data/
+.vercel
+
+# Scratch files & cache
+scratch/
+__pycache__/
+*.wav
+*.png
+*.txt
+*.csv
+/public/temp-blobs.json
+public/temp-blobs.json

@@ -10,6 +10,7 @@ import {
   ChartBarIcon,
   AcademicCapIcon,
   CalendarDaysIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 export const navigation = [
@@ -22,6 +23,7 @@ export const navigation = [
   { name: 'Curriculum',     shortName: 'Curriculum', href: '/curriculum',      icon: CalendarDaysIcon },
   { name: 'Simulators',     shortName: 'Sims',       href: '/simulators',      icon: BeakerIcon },
   { name: 'Leaderboard',    shortName: 'Board',      href: '/leaderboard',     icon: TrophyIcon },
+  { name: 'Disease Ref',  shortName: 'Diseases',  href: '/diseases',        icon: DocumentTextIcon },
   { name: 'Study Notes',  shortName: 'Notes',     href: '/notes',           icon: BookOpenIcon },
   { name: 'Settings',     shortName: 'Settings',  href: '/settings',        icon: Cog6ToothIcon },
   { name: 'Pricing',      shortName: 'Pricing',   href: '/pricing',         icon: CreditCardIcon },

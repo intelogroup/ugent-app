@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 const DEMOGRAPHIC_RE = /^\d+-year-old|^(male|female|man|woman|boy|girl)\b/i;
 
@@ -55,10 +56,11 @@ export const getDiseasePriorityList = query({
     const patternMap = new Map<string, PatternMeta>();
     for (const p of allPatterns) {
       if (!p.diseaseName || p.diseaseName === "N/A") continue;
-      let meta = patternMap.get(p.diseaseName);
+      const normalizedName = p.diseaseName.trim().replace(/\b\w/g, c => c.toUpperCase());
+      let meta = patternMap.get(normalizedName);
       if (!meta) {
         meta = { topicType: p.topicType ?? undefined, clueFreq: new Map(), questionIds: new Set() };
-        patternMap.set(p.diseaseName, meta);
+        patternMap.set(normalizedName, meta);
       }
       if (!meta.topicType && p.topicType) meta.topicType = p.topicType;
       meta.questionIds.add(p.questionId);
@@ -126,8 +128,9 @@ export const getMostConfusableTopics = query({
     const countMap = new Map<string, { discriminatorCount: number; topicType?: string }>();
     for (const p of allPatterns) {
       if (!p.diseaseName || p.diseaseName.trim() === "" || p.diseaseName === "N/A") continue;
-      const existing = countMap.get(p.diseaseName);
-      countMap.set(p.diseaseName, {
+      const normalizedName = p.diseaseName.trim().replace(/\b\w/g, c => c.toUpperCase());
+      const existing = countMap.get(normalizedName);
+      countMap.set(normalizedName, {
         discriminatorCount: (existing?.discriminatorCount ?? 0) + (p.discriminators?.length ?? 0),
         topicType: existing?.topicType ?? p.topicType ?? undefined,
       });
@@ -240,12 +243,12 @@ function mapSystem(rawSystem: string): string {
   // Specific overrides to match sketch precisely
   if (s.includes("pulmonary") || s.includes("respiratory") || s.includes("pulmonology")) return "Pulmo nary";
   if (s.includes("cardio") || s.includes("cardiac") || s.includes("vascular") || s.includes("circulatory")) return "Cardiovascular";
+  if (s.includes("nervous") || s.includes("neuro") || s.includes("cns")) return "System Nervous";
   if (s.includes("gastro") || s.includes("digestive") || s.includes("gi") || s.includes("hepatic") || s.includes("liver") || s.includes("biliary") || s.includes("gallbladder") || s.includes("pancreas")) return "Gastro Intestinal";
   if (s.includes("endocrine") || s.includes("metabolic") || s.includes("metabolism") || s.includes("thyroid") || s.includes("adrenal") || s.includes("pituitary") || s.includes("hypothalamus")) return "Endo crine";
   if (s.includes("renal") || s.includes("urinary") || s.includes("urology") || s.includes("genitourinary")) return "Renal";
   if (s.includes("hematologic") || s.includes("hematology") || s.includes("oncology") || s.includes("neoplasm") || s.includes("blood") || s.includes("heme") || s.includes("coagulation") || s.includes("lymphatic")) return "Hemato ONCO";
   if (s.includes("rheum") || s.includes("ortho") || s.includes("musculo") || s.includes("skeletal") || s.includes("connective tissue")) return "Rheum + ORTHO";
-  if (s.includes("nervous") || s.includes("neuro") || s.includes("cns")) return "System Nervous";
   if (s.includes("psych") || s.includes("behavioral") || s.includes("mental")) return "Psychiatry";
   if (s.includes("derm") || s.includes("skin") || s.includes("integumentary")) return "Dermato";
   if (s.includes("female") || s.includes("breast")) return "Female System";
@@ -254,12 +257,13 @@ function mapSystem(rawSystem: string): string {
   if (s.includes("infectious") || s.includes("microbiology") || s.includes("bacteriology") || s.includes("viral")) return "Infectious Diseases";
   if (s.includes("allergy") || s.includes("immuno") || s.includes("immune") || s.includes("autoimmune")) return "Allergy Imm.";
   if (s.includes("poison") || s.includes("toxic")) return "Poisoning";
-  if (s.includes("ent") || s.includes("ear") || s.includes("nose") || s.includes("throat") || s.includes("auditory") || s.includes("head and neck") || s.includes("oral")) return "ENT";
+  if (s.includes("ent") || s.includes("ear") || s.includes("nose") || s.includes("throat") || s.includes("auditory") || s.includes("head and neck") || s.includes("oral") || s.includes("otolaryngology") || s.includes("otorhinolaryngology")) return "ENT";
   if (s.includes("ophthal") || s.includes("eye") || s.includes("visual") || s.includes("retina")) return "Ophtal mo";
+  if (s.includes("pharmaco") || s.includes("drug") || s.includes("antimicrobial") || s.includes("antibiotic") || s.includes("chemotherapy") || s.includes("dose") || s.includes("pharm")) return "Poisoning";
   if (s.includes("biostat") || s.includes("epidemiol") || s.includes("statistics") || s.includes("public health") || s.includes("preventive") || s.includes("population health")) return "Biostatistics & Epidemiology";
   if (s.includes("ethic") || s.includes("legal") || s.includes("professional") || s.includes("social") || s.includes("humanities") || s.includes("jurisprudence") || s.includes("bioethic") || s.includes("law")) return "Social Sciences";
 
-  return "Infectious Diseases"; // Default catch-all for USMLE if unsure, or "Other"
+  return "Other";
 }
 
 export const getStrategyGraphData = query({
@@ -295,9 +299,21 @@ export const getStrategyGraphData = query({
       const question = await ctx.db.get(p.questionId);
       if (!question) continue;
 
-      const system = mapSystem(question.system ?? "Other");
+      let system = mapSystem(question.system ?? "Other");
       const topicType = p.topicType;
-      const disease = p.diseaseName.trim();
+      const disease = p.diseaseName.trim().replace(/\b\w/g, c => c.toUpperCase());
+
+      // Route reproductive diseases to male/female buckets by disease name
+      if (system === "OB GYN") {
+        const dl = disease.toLowerCase();
+        const maleKeywords = ["prostate", "testicular", "testis", "penile", "penis", "semen", "sperm", "scrotal", "scrotum", "vas deferens", "vasectomy", "priapism", "seminoma", "benign prostatic hyperplasia", "erectile", "androsten", "5-alpha", "5α", "cryptorchid"];
+        const femaleKeywords = ["ovarian", "ovary", "uterine", "uterus", "endometr", "cervical", "cervix", "vaginal", "vagina", "vulvar", "vulva", "fallopian", "mammary", "breast cancer", "fibrocystic breast", "endometriosis", "leiomyoma", "dermoid cyst", "mature cystic", "menarche", "menses", "menstrual", "menopause", "dysmenorrhea", "pelvic organ prolapse", "imperforate hymen", "müllerian", "hysterectomy", "oophorectom"];
+        if (maleKeywords.some(k => dl.includes(k))) {
+          system = "MALE System";
+        } else if (femaleKeywords.some(k => dl.includes(k))) {
+          system = "Female System";
+        }
+      }
 
       if (!tree.has(system)) tree.set(system, new Map());
       const systemMap = tree.get(system)!;
@@ -411,4 +427,22 @@ export const backFixDiscriminators = mutation({
       dryRun: args.dryRun
     };
   }
+});
+
+export const getGraphSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    const full = await ctx.runQuery(api.strategy.getStrategyGraphData, { userId: undefined as any });
+    return full.map(s => `${s.system}: ${s.total} diseases (${s.topicTypes.map(t => `${t.topicType}=${t.count}`).join(', ')})`);
+  },
+});
+
+export const getGraphSystem = query({
+  args: { system: v.string() },
+  handler: async (ctx, args) => {
+    const full = await ctx.runQuery(api.strategy.getStrategyGraphData, { userId: undefined as any });
+    const sys = full.find(s => s.system === args.system);
+    if (!sys) return [];
+    return sys.topicTypes.flatMap(t => t.diseases.map(d => `${t.topicType} | ${d.diseaseName} (${d.count})`));
+  },
 });

@@ -13,7 +13,7 @@ export const getSystemHubStats = query({
 
     let categorized = 0, withPattern = 0, withDifficulty = 0;
     let both = 0, catOnly = 0, patOnly = 0, neither = 0;
-    const diffCounts = {};
+    const diffCounts: Record<string, number> = {};
     const missingFields = { systemId: 0, topicId: 0, subjectId: 0, difficulty: 0, explanation: 0, educationalObjective: 0 };
 
     const patternByQuestion = new Map();

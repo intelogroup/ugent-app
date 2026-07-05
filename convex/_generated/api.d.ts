@@ -13,6 +13,7 @@ import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as backfill from "../backfill.js";
 import type * as backfill_actions from "../backfill_actions.js";
+import type * as classify from "../classify.js";
 import type * as ingest from "../ingest.js";
 import type * as interactions from "../interactions.js";
 import type * as leaderboard from "../leaderboard.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   backfill: typeof backfill;
   backfill_actions: typeof backfill_actions;
+  classify: typeof classify;
   ingest: typeof ingest;
   interactions: typeof interactions;
   leaderboard: typeof leaderboard;

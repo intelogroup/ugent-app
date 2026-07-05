@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { SubChapterNode } from "@/lib/curriculum/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,13 +72,24 @@ function successDot(rate: number | null): string {
   return "bg-rose-400";
 }
 
+function getMapKey(system: string): string {
+  if (system === 'Dermatology') return 'Integumentary';
+  if (system === 'Male Reproductive' || system === 'Female Reproductive') return 'Reproductive';
+  return system;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
+export default function StrategyGraphExplorer({
+  data,
+  firstAidMap = {},
+  pathomaMap = {},
+}: {
+  data: SystemNode[];
+  firstAidMap?: Record<string, { chapter: string; pages: string; subChapters: SubChapterNode[] }>;
+  pathomaMap?: Record<string, { chapter: string; subChapters: SubChapterNode[] }>;
+}) {
   const router = useRouter();
-  const data = useQuery(api.strategy.getStrategyGraphData, {
-    userId: userId as any,
-  });
 
   const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
   const [selectedTopicType, setSelectedTopicType] = useState<string | null>(null);
@@ -102,6 +112,13 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
     () => activeSystem?.topicTypes.find((t) => t.topicType === selectedTopicType) ?? null,
     [activeSystem, selectedTopicType]
   );
+
+  const sortedDiseases = useMemo(() => {
+    if (!activeTopicType?.diseases) return [];
+    return [...activeTopicType.diseases].sort((a, b) =>
+      a.diseaseName.localeCompare(b.diseaseName)
+    );
+  }, [activeTopicType]);
 
   // Level 1 collision-packed layout
   const CONTAINER_R = 350;
@@ -237,7 +254,7 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
     return (
       <div className="flex items-center justify-center py-12">
         <div
-          className="relative rounded-full border-4 border-neutral-100 bg-neutral-50/30 shadow-inner flex items-center justify-center"
+          className="relative rounded-full bg-neutral-50/30 flex items-center justify-center"
           style={{ width: CONTAINER_R * 2, height: CONTAINER_R * 2 }}
         >
           {data.map((s) => {
@@ -294,37 +311,65 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
             </span>
           </div>
 
-          {/* Topic Type Circles (Surrounding the central one) */}
-          {activeSystem?.topicTypes.map((tt, i) => {
-            const colors = TOPIC_TYPE_COLORS[tt.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT;
-            const isActive = selectedTopicType === tt.topicType;
+          {/* Topic Type Circles + Chapters Circle */}
+          {(() => {
+            const topicTypes = activeSystem?.topicTypes || [];
+            const totalCircles = topicTypes.length + 1;
             
-            // Calculate position in circle
-            const angle = (i / activeSystem.topicTypes.length) * 2 * Math.PI - Math.PI / 2;
-            const radius = 100;
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
+            return [
+              ...topicTypes.map((tt, i) => {
+                const colors = TOPIC_TYPE_COLORS[tt.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT;
+                const isActive = selectedTopicType === tt.topicType;
+                const angle = (i / totalCircles) * 2 * Math.PI - Math.PI / 2;
+                const radius = 100;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
 
-            return (
-              <button
-                key={tt.topicType}
-                onClick={() => setSelectedTopicType(isActive ? null : tt.topicType)}
-                style={{ transform: `translate(${x}px, ${y}px)` }}
-                className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
-                  isActive
-                    ? `${colors.bg} ${colors.border} ${colors.text} ${colors.shadow} ring-4 ring-white`
-                    : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
-                }`}
-              >
-                <span className="text-[10px] font-bold leading-none">{tt.topicType}</span>
-                <span className="text-[9px] opacity-60 mt-1">{tt.count}</span>
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={tt.topicType}
+                    onClick={() => setSelectedTopicType(isActive ? null : tt.topicType)}
+                    style={{ transform: `translate(${x}px, ${y}px)` }}
+                    className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
+                      isActive
+                        ? `${colors.bg} ${colors.border} ${colors.text} ${colors.shadow} ring-4 ring-white`
+                        : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold leading-none">{tt.topicType}</span>
+                    <span className="text-[9px] opacity-60 mt-1">{tt.count}</span>
+                  </button>
+                );
+              }),
+              (() => {
+                const isActive = selectedTopicType === "CHAPTERS";
+                const angle = ((totalCircles - 1) / totalCircles) * 2 * Math.PI - Math.PI / 2;
+                const radius = 100;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                return (
+                  <button
+                    key="CHAPTERS"
+                    onClick={() => setSelectedTopicType(isActive ? null : "CHAPTERS")}
+                    style={{ transform: `translate(${x}px, ${y}px)` }}
+                    className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
+                      isActive
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-indigo-100 ring-4 ring-white"
+                        : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold leading-none">Chapters</span>
+                    <span className="text-[9px] opacity-60 mt-1">Ref</span>
+                  </button>
+                );
+              })()
+            ];
+          })()}
         </div>
 
         {/* Level 3: The List (Connected to Active Type) */}
-        {activeTopicType && (
+        {activeTopicType && selectedTopicType !== "CHAPTERS" && (
           <div className="flex-1 w-full max-w-md animate-in slide-in-from-right-4 duration-300">
             <div className="bg-neutral-50/50 rounded-3xl border border-neutral-100 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -350,7 +395,7 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
                     background: #d4d4d4;
                   }
                 `}</style>
-                {activeTopicType.diseases.map((d) => (
+                {sortedDiseases.map((d) => (
                   <button
                     key={d.diseaseName}
                     onClick={() => router.push(`/strategy/${encodeURIComponent(d.diseaseName)}`)}
@@ -373,8 +418,116 @@ export default function StrategyGraphExplorer({ userId }: { userId?: string }) {
           </div>
         )}
 
+        {/* Level 3 for Chapters */}
+        {selectedTopicType === "CHAPTERS" && (
+          <div className="flex-1 w-full max-w-md animate-in slide-in-from-right-4 duration-300">
+            <div className="bg-neutral-50/50 rounded-3xl border border-neutral-100 p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
+                  Combined References
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Chapters for {selectedSystem}</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* First Aid Card */}
+                {(() => {
+                  const key = getMapKey(selectedSystem);
+                  const fa = firstAidMap[key];
+                  if (!fa) return null;
+
+                  return (
+                    <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          First Aid
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-neutral-800">{fa.chapter}</h4>
+                      <p className="text-xs text-neutral-500 mt-1">Pages: <span className="font-semibold text-neutral-700">{fa.pages}</span></p>
+                      {fa.subChapters && fa.subChapters.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-neutral-100">
+                          <p className="text-[10px] font-black uppercase text-neutral-400 mb-2 tracking-wider">Chapters & Sub-topics</p>
+                          <ul className="space-y-3">
+                            {fa.subChapters.map((sub, idx) => (
+                              <li key={idx}>
+                                <span className="text-xs font-bold text-neutral-800">• {sub.title}</span>
+                                {sub.items && sub.items.length > 0 && (
+                                  <ul className="pl-3 mt-1 space-y-1 border-l-2 border-neutral-100 ml-1.5">
+                                    {sub.items.map((item, itemIdx) => (
+                                      <li key={itemIdx} className="text-[11px] font-semibold text-neutral-500">
+                                        - {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Pathoma Card */}
+                {(() => {
+                  const key = getMapKey(selectedSystem);
+                  const pathoma = pathomaMap[key];
+                  if (!pathoma) return null;
+
+                  return (
+                    <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          Pathoma
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-neutral-800 leading-snug">{pathoma.chapter}</h4>
+                      {pathoma.subChapters && pathoma.subChapters.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-neutral-100">
+                          <p className="text-[10px] font-black uppercase text-neutral-400 mb-2 tracking-wider">Chapters & Sub-topics</p>
+                          <ul className="space-y-3">
+                            {pathoma.subChapters.map((sub, idx) => (
+                              <li key={idx}>
+                                <span className="text-xs font-bold text-neutral-800">• {sub.title}</span>
+                                {sub.items && sub.items.length > 0 && (
+                                  <ul className="pl-3 mt-1 space-y-1 border-l-2 border-neutral-100 ml-1.5">
+                                    {sub.items.map((item, itemIdx) => (
+                                      <li key={itemIdx} className="text-[11px] font-semibold text-neutral-500">
+                                        - {item}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Fallback */}
+                {(() => {
+                  const key = getMapKey(selectedSystem);
+                  if (!firstAidMap[key] && !pathomaMap[key]) {
+                    return (
+                      <p className="text-xs text-neutral-400 italic">
+                        No specific chapter mappings configured for this system.
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Level 3 Placeholder */}
-        {!activeTopicType && (
+        {!activeTopicType && selectedTopicType !== "CHAPTERS" && (
           <div className="flex-1 hidden lg:flex items-center justify-center text-neutral-300 italic text-sm border-2 border-dashed border-neutral-100 rounded-3xl h-[300px]">
             Select a category circle to view topics
           </div>

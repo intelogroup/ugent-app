@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useMemo, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import ClueCard from "@/components/strategy/ClueCard";
 import Link from "next/link";
@@ -18,27 +16,35 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export default function ClueTrainingPage() {
-  const feed = useQuery(api.research.getExtractionFeed, { limit: 50 });
+  const [feed, setFeed] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
+  useEffect(() => {
+    async function fetchClues() {
+      try {
+        const res = await fetch("/api/strategy/clues");
+        if (!res.ok) throw new Error("Failed to load clues");
+        const json = await res.json();
+        setFeed(json.feed || []);
+      } catch (err) {
+        console.error(err);
+        setFeed([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchClues();
+  }, []);
+
   const cards = useMemo(() => {
     if (!feed) return [];
-    return shuffle(
-      feed.filter(
-        (p) =>
-          p.mechanism !== "Pending further analysis" &&
-          p.keySymptoms.length > 0
-      )
-    );
+    return shuffle(feed);
   }, [feed]);
 
   const current = cards[index];
   const total = cards.length;
-  const questionText = useQuery(
-    api.questions.getQuestionTextById,
-    revealed && current?.questionId ? { id: current.questionId } : "skip"
-  );
 
   const goNext = () => {
     setRevealed(false);
@@ -66,17 +72,17 @@ export default function ClueTrainingPage() {
           </div>
         </div>
 
-        {feed === undefined && (
+        {isLoading && (
           <div className="card p-8 text-center text-sm text-neutral-400">Loading...</div>
         )}
 
-        {feed !== undefined && total === 0 && (
+        {!isLoading && total === 0 && (
           <div className="card p-8 text-center text-sm text-neutral-400">
             No training cards available. Ingest more questions with extracted patterns.
           </div>
         )}
 
-        {feed !== undefined && total > 0 && current && (
+        {!isLoading && total > 0 && current && (
           <>
             <div className="flex items-center justify-between text-sm text-neutral-400">
               <span>{index + 1} / {total}</span>
@@ -94,7 +100,7 @@ export default function ClueTrainingPage() {
                 mechanism: current.mechanism,
                 keySymptoms: current.keySymptoms,
                 clinicalContext: current.clinicalContext,
-                questionText: questionText?.text,
+                questionText: current.questionText,
               }}
               isRevealed={revealed}
               onReveal={() => setRevealed(true)}

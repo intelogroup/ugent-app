@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DiseasePriorityRow from "@/components/strategy/DiseasePriorityRow";
 import StrategyGraphExplorer from "@/components/strategy/StrategyGraphExplorer";
+import MemorizeTab from "@/components/strategy/MemorizeTab";
 import Link from "next/link";
 import { AcademicCapIcon, BeakerIcon, TableCellsIcon, CircleStackIcon } from "@heroicons/react/24/outline";
 import {
@@ -38,32 +37,43 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function StrategyHub() {
-  const [view, setView] = useState<"table" | "graph">("table");
+  const [view, setView] = useState<"table" | "graph" | "memorize">("table");
   const [activeFilter, setActiveFilter] = useState<string | undefined>(undefined);
   const [displayLimit, setDisplayLimit] = useState(30);
 
-  const currentUser = useQuery(api.users.getCurrentUser);
-  const diseasePriority = useQuery(
-    api.strategy.getDiseasePriorityList,
-    currentUser !== undefined
-      ? {
-          userId: currentUser?._id ?? undefined,
-          limit: displayLimit,
-          topicTypeFilter: activeFilter,
-        }
-      : "skip"
-  );
-  const systemFreqs = useQuery(api.research.getTopPatternsByCount, {
-    type: "SYSTEM",
-    limit: 20,
-  });
-  const topicTypeFreqs = useQuery(api.research.getTopPatternsByCount, {
-    type: "TOPIC_TYPE",
-    limit: 10,
-  });
-  const confusableTopics = useQuery(api.strategy.getMostConfusableTopics, { limit: 8 });
+  const [strategyData, setStrategyData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const isLoading = currentUser === undefined || diseasePriority === undefined;
+  useEffect(() => {
+    async function fetchStrategy() {
+      try {
+        const res = await fetch("/api/strategy");
+        if (!res.ok) throw new Error("Failed to load strategy data");
+        const json = await res.json();
+        setStrategyData(json);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Something went wrong");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchStrategy();
+  }, []);
+
+  const filteredPriority = useMemo(() => {
+    if (!strategyData?.diseasePriority) return [];
+    let list = strategyData.diseasePriority;
+    if (activeFilter) {
+      list = list.filter((d: any) => d.topicType === activeFilter);
+    }
+    return list.slice(0, displayLimit);
+  }, [strategyData, activeFilter, displayLimit]);
+  const systemFreqs = strategyData?.systemFreqs || [];
+  const topicTypeFreqs = strategyData?.topicTypeFreqs || [];
+  const confusableTopics = strategyData?.confusableTopics || [];
+  const graphData = strategyData?.graphData || [];
 
   return (
     <DashboardLayout>
@@ -101,6 +111,17 @@ export default function StrategyHub() {
                 <CircleStackIcon className="w-3.5 h-3.5" />
                 Explorer
               </button>
+              <button
+                onClick={() => setView("memorize")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  view === "memorize"
+                    ? "bg-white text-neutral-900 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                }`}
+              >
+                <AcademicCapIcon className="w-3.5 h-3.5" />
+                Memorize
+              </button>
             </div>
             <Link
               href="/strategy/clue-training"
@@ -117,8 +138,26 @@ export default function StrategyHub() {
         {/* Graph Explorer View */}
         {view === "graph" && (
           <div className="card p-6">
-            <StrategyGraphExplorer userId={currentUser?._id as string | undefined} />
+            <StrategyGraphExplorer
+              data={graphData}
+              firstAidMap={strategyData?.firstAidMap}
+              pathomaMap={strategyData?.pathomaMap}
+            />
           </div>
+        )}
+
+        {/* Memorize View */}
+        {view === "memorize" && (
+          isLoading ? (
+            <div className="card p-8 text-center text-sm text-neutral-400">Loading study cards...</div>
+          ) : error ? (
+            <div className="card p-8 text-center text-sm text-rose-500">Error loading data: {error}</div>
+          ) : (
+            <MemorizeTab
+              geneticsPairs={strategyData?.geneticsPairs || []}
+              questionBankClues={strategyData?.questionBankClues || []}
+            />
+          )
         )}
 
         {view === "table" && <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -153,7 +192,9 @@ export default function StrategyHub() {
 
             {isLoading ? (
               <div className="p-8 text-center text-sm text-neutral-400">Loading...</div>
-            ) : !diseasePriority || diseasePriority.length === 0 ? (
+            ) : error ? (
+              <div className="p-8 text-center text-sm text-rose-500">Error: {error}</div>
+            ) : !filteredPriority || filteredPriority.length === 0 ? (
               <div className="p-8 text-center text-sm text-neutral-400">
                 {activeFilter
                   ? `No ${activeFilter.toLowerCase()} topics yet. Ingest more questions or run the backfill script.`
@@ -173,7 +214,7 @@ export default function StrategyHub() {
                       </tr>
                     </thead>
                     <tbody>
-                      {diseasePriority.map((d, i) => (
+                      {filteredPriority.map((d: any, i: number) => (
                         <DiseasePriorityRow
                           key={d.diseaseName}
                           rank={i + 1}
@@ -190,7 +231,7 @@ export default function StrategyHub() {
                 </div>
 
                 {/* See More Button */}
-                {diseasePriority.length >= displayLimit && (
+                {strategyData?.diseasePriority?.filter((d: any) => !activeFilter || d.topicType === activeFilter).length >= displayLimit && (
                   <div className="p-4 border-t border-neutral-100 flex justify-center">
                     <button
                       onClick={() => setDisplayLimit((prev) => prev + 100)}
@@ -211,7 +252,7 @@ export default function StrategyHub() {
               <div className="card p-4">
                 <h2 className="text-sm font-semibold text-neutral-900 mb-3">Question Types</h2>
                 <div className="space-y-2">
-                  {topicTypeFreqs.map((t) => (
+                  {topicTypeFreqs.map((t: any) => (
                     <div key={t.name} className="flex items-center justify-between">
                       <span className={`px-2 py-0.5 text-[11px] font-semibold rounded ${TYPE_COLORS[t.name] ?? "bg-neutral-100 text-neutral-600"}`}>
                         {t.name}
@@ -229,7 +270,7 @@ export default function StrategyHub() {
                   ))}
                 </div>
                 <p className="text-[10px] text-neutral-400 mt-3">
-                  Based on {topicTypeFreqs.reduce((s, t) => s + t.count, 0)} classified questions. Most questions classified before schema update show no type yet.
+                  Based on {topicTypeFreqs.reduce((s: number, t: any) => s + t.count, 0)} classified questions. Most questions classified before schema update show no type yet.
                 </p>
               </div>
             )}
@@ -240,7 +281,7 @@ export default function StrategyHub() {
                 <h2 className="text-sm font-semibold text-neutral-900 mb-1">Most Confusable</h2>
                 <p className="text-[11px] text-neutral-400 mb-3">Topics with the most wrong-answer distractors extracted</p>
                 <div className="space-y-2">
-                  {confusableTopics.map((t) => (
+                  {confusableTopics.map((t: any) => (
                     <div key={t.diseaseName} className="flex items-center justify-between gap-2">
                       <Link
                         href={`/strategy/${encodeURIComponent(t.diseaseName)}`}
@@ -269,7 +310,7 @@ export default function StrategyHub() {
                 ) : (
                   <ResponsiveContainer width="100%" height={Math.max(260, (systemFreqs?.length ?? 10) * 28)}>
                     <BarChart
-                      data={systemFreqs.map((s) => ({ name: s.name.length > 12 ? s.name.slice(0, 12) + "…" : s.name, count: s.count }))}
+                      data={systemFreqs.map((s: any) => ({ name: s.name.length > 12 ? s.name.slice(0, 12) + "…" : s.name, count: s.count }))}
                       layout="vertical"
                       margin={{ left: 0, right: 16, top: 4, bottom: 4 }}
                     >
