@@ -132,6 +132,7 @@ export async function GET() {
         if (sLower.includes('psych') || sLower.includes('behavior')) normalizedSystems.push('Psychiatry');
         if (sLower.includes('biostat') || sLower.includes('epidemiol') || sLower.includes('statistics')) normalizedSystems.push('Biostatistics & Epidemiology');
         if (sLower.includes('ethic') || sLower.includes('legal') || sLower.includes('policy')) normalizedSystems.push('Social Sciences');
+        if (sLower.includes('pediatr')) normalizedSystems.push('Pediatrics');
       }
 
       const uniqueSystems = [...new Set(normalizedSystems)];
