@@ -165,7 +165,9 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
     pages: '42-62',
     subChapters: [
       { title: 'Gene Expression', items: ['Transcription & translation regulation', 'Epigenetic modifications (methylation, acetylation)'] },
-      { title: 'Inheritance Patterns', items: ['Autosomal dominant & recessive', 'X-linked dominant & recessive', 'Mitochondrial & non-classical inheritance'] }
+      { title: 'Inheritance Patterns', items: ['Autosomal dominant & recessive', 'X-linked dominant & recessive', 'Mitochondrial & non-classical inheritance'] },
+      { title: 'Chromosomal Disorders & Syndromes', items: ['Down Syndrome (Trisomy 21)', 'Edwards Syndrome (Trisomy 18)', 'Patau Syndrome (Trisomy 13)', 'Turner Syndrome (45,XO)', 'Klinefelter Syndrome (47,XXY)', 'Williams Syndrome', 'Cri-du-chat Syndrome', 'DiGeorge Syndrome (22q11.2)'] },
+      { title: 'High-Yield Genetic Disorders', items: ['Cystic Fibrosis', 'Huntington Disease', 'Myotonic Dystrophy', 'Fragile X Syndrome', 'Prader-Willi & Angelman Syndromes', 'Marfan Syndrome', 'Xeroderma Pigmentosum', 'Friedreich Ataxia', 'Homocystinuria', 'Tuberous Sclerosis Complex', 'MELAS (mitochondrial)'] }
     ]
   },
   Ophthalmology: {
@@ -315,7 +317,8 @@ export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChap
     chapter: 'Ch. 3 – Neoplasia (genetic aspects)',
     subChapters: [
       { title: 'Oncogenes & Suppressors', items: ['Ras, Myc, Her2 oncogenes', 'Rb & p53 tumor suppressors'] },
-      { title: 'Apoptosis Regulations', items: ['Bcl-2 & Bax mechanisms'] }
+      { title: 'Apoptosis Regulations', items: ['Bcl-2 & Bax mechanisms'] },
+      { title: 'Cancer-Related Genetic Syndromes', items: ['Li-Fraumeni Syndrome (TP53)', 'Familial Adenomatous Polyposis (FAP) & Lynch Syndrome (HNPCC)', 'Neurofibromatosis Types 1 & 2', 'Tuberous Sclerosis & Von Hippel-Lindau (VHL)', 'Retinoblastoma (RB1)', 'Burkitt Lymphoma (t(8;14) c-myc)'] }
     ]
   },
   General: {
