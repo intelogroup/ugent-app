@@ -179,6 +179,30 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
       { title: 'Pupillary & Visual Fields', items: ['Pupillary control (Miosis, Mydriasis)', 'Pupillary light reflex', 'Horner syndrome', 'Cranial nerve palsies (CN III, IV, VI)', 'Visual field defects', 'Internuclear ophthalmoplegia (INO)'] }
     ]
   },
+  ENT: {
+    chapter: 'Neurology and Special Senses (Otology)',
+    pages: '549-550',
+    subChapters: [
+      { title: 'Otology', items: ['Weber & Rinne hearing tests', 'Conductive vs Sensorineural hearing loss', 'Menière disease & Cholesteatoma', 'Otitis externa & media'] }
+    ]
+  },
+  'Biostatistics & Epidemiology': {
+    chapter: 'Public Health Sciences',
+    pages: '256-266',
+    subChapters: [
+      { title: 'Study Designs', items: ['Case-control, cohort, RCT, meta-analysis'] },
+      { title: 'Diagnostic Testing', items: ['Sensitivity, specificity, PPV, NPV, likelihood ratios'] },
+      { title: 'Measures of Effect & Error', items: ['Relative risk (RR), Odds ratio (OR), ARR, NNT', 'Bias types & selection/measurement bias', 'Statistical hypothesis & p-values'] }
+    ]
+  },
+  'Social Sciences': {
+    chapter: 'Public Health Sciences (Ethics & Quality)',
+    pages: '267-278',
+    subChapters: [
+      { title: 'Ethics & Law', items: ['Informed consent & decision capacity', 'Confidentiality & exceptions', 'Surrogate decision maker, advance directives'] },
+      { title: 'Quality & Safety', items: ['Healthcare delivery & medical errors', 'Quality improvement (PDSA, root cause analysis)', 'Patient safety metrics'] }
+    ]
+  },
 };
 
 export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChapterNode[] }> = {
@@ -309,6 +333,20 @@ export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChap
       { title: 'Inflammatory & Extraintestinal', items: ['Extraintestinal manifestations of IBD (Ch. 10 - p. 110)', 'HLA-B27 Seronegative Spondyloarthropathies (Ch. 18 - p. 201)', 'Reactive Arthritis / Reiter Syndrome (Ch. 18 - p. 201)'] },
       { title: 'Neurological Connections', items: ['Pancoast tumor compression / Horner syndrome (Ch. 9 - p. 98)', 'Syringomyelia / Horner syndrome (Ch. 17 - p. 182)'] }
     ]
+  },
+  ENT: {
+    chapter: 'Ch. 10 – Gastrointestinal Pathology (Oral Cavity)',
+    subChapters: [
+      { title: 'Oral & Salivary Pathology', items: ['Cleft lip & cleft palate', 'Mumps virus infection', 'Salivary tumors (Pleomorphic adenoma, Warthin tumor)'] }
+    ]
+  },
+  'Biostatistics & Epidemiology': {
+    chapter: '(not covered in Pathoma)',
+    subChapters: []
+  },
+  'Social Sciences': {
+    chapter: '(not covered in Pathoma)',
+    subChapters: []
   },
 };
 
