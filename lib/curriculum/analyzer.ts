@@ -169,6 +169,16 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
       { title: 'Inheritance Patterns', items: ['Autosomal dominant/recessive', 'X-linked'] }
     ]
   },
+  Ophthalmology: {
+    chapter: 'Ophthalmology',
+    pages: '551-560',
+    subChapters: [
+      { title: 'Anatomy & Refraction', items: ['Normal eye anatomy', 'Conjunctivitis', 'Refractive errors (Hyperopia, Myopia, Astigmatism)'] },
+      { title: 'Lens & Retinal Disorders', items: ['Lens disorders (Cataracts, Presbyopia)', 'Age-related macular degeneration', 'Diabetic retinopathy', 'Retinoblastoma & Uveitis'] },
+      { title: 'Glaucoma', items: ['Open-angle glaucoma', 'Closed-angle glaucoma'] },
+      { title: 'Pupillary & Visual Fields', items: ['Pupillary control (Miosis, Mydriasis)', 'Pupillary light reflex', 'Horner syndrome', 'Cranial nerve palsies (CN III, IV, VI)', 'Visual field defects', 'Internuclear ophthalmoplegia (INO)'] }
+    ]
+  },
 };
 
 export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChapterNode[] }> = {
@@ -290,6 +300,14 @@ export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChap
       { title: 'Reversible & Irreversible', items: ['Cellular swelling & membrane damage', 'Mitochondrial dysfunction'] },
       { title: 'Apoptosis & Necrosis', items: ['Coagulative, Liquefactive, Caseous necrosis', 'Intrinsic & Extrinsic apoptosis pathways'] },
       { title: 'Free Radical Injury', items: ['Superoxide & Hydroxyl radical damage', 'pathologic calcification'] }
+    ]
+  },
+  Ophthalmology: {
+    chapter: '(covered across multiple pathology chapters)',
+    subChapters: [
+      { title: 'Neoplasia & Endocrine', items: ['Retinoblastoma (Ch. 3 - p. 26-27)', 'Diabetic Retinopathy & Cataracts (Ch. 15 - p. 168)'] },
+      { title: 'Inflammatory & Extraintestinal', items: ['Extraintestinal manifestations of IBD (Ch. 10 - p. 110)', 'HLA-B27 Seronegative Spondyloarthropathies (Ch. 18 - p. 201)', 'Reactive Arthritis / Reiter Syndrome (Ch. 18 - p. 201)'] },
+      { title: 'Neurological Connections', items: ['Pancoast tumor compression / Horner syndrome (Ch. 9 - p. 98)', 'Syringomyelia / Horner syndrome (Ch. 17 - p. 182)'] }
     ]
   },
 };
