@@ -135,6 +135,51 @@ export async function GET() {
         if (sLower.includes('pediatr')) normalizedSystems.push('Pediatrics');
       }
 
+      // Special syndrome-specific system mapping rules
+      const nameLower = node.name.toLowerCase();
+      if (nameLower.includes('turner syndrome')) {
+        normalizedSystems.push('Genetics', 'Reproductive', 'Cardiovascular');
+      }
+      if (nameLower.includes('down syndrome')) {
+        normalizedSystems.push('Genetics', 'Pediatrics', 'Cardiovascular');
+      }
+      if (nameLower.includes('li-fraumeni')) {
+        normalizedSystems.push('Genetics', 'Hematology & Oncology');
+      }
+      if (nameLower.includes('potter sequence') || nameLower.includes('potter syndrome')) {
+        normalizedSystems.push('Renal', 'Pediatrics', 'Respiratory');
+      }
+      if (nameLower.includes('tumor lysis')) {
+        normalizedSystems.push('Hematology & Oncology', 'Renal', 'Biochemistry');
+      }
+      if (nameLower.includes('siadh') || nameLower.includes('syndrome of inappropriate antidiuretic')) {
+        normalizedSystems.push('Endocrine', 'Neurology', 'Renal');
+      }
+      if (nameLower.includes('ipex syndrome')) {
+        normalizedSystems.push('Immunology', 'Endocrine', 'Gastrointestinal');
+      }
+      if (nameLower.includes('multiple endocrine neoplasia') || nameLower.includes('men1') || nameLower.includes('men2')) {
+        normalizedSystems.push('Endocrine', 'Genetics');
+      }
+      if (nameLower.includes('fat embolism')) {
+        normalizedSystems.push('Respiratory', 'Musculoskeletal');
+      }
+      if (nameLower.includes('amniotic fluid embol')) {
+        normalizedSystems.push('Reproductive', 'Respiratory', 'Hematology & Oncology');
+      }
+      if (nameLower.includes('jarisch-herxheimer')) {
+        normalizedSystems.push('Infectious Disease', 'Immunology');
+      }
+      if (nameLower.includes('wilson disease') || nameLower.includes("wilson's disease")) {
+        normalizedSystems.push('Gastrointestinal', 'Neurology', 'Ophthalmology', 'Genetics');
+      }
+      if (nameLower.includes('alport syndrome')) {
+        normalizedSystems.push('Renal', 'Ophthalmology', 'ENT', 'Genetics');
+      }
+      if (nameLower.includes('marfan syndrome')) {
+        normalizedSystems.push('Cardiovascular', 'Musculoskeletal', 'Ophthalmology', 'Genetics');
+      }
+
       const uniqueSystems = [...new Set(normalizedSystems)];
 
       for (let system of uniqueSystems) {
