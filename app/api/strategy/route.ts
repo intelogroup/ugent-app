@@ -183,7 +183,12 @@ export async function GET() {
       const uniqueSystems = [...new Set(normalizedSystems)];
 
       for (let system of uniqueSystems) {
-        const topicType = node.type;
+        let topicType = node.type;
+
+        // Force SYNDROME category if name contains "syndrome" or "sequence"
+        if (nameLower.includes('syndrome') || nameLower.includes('sequence')) {
+          topicType = 'SYNDROME';
+        }
 
         // Route reproductive diseases to male/female buckets
         if (system === "Reproductive") {
