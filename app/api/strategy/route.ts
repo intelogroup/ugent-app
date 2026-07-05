@@ -166,7 +166,7 @@ export async function GET() {
         systemTotal += typeTotal;
         topicTypes.push({
           topicType,
-          count: typeTotal,
+          count: diseases.length,
           diseases: diseases.sort((a, b) => b.count - a.count),
         });
       }
