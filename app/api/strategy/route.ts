@@ -119,6 +119,17 @@ export async function GET() {
 
       const rawSystems = node.systems && node.systems.length > 0 ? node.systems : [node.system];
       const normalizedSystems = rawSystems.map(sys => mapSystem(sys || "Other", node.subject));
+      
+      // Map cross-cutting subjects to basic science system circles
+      const rawSubjects = node.subjects && node.subjects.length > 0 ? node.subjects : [node.subject];
+      for (const subj of rawSubjects) {
+        const sLower = (subj || '').toLowerCase();
+        if (sLower.includes('genetic')) normalizedSystems.push('Genetics');
+        if (sLower.includes('pharm')) normalizedSystems.push('Pharmacology');
+        if (sLower.includes('biochem')) normalizedSystems.push('Biochemistry');
+        if (sLower.includes('immun')) normalizedSystems.push('Immunology');
+      }
+
       const uniqueSystems = [...new Set(normalizedSystems)];
 
       for (let system of uniqueSystems) {
