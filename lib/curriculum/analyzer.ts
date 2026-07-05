@@ -173,10 +173,11 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
     chapter: 'Ophthalmology',
     pages: '551-560',
     subChapters: [
-      { title: 'Anatomy & Refraction', items: ['Normal eye anatomy', 'Conjunctivitis', 'Refractive errors (Hyperopia, Myopia, Astigmatism)'] },
-      { title: 'Lens & Retinal Disorders', items: ['Lens disorders (Cataracts, Presbyopia)', 'Age-related macular degeneration', 'Diabetic retinopathy', 'Retinoblastoma & Uveitis'] },
-      { title: 'Glaucoma', items: ['Open-angle glaucoma', 'Closed-angle glaucoma'] },
-      { title: 'Pupillary & Visual Fields', items: ['Pupillary control (Miosis, Mydriasis)', 'Pupillary light reflex', 'Horner syndrome', 'Cranial nerve palsies (CN III, IV, VI)', 'Visual field defects', 'Internuclear ophthalmoplegia (INO)'] }
+      { title: 'Anatomy & Refraction', items: ['Normal eye anatomy', 'Conjunctivitis', 'Refractive errors (Myopia, Hyperopia, Astigmatism)', 'Presbyopia'] },
+      { title: 'Lens & Glaucoma', items: ['Cataracts (acquired & congenital)', 'Open-angle glaucoma', 'Closed-angle glaucoma'] },
+      { title: 'Retinal Vascular & Degenerative', items: ['Age-related macular degeneration (AMD)', 'Diabetic retinopathy (proliferative & nonproliferative)', 'Hypertensive retinopathy', 'Retinal artery occlusion', 'Retinal vein occlusion', 'Retinal detachment', 'Retinitis pigmentosa', 'Retinopathy of prematurity'] },
+      { title: 'Tumor & Inflammation', items: ['Retinoblastoma', 'Leukocoria (white reflex)', 'Uveitis (anterior & posterior)'] },
+      { title: 'Neuro-Ophthalmology', items: ['Pupillary control (Miosis, Mydriasis)', 'Pupillary light reflex', 'Horner syndrome', 'Cranial nerve palsies (CN III, IV, VI)', 'Visual field defects (hemianopia, quadrantanopia)', 'Internuclear ophthalmoplegia (INO)', 'Argyll Robertson pupil', 'Optic neuritis', 'Papilledema'] }
     ]
   },
   ENT: {
@@ -331,7 +332,7 @@ export const PATHOMA_MAP: Record<string, { chapter: string; subChapters: SubChap
     subChapters: [
       { title: 'Neoplasia & Endocrine', items: ['Retinoblastoma (Ch. 3 - p. 26-27)', 'Diabetic Retinopathy & Cataracts (Ch. 15 - p. 168)'] },
       { title: 'Inflammatory & Extraintestinal', items: ['Extraintestinal manifestations of IBD (Ch. 10 - p. 110)', 'HLA-B27 Seronegative Spondyloarthropathies (Ch. 18 - p. 201)', 'Reactive Arthritis / Reiter Syndrome (Ch. 18 - p. 201)'] },
-      { title: 'Neurological Connections', items: ['Pancoast tumor compression / Horner syndrome (Ch. 9 - p. 98)', 'Syringomyelia / Horner syndrome (Ch. 17 - p. 182)'] }
+      { title: 'Neurological Connections', items: ['Pancoast tumor compression / Horner syndrome (Ch. 9 - p. 98)', 'Syringomyelia / Horner syndrome (Ch. 17 - p. 182)', 'Multiple Sclerosis (Optic neuritis, INO) (Ch. 17 - p. 188)', 'Malignant hypertension / Papilledema (Ch. 4 - p. 68)'] }
     ]
   },
   ENT: {
