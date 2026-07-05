@@ -128,6 +128,10 @@ export async function GET() {
         if (sLower.includes('pharm')) normalizedSystems.push('Pharmacology');
         if (sLower.includes('biochem')) normalizedSystems.push('Biochemistry');
         if (sLower.includes('immun')) normalizedSystems.push('Immunology');
+        if (sLower.includes('microbiol') || sLower.includes('virolog')) normalizedSystems.push('Infectious Disease');
+        if (sLower.includes('psych') || sLower.includes('behavior')) normalizedSystems.push('Psychiatry');
+        if (sLower.includes('biostat') || sLower.includes('epidemiol') || sLower.includes('statistics')) normalizedSystems.push('Biostatistics & Epidemiology');
+        if (sLower.includes('ethic') || sLower.includes('legal') || sLower.includes('policy')) normalizedSystems.push('Social Sciences');
       }
 
       const uniqueSystems = [...new Set(normalizedSystems)];
