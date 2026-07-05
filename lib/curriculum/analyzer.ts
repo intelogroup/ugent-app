@@ -13,58 +13,58 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
     chapter: 'Neurology',
     pages: '458-499',
     subChapters: [
-      { title: 'Embryology & Anatomy', items: ['Neural tube development', 'Ventricles & CSF', 'Spinal cord tracts'] },
-      { title: 'Physiology', items: ['Action potentials', 'Synaptic transmission', 'Neurotransmitter changes'] },
-      { title: 'Pathology', items: ['Stroke (ischemic/hemorrhagic)', 'Dementia (Alzheimer, Lewy Body)', 'Seizures', 'Brain tumors'] },
+      { title: 'Embryology & Anatomy', items: ['Neural tube development & defects (Anencephaly, Spina Bifida)', 'Ventricles, CSF flow & Hydrocephalus (Normal pressure, Non-communicating, Communicating)', 'Spinal cord tracts & Cortical homunculus'] },
+      { title: 'Physiology', items: ['Action potentials & myelination', 'Synaptic transmission & Neurotransmitter changes in disease (Alzheimer, Parkinson, Huntington, Depression)'] },
+      { title: 'Pathology', items: ['Cerebrovascular disease & Stroke (Ischemic, Epidural/Subdural hematomas, Subarachnoid hemorrhage, Wallenberg)', 'Dementias (Alzheimer, Lewy Body, Frontotemporal, vascular)', 'Parkinson disease & Huntington disease', 'Demyelinating & Neuromuscular (Multiple Sclerosis, Guillain-Barré, Charcot-Marie-Tooth, ALS, Myasthenia Gravis)', 'Seizure disorders & Status epilepticus', 'Brain tumors (Glioblastoma, Meningioma, Schwannoma, Medulloblastoma, Pilocytic Astrocytoma)'] },
       { title: 'Ophthalmology', items: ['Visual pathway lesions', 'Glaucoma', 'Pupillary abnormalities'] },
-      { title: 'Pharmacology', items: ['Anesthetics', 'Antiepileptics', 'Parkinson drugs'] }
+      { title: 'Pharmacology', items: ['Anesthetics (local & inhaled)', 'Antiepileptics (Phenytoin, Valproate, Carbamazepine)', 'Parkinson therapeutics (Levodopa/Carbidopa, Dopamine agonists)'] }
     ]
   },
   Respiratory: {
     chapter: 'Respiratory',
     pages: '558-577',
     subChapters: [
-      { title: 'Anatomy & Embryology', items: ['Lung development', 'Bronchial tree structure'] },
-      { title: 'Physiology', items: ['Lung volumes', 'Oxygen-hemoglobin dissociation', 'V/Q mismatches'] },
-      { title: 'Pathology', items: ['Obstructive diseases (COPD, Asthma)', 'Restrictive diseases (IPF, Sarcoidosis)', 'Pneumonias', 'Lung Cancer'] },
-      { title: 'Pharmacology', items: ['Asthma controllers & bronchodilators'] }
+      { title: 'Anatomy & Embryology', items: ['Lung development phases (Pseudoglandular, Canalicular, Saccular, Alveolar)', 'Bronchial tree structure & histology'] },
+      { title: 'Physiology', items: ['Lung volumes & capacities', 'Oxygen-hemoglobin dissociation curve shifts', 'V/Q mismatches & shunt vs dead space'] },
+      { title: 'Pathology', items: ['Obstructive lung diseases (COPD, Asthma, Bronchiectasis)', 'Restrictive lung diseases (Idiopathic Pulmonary Fibrosis, Pneumoconioses, Sarcoidosis)', 'Pneumonias (Lobar, Bronchopneumonia, Interstitial)', 'Lung Abscess & Tuberculosis', 'Pulmonary embolism & Pulmonary hypertension', 'Pneumothorax & Pleural effusions', 'Lung Cancer types (Adenocarcinoma, Squamous cell, Small cell, Large cell)'] },
+      { title: 'Pharmacology', items: ['Asthma controllers (steroids, leukotriene inhibitors)', 'Bronchodilators (Beta-2 agonists, Muscarinic antagonists)'] }
     ]
   },
   Gastrointestinal: {
     chapter: 'Gastrointestinal',
     pages: '327-363',
     subChapters: [
-      { title: 'Anatomy', items: ['Peritoneum & retroperitoneal organs', 'GI blood supply & innervation'] },
-      { title: 'Physiology', items: ['GI hormones', 'Bilirubin metabolism', 'Digestion & absorption'] },
-      { title: 'Pathology', items: ['Esophageal disease (Achalasia, GERD)', 'Stomach (Gastritis, Peptic Ulcers)', 'Bowel (IBD, Polyps, Colon Cancer)', 'Hepatobiliary (Cirrhosis, Hepatitis)'] },
-      { title: 'Pharmacology', items: ['H2 blockers', 'PPIs', 'Antiemetics'] }
+      { title: 'Anatomy & Embryology', items: ['Peritoneum & retroperitoneal structures', 'GI blood supply (Celiac, SMA, IMA) & Portosystemic anastomoses', 'Hernia types (Direct, Indirect inguinal, Femoral)'] },
+      { title: 'Physiology', items: ['GI secretory hormones (Gastrin, CCK, Secretin, Somatostatin)', 'Bilirubin metabolism & Jaundice etiologies', 'Digestion & absorption of macronutrients'] },
+      { title: 'Pathology', items: ['Esophageal disorders (Achalasia, GERD, Esophagitis, Mallory-Weiss, Barrett)', 'Stomach disorders (Acute/Chronic Gastritis, Peptic Ulcer Disease, Gastric Cancer)', 'Bowel disorders (Crohn disease, Ulcerative Colitis, Celiac disease, Irritable Bowel Syndrome, Appendicitis)', 'Colonic pathology (Diverticulosis, Polyps, Colorectal Cancer, Angiodysplasia)', 'Hepatobiliary (Cirrhosis, Portal hypertension, Viral Hepatitis, Alcoholic liver disease, NAFLD, Cholelithiasis)'] },
+      { title: 'Pharmacology', items: ['H2 receptor blockers & Proton Pump Inhibitors (PPIs)', 'Antiemetic agents (Ondansetron, Metoclopramide)', 'Laxatives & antidiarrheals'] }
     ]
   },
   Cardiovascular: {
     chapter: 'Cardiovascular',
     pages: '256-297',
     subChapters: [
-      { title: 'Embryology & Anatomy', items: ['Heart development', 'Fetal circulation', 'Coronary anatomy'] },
-      { title: 'Physiology', items: ['Cardiac cycle & PV loops', 'EKG rhythms', 'Hemodynamics'] },
-      { title: 'Pathology', items: ['Congenital shunts (ASD, VSD, Tetralogy)', 'Ischemic heart disease', 'Valvular dysfunction', 'Cardiomyopathies'] },
-      { title: 'Pharmacology', items: ['Antihypertensives', 'Antiarrhythmics', 'Lipid-lowering agents'] }
+      { title: 'Embryology & Anatomy', items: ['Heart development & looping', 'Fetal circulation & shunts closure', 'Coronary artery anatomy & dominance'] },
+      { title: 'Physiology', items: ['Cardiac cycle, PV loops & Wiggers diagram', 'EKG interpretation & arrhythmias', 'Hemodynamics (CO, SV, TPR, MAP)'] },
+      { title: 'Pathology', items: ['Congenital shunts (ASD, VSD, Patent Foramen Ovale, Tetralogy of Fallot, transposition of great vessels)', 'Ischemic heart disease (Stable/unstable angina, NSTEMI, STEMI)', 'Myocardial Infarction complications', 'Sudden cardiac death & heart failure', 'Hypertension & Atherosclerosis', 'Aortic dissection & Aneurysms', 'Cardiac arrhythmias (Atrial fibrillation, AV blocks, Ventricular fibrillation)', 'Valvular diseases (Mitral regurgitation/stenosis, Aortic regurgitation/stenosis)', 'Cardiomyopathies (Dilated, Hypertrophic, Restrictive)', 'Infectious & Inflammatory (Endocarditis, Myocarditis, Pericarditis, Rheumatic Fever, Rheumatic heart disease)', 'Vasculitis types (Large, Medium, Small vessel)'] },
+      { title: 'Pharmacology', items: ['Antihypertensive agents (ACE inhibitors, ARBs, CCBs, Beta-blockers)', 'Antiarrhythmic drugs (Classes I-IV)', 'Lipid-lowering agents (Statins, Fibrates, Ezetimibe)'] }
     ]
   },
   'Hematology & Oncology': {
     chapter: 'Hematology & Oncology',
     pages: '364-411',
     subChapters: [
-      { title: 'Physiology', items: ['Hematopoiesis', 'RBC & WBC morphology', 'Platelet activation & Coagulation cascade'] },
-      { title: 'Pathology', items: ['Anemias (Microcytic, Macrocytic, Normocytic)', 'Bleeding disorders (Hemophilia, vWD, DIC)', 'Leukemias & Lymphomas', 'Plasma cell dyscrasias'] },
-      { title: 'Oncology & Pharmacology', items: ['Chemotherapeutic agents', 'Anticoagulants & thrombolytics'] }
+      { title: 'Physiology', items: ['Hematopoiesis & RBC lineage', 'RBC & WBC morphology', 'Platelet activation & Coagulation cascade'] },
+      { title: 'Pathology', items: ['Microcytic, Macrocytic & Normocytic Anemias', 'Extravascular vs Intravascular hemolysis (Spherocytosis, G6PD, Sickle Cell, Paroxysmal nocturnal hemoglobinuria)', 'Bleeding disorders (vWD, Hemophilias, ITP, TTP, DIC)', 'Leukemias & Lymphomas (AML, ALL, CML, CLL, Hodgkin, Non-Hodgkin)', 'Plasma cell dyscrasias (Multiple Myeloma, MGUS)'] },
+      { title: 'Oncology & Pharmacology', items: ['Chemotherapeutic agents (alkylating, antimetabolites, microtubule inhibitors)', 'Anticoagulants & thrombolytics (Heparin, Warfarin, DOACs)'] }
     ]
   },
   Immunology: {
     chapter: 'Immunology',
     pages: '94-113',
     subChapters: [
-      { title: 'Cellular Components', items: ['T-cell & B-cell development', 'Antigen presentation', 'Cytokine signaling'] },
-      { title: 'Lymphoid Organs', items: ['Lymph nodes', 'Spleen', 'Thymus'] },
+      { title: 'Cellular Components', items: ['T-cell & B-cell development', 'Antigen presentation (MHC I & II)', 'Cytokine signaling & functions'] },
+      { title: 'Lymphoid Organs', items: ['Lymph node histology', 'Spleen architecture', 'Thymus development'] },
       { title: 'Hypersensitivities & Autoimmunity', items: ['Types I-IV Hypersensitivities', 'Transplant rejection mechanisms'] },
       { title: 'Autoimmune Disorders', items: ['Systemic Lupus Erythematosus (SLE)', 'Sjögren syndrome', 'Scleroderma (systemic sclerosis)', 'Mixed connective tissue disease'] },
       { title: 'Immunodeficiencies', items: ['B-cell disorders (X-linked Agam)', 'T-cell disorders (DiGeorge)', 'Combined (SCID, Wiskott-Aldrich)', 'Phagocyte dysfunctions'] }
@@ -74,99 +74,98 @@ export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; sub
     chapter: 'Microbiology',
     pages: '114-183',
     subChapters: [
-      { title: 'Bacteriology', items: ['Gram-positives (Staph, Strep)', 'Gram-negatives (Neisseria, Enterics)', 'Mycobacteria & Spirochetes'] },
-      { title: 'Virology', items: ['DNA & RNA viruses', 'HIV & Hepatitis viruses'] },
-      { title: 'Mycology & Parasitology', items: ['Systemic mycoses', 'Protozoa & Helminths'] },
-      { title: 'Antimicrobials', items: ['Penicillins', 'Cephalosporins', 'Macrolides', 'Antivirals'] }
+      { title: 'Bacteriology', items: ['Gram-positives (Staphylococcus, Streptococcus, Clostridium)', 'Gram-negatives (Neisseria, Pseudomonas, Enterics)', 'Mycobacteria, Spirochetes (Treponema, Borrelia) & Zoonotics'] },
+      { title: 'Virology', items: ['DNA & RNA viruses', 'Herpesviruses (HSV, VZV, CMV, EBV)', 'HIV, Influenza & Hepatitis viruses'] },
+      { title: 'Mycology & Parasitology', items: ['Systemic mycoses (Histoplasma, Blastomyces, Coccidioides)', 'Opportunistic fungi (Candida, Aspergillus, Cryptococcus)', 'Protozoa & Helminths'] },
+      { title: 'Antimicrobials', items: ['Penicillins & Cephalosporins', 'Macrolides & Aminoglycosides', 'Antivirals & Antifungals'] }
     ]
   },
   Endocrine: {
     chapter: 'Endocrine',
     pages: '298-326',
     subChapters: [
-      { title: 'Anatomy & Embryology', items: ['Thyroid & adrenal gland anatomy', 'Pituitary development'] },
-      { title: 'Physiology', items: ['Hypothalamic-Pituitary axes', 'Hormone feedback systems'] },
-      { title: 'Pathology', items: ['Thyroid disorders (Graves, Hashimoto)', 'Adrenal disorders (Cushing, Conn)', 'Diabetes Mellitus'] },
-      { title: 'Pharmacology', items: ['Insulin regimes', 'Thyroid replacements', 'Antithyroid drugs'] }
+      { title: 'Anatomy & Embryology', items: ['Thyroid & adrenal gland anatomy', 'Pituitary development & Rathke cleft'] },
+      { title: 'Physiology', items: ['Hypothalamic-Pituitary axes', 'Hormone feedback systems & receptor types'] },
+      { title: 'Pathology', items: ['Pituitary gland disorders (Prolactinoma, Acromegaly, Diabetes Insipidus, SIADH)', 'Thyroid gland disorders (Hashimoto, De Quervain, Graves, Goiters, Thyroid Papillary/Follicular/Medullary Cancers)', 'Adrenal disorders (Cushing syndrome, Conn syndrome, Addison disease, Congenital Adrenal Hyperplasia)', 'Pancreatic disorders (Diabetes Mellitus type 1 & 2, DKA, Hyperosmolar state)', 'Multiple Endocrine Neoplasia (MEN 1, 2A, 2B)'] },
+      { title: 'Pharmacology', items: ['Insulin regimens & oral hypoglycemics', 'Thyroid replacements & Antithyroid drugs'] }
     ]
   },
   Integumentary: {
     chapter: 'Musculoskeletal, Skin, CT',
     pages: '412-457',
     subChapters: [
-      { title: 'Skin Anatomy & Physiology', items: ['Epidermal layers', 'Skin junctions'] },
-      { title: 'Dermatopathology', items: ['Inflammatory dermatoses (Eczema, Psoriasis)', 'Bullous disorders (Pemphigus, Pemphigoid)'] },
-      { title: 'Skin Cancer', items: ['BCC', 'SCC', 'Melanoma'] }
+      { title: 'Skin Anatomy & Physiology', items: ['Epidermal layers', 'Skin junctions & histology'] },
+      { title: 'Dermatopathology', items: ['Inflammatory dermatoses (Atopic dermatitis, Psoriasis, Seborrheic dermatitis, Contact dermatitis)', 'Bullous diseases (Pemphigus vulgaris, Bullous pemphigoid, Dermatitis herpetiformis)', 'Infections (Impetigo, Cellulitis, Erysipelas, Necrotizing fasciitis, HSV, VZV, Molluscum, HPV)'] },
+      { title: 'Skin Cancer', items: ['Basal Cell Carcinoma (BCC)', 'Squamous Cell Carcinoma (SCC)', 'Melanoma'] }
     ]
   },
   Renal: {
     chapter: 'Renal',
     pages: '500-527',
     subChapters: [
-      { title: 'Anatomy & Embryology', items: ['Kidney development', 'Nephron architecture'] },
-      { title: 'Physiology', items: ['GFR & renal clearance', 'Electrolyte & water handling'] },
-      { title: 'Pathology', items: ['Nephritic syndromes (PSGN, IgA)', 'Nephrotic syndromes (Minimal Change, FSGS)', 'AKI & CKD'] },
-      { title: 'Pharmacology', items: ['Diuretics (Loop, Thiazide, K-sparing)'] }
+      { title: 'Anatomy & Embryology', items: ['Kidney development (Pronephros, Mesonephros, Metanephros)', 'Nephron structure & glomerular filtration barrier'] },
+      { title: 'Physiology', items: ['GFR, RPF & renal clearance', 'Electrolyte & water handling along the nephron', 'Acid-base physiology & compensation'] },
+      { title: 'Pathology', items: ['Nephritic syndromes (PSGN, IgA Nephropathy, Alport, RPGN, Membranoproliferative)', 'Nephrotic syndromes (Minimal Change, FSGS, Membranous, Amyloidosis, Diabetic nephropathy)', 'Acute Kidney Injury (Prerenal, Intrinsic, Postrenal)', 'Acute Tubular Necrosis (ATN) & Interstitial Nephritis', 'Kidney stones (Calcium oxalate, Ammonium magnesium phosphate, Uric acid, Cystine)', 'Renal Cell Carcinoma & Wilms tumor'] },
+      { title: 'Pharmacology', items: ['Diuretics (Loop, Thiazide, K-sparing, Carbonic anhydrase inhibitors)'] }
     ]
   },
   Reproductive: {
     chapter: 'Reproductive',
     pages: '528-557',
     subChapters: [
-      { title: 'Embryology & Anatomy', items: ['Sex determination', 'Uterine/ovarian anatomy'] },
-      { title: 'Physiology', items: ['Menstrual cycle', 'Pregnancy & lactation'] },
-      { title: 'Pathology', items: ['Breast disease (Fibrocystic, Fibroadenoma, Cancer)', 'Ovarian & uterine tumors', 'Prostate diseases'] },
-      { title: 'Pharmacology', items: ['OCPs', 'SERMs', 'Androgen antagonists'] }
+      { title: 'Embryology & Anatomy', items: ['Sex determination & ducts differentiation', 'Uterine, ovarian & testicular anatomy'] },
+      { title: 'Physiology', items: ['Menstrual cycle & hormonal changes', 'Pregnancy & lactation physiology'] },
+      { title: 'Pathology', items: ['Breast disorders (Fibrocystic changes, Fibroadenoma, Intraductal papilloma, DCIS, Invasive ductal/lobular carcinoma)', 'Ovarian diseases (PCOS, Teratoma, Serous/Mucinous cystadenocarcinoma, Granulosa cell tumor)', 'Uterine/Cervical pathology (Endometrial hyperplasia/cancer, Leiomyomas, Cervical dysplasia, Endometriosis, Adenomyosis)', 'Male Reproductive (Benign Prostatic Hyperplasia, Prostate Adenocarcinoma, Testicular tumors like Seminoma, Yolk sac, Choriocarcinoma)'] },
+      { title: 'Pharmacology', items: ['OCPs & HRT', 'SERMs (Tamoxifen, Raloxifene)', 'Androgen receptor antagonists & 5-alpha-reductase inhibitors'] }
     ]
   },
   Musculoskeletal: {
     chapter: 'Musculoskeletal, Skin, CT',
     pages: '412-457',
     subChapters: [
-      { title: 'Bone & Joint Physiology', items: ['Osteoblast & osteoclast activity', 'Cartilage structure'] },
-      { title: 'Pathology', items: ['Osteoporosis & Paget disease', 'Osteo/Rheumatoid arthritis', 'Myopathies'] },
-      { title: 'Connective Tissue', items: ['SLE', 'Sjogren', 'Scleroderma'] }
+      { title: 'Bone & Joint Physiology', items: ['Osteoblast & osteoclast activity signaling (RANKL/OPG)', 'Cartilage structure & endochondral bone formation'] },
+      { title: 'Pathology', items: ['Bone pathology (Osteoporosis, Osteopetrosis, Paget disease of bone, Osteosarcoma, Ewing sarcoma, Osteoclastoma)', 'Joint pathology (Osteoarthritis, Rheumatoid arthritis, Gout, Pseudogout, Ankylosing spondylitis, Reactive arthritis)', 'Skeletal muscle & Neuromuscular (Myasthenia Gravis, Lambert-Eaton, Muscular Dystrophies like Duchenne/Becker)'] }
     ]
   },
   Psychiatry: {
     chapter: 'Psychiatry',
     pages: '466-489',
     subChapters: [
-      { title: 'Developmental Disorders', items: ['ADHD', 'Autism Spectrum'] },
-      { title: 'Psychopathology', items: ['Depressive & Bipolar disorders', 'Schizophrenia', 'Anxiety & OCD', 'Personality disorders'] },
-      { title: 'Pharmacology', items: ['Antidepressants (SSRIs, TCAs)', 'Antipsychotics', 'Mood stabilizers'] }
+      { title: 'Developmental Disorders', items: ['ADHD', 'Autism Spectrum', 'Conduct disorder & Oppositional Defiant Disorder'] },
+      { title: 'Psychopathology', items: ['Depressive & Bipolar disorders', 'Schizophrenia & other psychoses', 'Anxiety, OCD & PTSD', 'Personality disorders (Cluster A, B, C)', 'Substance use disorders (Alcohol, Opioids, Cocaine, Benzodiazepines)'] },
+      { title: 'Pharmacology', items: ['Antidepressants (SSRIs, SNRIs, TCAs, MAOIs)', 'Antipsychotics (Typical vs Atypical)', 'Mood stabilizers (Lithium, Valproate)'] }
     ]
   },
   Pediatrics: {
     chapter: 'Reproductive',
     pages: '557',
     subChapters: [
-      { title: 'Congenital Anomalies', items: ['Genetic syndromes', 'Congenital defects'] },
-      { title: 'Milestones', items: ['Motor, cognitive, and social milestones'] }
+      { title: 'Congenital Anomalies', items: ['Genetic syndromes (Down, Edwards, Patau, Turner, Klinefelter)', 'Congenital defects (cleft lip/palate, cardiac shunts)'] },
+      { title: 'Milestones', items: ['Gross motor, fine motor, language, and social milestones'] }
     ]
   },
   General: {
     chapter: 'General Principles',
     pages: '1-93',
     subChapters: [
-      { title: 'Biochemistry', items: ['Metabolic pathways', 'Storage diseases'] },
-      { title: 'Immunology & Pathology', items: ['Inflammation', 'Wound healing'] }
+      { title: 'Biochemistry', items: ['Metabolic pathways (Glycolysis, Krebs, Gluconeogenesis)', 'Storage diseases (Lysosomal, Glycogen storage)', 'Nucleotide synthesis & Repair'] },
+      { title: 'Immunology & Pathology', items: ['Acute & Chronic Inflammation', 'Wound healing & tissue repair'] }
     ]
   },
   Pharmacology: {
     chapter: 'Pharmacology',
     pages: '184-255',
     subChapters: [
-      { title: 'Pharmacokinetics', items: ['Half-life', 'Clearance', 'Volume of distribution'] },
-      { title: 'Autonomic Drugs', items: ['Sympathomimetics', 'Parasympatholytics'] }
+      { title: 'Pharmacokinetics', items: ['Half-life & clearance calculations', 'Volume of distribution & bioavailability'] },
+      { title: 'Autonomic Drugs', items: ['Sympathomimetics & sympatholytics', 'Parasympathomimetics & parasympatholytics'] }
     ]
   },
   Genetics: {
     chapter: 'General Principles',
     pages: '42-62',
     subChapters: [
-      { title: 'Gene Expression', items: ['Transcription', 'Translation', 'Epigenetics'] },
-      { title: 'Inheritance Patterns', items: ['Autosomal dominant/recessive', 'X-linked'] }
+      { title: 'Gene Expression', items: ['Transcription & translation regulation', 'Epigenetic modifications (methylation, acetylation)'] },
+      { title: 'Inheritance Patterns', items: ['Autosomal dominant & recessive', 'X-linked dominant & recessive', 'Mitochondrial & non-classical inheritance'] }
     ]
   },
   Ophthalmology: {
