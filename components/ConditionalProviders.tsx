@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
-import { ConvexClientProvider } from './ConvexClientProvider';
 import type { ReactNode } from 'react';
 
 const PUBLIC_PREFIXES = ['/', '/login', '/signup', '/auth'];
@@ -20,9 +19,5 @@ export function ConditionalProviders({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return (
-    <AuthKitProvider>
-      <ConvexClientProvider>{children}</ConvexClientProvider>
-    </AuthKitProvider>
-  );
+  return <AuthKitProvider>{children}</AuthKitProvider>;
 }

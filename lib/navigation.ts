@@ -2,10 +2,7 @@ import {
   HomeIcon,
   PlusCircleIcon,
   ClipboardDocumentListIcon,
-  TrophyIcon,
-  BookOpenIcon,
   Cog6ToothIcon,
-  CreditCardIcon,
   BeakerIcon,
   ChartBarIcon,
   AcademicCapIcon,
@@ -15,17 +12,13 @@ import {
 
 export const navigation = [
   { name: 'Dashboard',    shortName: 'Home',      href: '/dashboard',       icon: HomeIcon },
-  { name: 'Research',     shortName: 'Research',  href: '/research/ingest', icon: BeakerIcon },
   { name: 'Create Test',  shortName: 'Quiz',      href: '/create-test',     icon: PlusCircleIcon },
   { name: 'My Tests',     shortName: 'Tests',     href: '/tests',           icon: ClipboardDocumentListIcon },
   { name: 'AI Analytics', shortName: 'Analytics', href: '/analytics',       icon: ChartBarIcon },
   { name: 'Strategy Hub',   shortName: 'Strategy',   href: '/strategy',        icon: AcademicCapIcon },
   { name: 'Curriculum',     shortName: 'Curriculum', href: '/curriculum',      icon: CalendarDaysIcon },
   { name: 'Simulators',     shortName: 'Sims',       href: '/simulators',      icon: BeakerIcon },
-  { name: 'Leaderboard',    shortName: 'Board',      href: '/leaderboard',     icon: TrophyIcon },
   { name: 'Disease Ref',  shortName: 'Diseases',  href: '/diseases',        icon: DocumentTextIcon },
-  { name: 'Study Notes',  shortName: 'Notes',     href: '/notes',           icon: BookOpenIcon },
   { name: 'Settings',     shortName: 'Settings',  href: '/settings',        icon: Cog6ToothIcon },
-  { name: 'Pricing',      shortName: 'Pricing',   href: '/pricing',         icon: CreditCardIcon },
 ];
 

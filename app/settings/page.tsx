@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
   UserIcon,
-  CreditCardIcon,
   BellIcon,
   ShieldCheckIcon,
   Cog6ToothIcon
@@ -15,35 +13,12 @@ import { useAuth } from '@workos-inc/authkit-nextjs/components';
 export default function SettingsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
-  const router = useRouter();
 
   const tabs = [
     { id: 'account', name: 'Account', icon: UserIcon },
-    { id: 'billing', name: 'Billing', icon: CreditCardIcon },
     { id: 'notifications', name: 'Notifications', icon: BellIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
   ];
-
-  const handleManageBilling = async () => {
-    try {
-      const response = await fetch('/api/stripe/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id }),
-      });
-
-      const { url } = await response.json();
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        router.push('/pricing');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      router.push('/pricing');
-    }
-  };
 
   return (
     <DashboardLayout>
@@ -101,36 +76,6 @@ export default function SettingsPage() {
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
                   />
                   <p className="text-xs text-neutral-500 mt-1">Contact support to update your name</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'billing' && (
-            <div className="space-y-4">
-              <div className="card">
-                <h2 className="text-xl font-semibold text-neutral-900 mb-4">Billing & Subscription</h2>
-                <p className="text-neutral-600 mb-6">
-                  Manage your subscription, payment methods, and billing history.
-                </p>
-                <button
-                  onClick={handleManageBilling}
-                  className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-                >
-                  Manage Billing
-                </button>
-              </div>
-
-              <div className="card">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-3">Quick Links</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => router.push('/pricing')}
-                    className="flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    <CreditCardIcon className="w-5 h-5" />
-                    <span>View Pricing Plans</span>
-                  </button>
                 </div>
               </div>
             </div>
