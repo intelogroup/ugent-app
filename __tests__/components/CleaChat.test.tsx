@@ -52,6 +52,7 @@ describe('CleaChat', () => {
     expect(orb.querySelectorAll('.clea-orb-current')).toHaveLength(2);
     expect(orb.querySelector('.clea-orb-current--one')).toBeInTheDocument();
     expect(orb.querySelector('.clea-orb-current--two')).toBeInTheDocument();
+    expect(orb.querySelector('.clea-orb-ribbon')).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Clea Live mode' })).not.toBeInTheDocument();

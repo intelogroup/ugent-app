@@ -117,7 +117,7 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   position: absolute;
   z-index: 1;
   border-radius: 50%;
-  filter: blur(10px);
+  filter: blur(7px);
   mix-blend-mode: screen;
   pointer-events: none;
 }
@@ -127,8 +127,8 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   left: -10px;
   width: 92px;
   height: 54px;
-  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.72), rgba(125, 211, 252, 0.18) 62%, transparent 74%);
-  animation: clea-orb-current-one 7.2s ease-in-out infinite;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.94), rgba(125, 211, 252, 0.48) 58%, transparent 76%);
+  animation: clea-orb-current-one 5.6s ease-in-out infinite;
 }
 
 .clea-orb-current--two {
@@ -136,8 +136,21 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   bottom: -18px;
   width: 78px;
   height: 96px;
-  background: radial-gradient(ellipse, rgba(129, 140, 248, 0.62), rgba(96, 165, 250, 0.14) 64%, transparent 76%);
-  animation: clea-orb-current-two 9.6s ease-in-out infinite;
+  background: radial-gradient(ellipse, rgba(165, 180, 252, 0.88), rgba(96, 165, 250, 0.42) 60%, transparent 78%);
+  animation: clea-orb-current-two 7.2s ease-in-out infinite;
+}
+
+.clea-orb-ribbon {
+  position: absolute;
+  inset: 24px 10px;
+  z-index: 3;
+  border: 5px solid rgba(219, 234, 254, 0.74);
+  border-right-color: rgba(96, 165, 250, 0.08);
+  border-bottom-color: rgba(129, 140, 248, 0.34);
+  border-radius: 50%;
+  filter: blur(2px) drop-shadow(0 0 7px rgba(191, 219, 254, 0.72));
+  pointer-events: none;
+  animation: clea-orb-ribbon-spin 3.8s linear infinite;
 }
 
 .clea-orb-light {
@@ -179,15 +192,20 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
 }
 
 @keyframes clea-orb-current-one {
-  0%, 100% { transform: translate(-4px, 2px) rotate(-12deg) scale(0.94); opacity: 0.58; }
-  45% { transform: translate(34px, 22px) rotate(24deg) scale(1.12); opacity: 0.9; }
-  72% { transform: translate(18px, 42px) rotate(8deg) scale(1.02); opacity: 0.68; }
+  0%, 100% { transform: translate(-14px, -2px) rotate(-18deg) scale(1); opacity: 0.72; }
+  45% { transform: translate(54px, 28px) rotate(32deg) scale(1.24); opacity: 1; }
+  72% { transform: translate(26px, 52px) rotate(12deg) scale(1.08); opacity: 0.82; }
 }
 
 @keyframes clea-orb-current-two {
-  0%, 100% { transform: translate(4px, 8px) rotate(18deg) scale(1.08); opacity: 0.5; }
-  38% { transform: translate(-30px, -28px) rotate(-18deg) scale(0.92); opacity: 0.82; }
-  76% { transform: translate(-12px, -42px) rotate(6deg) scale(1.04); opacity: 0.64; }
+  0%, 100% { transform: translate(14px, 18px) rotate(24deg) scale(1.16); opacity: 0.68; }
+  38% { transform: translate(-48px, -38px) rotate(-28deg) scale(1); opacity: 0.96; }
+  76% { transform: translate(-20px, -58px) rotate(10deg) scale(1.14); opacity: 0.8; }
+}
+
+@keyframes clea-orb-ribbon-spin {
+  from { transform: rotate(0deg) scaleX(0.88); }
+  to { transform: rotate(360deg) scaleX(0.88); }
 }
 
 @keyframes clea-orb-rotate {
@@ -211,12 +229,18 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .clea-orb-shell,
   .clea-orb-core,
   .clea-orb-current,
+  .clea-orb-ribbon,
   .clea-orb-light,
   .clea-orb-highlight,
-  .clea-orb-ripple,
-  .clea-orb-shell {
-    animation: none;
+  .clea-orb-ripple {
+    animation: clea-orb-gentle-pulse 4.8s ease-in-out infinite;
   }
+}
+
+@keyframes clea-orb-gentle-pulse {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
 }

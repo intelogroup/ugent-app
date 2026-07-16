@@ -5,6 +5,7 @@ export default function CleaLiveOrb() {
       <div className="clea-orb-core">
         <div className="clea-orb-current clea-orb-current--one" />
         <div className="clea-orb-current clea-orb-current--two" />
+        <div className="clea-orb-ribbon" />
         <div className="clea-orb-light" />
         <div className="clea-orb-highlight" />
       </div>
