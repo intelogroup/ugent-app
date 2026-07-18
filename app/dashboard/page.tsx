@@ -97,8 +97,8 @@ export default function Home() {
             </div>
           ) : (
             <div className="divide-y divide-neutral-100">
-              {performanceData.slice(-5).map((d) => (
-                <div key={d.date} className="flex justify-between items-center py-2">
+              {performanceData.slice(-5).map((d, index) => (
+                <div key={`${d.date}-${index}`} className="flex justify-between items-center py-2">
                   <span className="text-sm text-neutral-700">{d.date}</span>
                   <span className="text-sm font-semibold text-neutral-900">{d.score}%</span>
                 </div>
