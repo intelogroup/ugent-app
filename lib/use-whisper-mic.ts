@@ -28,28 +28,46 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
     let stopped = false;
     let stream: MediaStream | null = null;
     let audioCtx: AudioContext | null = null;
+    // A MediaRecorder only emits the container header in its very first
+    // chunk — reusing one recorder and slicing its chunk stream into
+    // per-utterance blobs leaves every utterance after the first headerless
+    // and undecodable. Start a fresh recorder per utterance instead, so
+    // each one produces a self-contained, valid file.
     let recorder: MediaRecorder | null = null;
-    let chunks: Blob[] = [];
     let speaking = false;
     let silenceStart: number | null = null;
     let speechStart = 0;
     const transcribeQueue = new SerialQueue();
 
-    function finalizeUtterance() {
-      if (chunks.length === 0) return;
-      const blob = new Blob(chunks, { type: recorder?.mimeType || 'audio/webm' });
-      chunks = [];
-      if (performance.now() - speechStart < MIN_UTTERANCE_MS) return;
+    function startUtteranceRecording() {
+      if (!stream) return;
+      const chunks: Blob[] = [];
+      const rec = new MediaRecorder(stream);
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      rec.onstop = () => {
+        if (performance.now() - speechStart < MIN_UTTERANCE_MS || chunks.length === 0) return;
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
 
-      void transcribeQueue.push(async () => {
-        const pcm = await resampleTo16kMono(blob);
-        setModelLoading(true);
-        const asr = await getWhisperPipeline();
-        setModelLoading(false);
-        const result: any = await asr(pcm);
-        const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
-        if (text && !stopped) onTranscriptRef.current(text);
-      });
+        void transcribeQueue.push(async () => {
+          const pcm = await resampleTo16kMono(blob);
+          setModelLoading(true);
+          const asr = await getWhisperPipeline();
+          setModelLoading(false);
+          const result: any = await asr(pcm);
+          const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
+          if (text && !stopped) onTranscriptRef.current(text);
+        });
+      };
+      rec.start();
+      recorder = rec;
+    }
+
+    function finalizeUtterance() {
+      if (!recorder || recorder.state === 'inactive') return;
+      recorder.stop();
+      recorder = null;
     }
 
     (async () => {
@@ -71,12 +89,6 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
       source.connect(analyser);
       const data = new Float32Array(analyser.fftSize);
 
-      recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      recorder.start(250);
-
       const tick = () => {
         if (stopped) return;
         analyser.getFloatTimeDomainData(data);
@@ -89,6 +101,7 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
           if (!speaking) {
             speaking = true;
             speechStart = now;
+            startUtteranceRecording();
           }
           silenceStart = null;
         } else if (speaking) {

@@ -40,11 +40,16 @@ beforeEach(() => {
 
   (global as any).MediaRecorder = class {
     ondataavailable: ((e: { data: Blob }) => void) | null = null;
+    onstop: (() => void) | null = null;
+    state = 'recording';
     mimeType = 'audio/webm';
     start() {
       recorderDataHandler = (e) => this.ondataavailable?.(e);
     }
-    stop() {}
+    stop() {
+      this.state = 'inactive';
+      this.onstop?.();
+    }
   };
 
   (global as any).AudioContext = class {
@@ -76,15 +81,14 @@ describe('useWhisperMic', () => {
     const onTranscript = jest.fn();
     renderHook(() => useWhisperMic(true, onTranscript));
 
-    await waitFor(() => expect(recorderDataHandler).not.toBeNull());
-    act(() => {
-      recorderDataHandler!({ data: new Blob(['chunk']) });
-    });
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
-    // speak: rms above threshold marks speaking=true, speechStart=0
+    // speak: rms above threshold marks speaking=true, speechStart=0, and
+    // starts a fresh per-utterance MediaRecorder
     currentRms = 0.1;
     tick();
+    await waitFor(() => expect(recorderDataHandler).not.toBeNull());
+    act(() => recorderDataHandler!({ data: new Blob(['chunk']) }));
 
     // go silent — starts the silence-hang timer at now=100
     currentRms = 0;
@@ -111,13 +115,13 @@ describe('useWhisperMic', () => {
     const onTranscript = jest.fn();
     renderHook(() => useWhisperMic(true, onTranscript));
 
-    await waitFor(() => expect(recorderDataHandler).not.toBeNull());
+    await waitFor(() => expect(pendingTick).not.toBeNull());
 
     // first utterance: speak, go silent, finalize — kicks off a slow transcription
-    act(() => recorderDataHandler!({ data: new Blob(['chunk-1']) }));
-    await waitFor(() => expect(pendingTick).not.toBeNull());
     currentRms = 0.1;
     tick();
+    await waitFor(() => expect(recorderDataHandler).not.toBeNull());
+    act(() => recorderDataHandler!({ data: new Blob(['chunk-1']) }));
     currentRms = 0;
     mockNow = 100;
     tick();
@@ -127,11 +131,11 @@ describe('useWhisperMic', () => {
 
     // second utterance arrives and finalizes while the first is still pending —
     // recording/VAD must not be blocked by the in-flight transcription
-    act(() => recorderDataHandler!({ data: new Blob(['chunk-2']) }));
-    await waitFor(() => expect(pendingTick).not.toBeNull());
     currentRms = 0.1;
     mockNow = 1000;
     tick();
+    await waitFor(() => expect(recorderDataHandler).not.toBeNull());
+    act(() => recorderDataHandler!({ data: new Blob(['chunk-2']) }));
     currentRms = 0;
     mockNow = 1100;
     tick();

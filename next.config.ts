@@ -6,7 +6,7 @@ const contentSecurityPolicy = [
   "frame-ancestors 'self'",
   "frame-src 'self' https://embed.liveavatar.com",
   "form-action 'self' https://*.workos.com",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:",
   "style-src 'self' 'unsafe-inline' https:",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https:",
