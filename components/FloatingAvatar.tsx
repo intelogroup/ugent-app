@@ -1,7 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { XMarkIcon, PlayIcon, MicrophoneIcon } from '@heroicons/react/24/outline';
+import { useCleaAgent } from '@/lib/clea-agent-context';
+import { stripMarkdown } from '@/lib/strip-markdown';
 
 const SIZE = 140;
 
@@ -53,10 +55,8 @@ export default function FloatingAvatar() {
     }
   };
 
-  const runTtsStream = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const text = window.prompt('Text for Clea to say:', 'Hello, welcome back to Ugent. Ready to study?');
-    if (!text) return;
+  const speak = async (rawText: string) => {
+    const text = stripMarkdown(rawText);
     setLoading(true);
     setLatencyMs(null);
     const t0 = performance.now();
@@ -142,6 +142,40 @@ export default function FloatingAvatar() {
       setLoading(false);
     }
   };
+
+  const runTtsStream = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = window.prompt('Text for Clea to say:', 'Hello, welcome back to Ugent. Ready to study?');
+    if (text) void speak(text);
+  };
+
+  const { messages, status, micActive, toggleMic } = useCleaAgent();
+  const lastSpokenIdRef = useRef<string | null>(null);
+  const hasSeenInitialMessagesRef = useRef(false);
+
+  useEffect(() => {
+    // Skip the very first non-empty messages snapshot — that's history
+    // restored from disk on mount, not a fresh reply to speak aloud.
+    if (!hasSeenInitialMessagesRef.current) {
+      if (messages.length > 0) {
+        hasSeenInitialMessagesRef.current = true;
+        lastSpokenIdRef.current = messages[messages.length - 1]?.id ?? null;
+      }
+      return;
+    }
+
+    if (status !== 'ready') return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant' || last.id === lastSpokenIdRef.current) return;
+
+    lastSpokenIdRef.current = last.id;
+    const text = last.parts
+      .filter((part) => part.type === 'text')
+      .map((part) => (part as { text: string }).text)
+      .join('');
+    if (text.trim()) void speak(text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, status]);
 
   const clampPos = (x: number, y: number) => ({
     x: Math.min(Math.max(x, 0), window.innerWidth - SIZE),
@@ -256,12 +290,26 @@ export default function FloatingAvatar() {
         </button>
         <button
           type="button"
-          onClick={runTtsStream}
-          disabled={loading}
-          aria-label="Run streaming ElevenLabs TTS lipsync test"
-          className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70 disabled:opacity-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleMic();
+          }}
+          aria-label={micActive ? 'Stop listening' : 'Start listening'}
+          aria-pressed={micActive}
+          className={`absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full text-white transition disabled:opacity-50 ${
+            micActive ? 'bg-primary-600' : 'bg-black/50 hover:bg-black/70'
+          }`}
         >
           <MicrophoneIcon className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={runTtsStream}
+          disabled={loading}
+          aria-label="Speak custom text (dev test)"
+          className="absolute bottom-1 left-8 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70 disabled:opacity-50"
+        >
+          <PlayIcon className="h-3.5 w-3.5 rotate-90" />
         </button>
       </div>
       {(loading || latencyMs !== null) && (
