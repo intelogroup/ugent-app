@@ -43,6 +43,7 @@ export default function FloatingAvatar() {
     active.ws.close();
     active.audio.pause();
     setStreaming(false);
+    setIsSpeaking(false);
   };
 
   const runLipsync = async (e: React.MouseEvent) => {
@@ -112,6 +113,7 @@ export default function FloatingAvatar() {
           if (!started && frames.size >= PREBUFFER_FRAMES) {
             started = true;
             setStreaming(true);
+            setIsSpeaking(true);
             setLatencyMs(performance.now() - t0);
             audio.play().catch((err) => console.error('stream audio.play() failed', err));
 
@@ -143,6 +145,7 @@ export default function FloatingAvatar() {
               else {
                 activeSpeechRef.current = null;
                 setStreaming(false);
+                setIsSpeaking(false);
                 resolve();
               }
             };
@@ -157,6 +160,7 @@ export default function FloatingAvatar() {
       setLatencyMs(-1);
       activeSpeechRef.current = null;
       setStreaming(false);
+      setIsSpeaking(false);
     } finally {
       setLoading(false);
     }
@@ -168,7 +172,8 @@ export default function FloatingAvatar() {
     if (text) void speak(text);
   };
 
-  const { messages, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface } = useCleaAgent();
+  const { messages, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface, setIsSpeaking } =
+    useCleaAgent();
   const lastSpokenIdRef = useRef<string | null>(null);
   const hasSeenInitialMessagesRef = useRef(false);
 

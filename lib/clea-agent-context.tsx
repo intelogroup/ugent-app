@@ -32,6 +32,11 @@ type CleaAgentValue = ReturnType<typeof useChat> & {
   // avatar and the live orb can never both speak the same reply.
   voiceSurface: VoiceSurface;
   setVoiceSurface: (surface: VoiceSurface) => void;
+  // True while TTS audio is actually playing out loud. Without speakers
+  // muting the mic, Clea's own voice re-enters the mic and gets transcribed
+  // as if the user said it — so mic capture pauses whenever this is true.
+  isSpeaking: boolean;
+  setIsSpeaking: (speaking: boolean) => void;
 };
 
 const CleaAgentContext = createContext<CleaAgentValue | null>(null);
@@ -114,6 +119,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const toggleMic = () => setMicActive((active) => !active);
 
   const [voiceSurface, setVoiceSurface] = useState<VoiceSurface>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // WebGPU is required for the in-browser Whisper pipeline (transformers.js).
   // Where it's unavailable (Safari, older browsers), fall back to the
@@ -130,8 +136,9 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
 
   const onTranscript = (text: string) => queuedSendMessage({ text });
 
-  const { modelLoading: whisperLoading } = useWhisperMic(micActive && hasWebGpu, onTranscript);
-  useContinuousMic(micActive && !hasWebGpu, onTranscript);
+  const micCaptureActive = micActive && !isSpeaking;
+  const { modelLoading: whisperLoading } = useWhisperMic(micCaptureActive && hasWebGpu, onTranscript);
+  useContinuousMic(micCaptureActive && !hasWebGpu, onTranscript);
   const micModelLoading = hasWebGpu && whisperLoading;
 
   return (
@@ -144,6 +151,8 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
         micModelLoading,
         voiceSurface,
         setVoiceSurface,
+        isSpeaking,
+        setIsSpeaking,
       }}
     >
       {children}

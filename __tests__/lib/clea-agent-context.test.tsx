@@ -7,6 +7,9 @@ jest.mock('@/lib/use-whisper-mic', () => ({
 jest.mock('@/lib/use-continuous-mic', () => ({
   useContinuousMic: jest.fn(),
 }));
+jest.mock('@/lib/whisper-pipeline', () => ({
+  getWhisperPipeline: jest.fn(async () => ({})),
+}));
 
 // The provider issues a GET on mount to restore history — mock fetch so
 // tests don't hit a real server, and so we can assert both surfaces see
@@ -95,5 +98,40 @@ describe('CleaAgentProvider / useCleaAgent', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mic-loading')).toHaveTextContent('false');
     });
+  });
+
+  it('pauses mic capture while TTS is speaking, to avoid transcribing itself', async () => {
+    (navigator as any).gpu = {};
+    const { useWhisperMic } = jest.requireMock('@/lib/use-whisper-mic') as {
+      useWhisperMic: jest.Mock;
+    };
+
+    function SpeakingConsumer() {
+      const { micActive, toggleMic, isSpeaking, setIsSpeaking } = useCleaAgent();
+      return (
+        <div>
+          <button onClick={toggleMic}>toggle mic</button>
+          <button onClick={() => setIsSpeaking(!isSpeaking)}>toggle speaking</button>
+        </div>
+      );
+    }
+
+    render(
+      <CleaAgentProvider>
+        <SpeakingConsumer />
+      </CleaAgentProvider>
+    );
+
+    fireEvent.click(screen.getByText('toggle mic'));
+    await waitFor(() => {
+      expect(useWhisperMic.mock.calls.at(-1)?.[0]).toBe(true);
+    });
+
+    fireEvent.click(screen.getByText('toggle speaking'));
+    await waitFor(() => {
+      expect(useWhisperMic.mock.calls.at(-1)?.[0]).toBe(false);
+    });
+
+    delete (navigator as any).gpu;
   });
 });
