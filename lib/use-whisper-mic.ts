@@ -54,14 +54,23 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
       rec.onstop = () => {
         if (performance.now() - speechStart < MIN_UTTERANCE_MS || chunks.length === 0) return;
         const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+        const finalizedAt = performance.now();
 
         transcribeQueue
           .push(async () => {
+            const t0 = performance.now();
             const pcm = await resampleTo16kMono(blob);
+            const t1 = performance.now();
             setModelLoading(true);
             const asr = await getWhisperPipeline();
+            const t2 = performance.now();
             setModelLoading(false);
             const result: any = await asr(pcm, { language: 'english' });
+            const t3 = performance.now();
+            console.log(
+              `[whisper] resample=${(t1 - t0).toFixed(0)}ms pipelineWait=${(t2 - t1).toFixed(0)}ms ` +
+                `inference=${(t3 - t2).toFixed(0)}ms totalSinceSilenceEnd=${(t3 - finalizedAt).toFixed(0)}ms`
+            );
             const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
             if (text && !stopped) onTranscriptRef.current(text);
           })
