@@ -59,3 +59,6 @@ __pycache__/
 *.csv
 /public/temp-blobs.json
 public/temp-blobs.json
+
+# local Clea chat persistence (stopgap until Convex/Supabase)
+data/.clea-chats/
