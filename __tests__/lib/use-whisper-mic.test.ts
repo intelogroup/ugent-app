@@ -83,24 +83,45 @@ describe('useWhisperMic', () => {
 
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
-    // speak: rms above threshold marks speaking=true, speechStart=0, and
-    // starts a fresh per-utterance MediaRecorder
+    // energy crosses the floor at now=0, but speaking isn't confirmed until
+    // it's sustained past SPEECH_ONSET_MS (150ms) — rejects transient blips
     currentRms = 0.1;
+    tick();
+    mockNow = 150;
     tick();
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk']) }));
 
-    // go silent — starts the silence-hang timer at now=100
+    // go silent — starts the silence-hang timer at now=250
     currentRms = 0;
-    mockNow = 100;
+    mockNow = 250;
     tick();
 
     // advance past SILENCE_HANG_MS (700ms) from silenceStart — utterance finalizes
-    mockNow = 900;
+    mockNow = 950;
     tick();
 
     await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('hello world'));
+  });
+
+  it('ignores a brief noise blip that never sustains past the onset window', async () => {
+    const onTranscript = jest.fn();
+    renderHook(() => useWhisperMic(true, onTranscript));
+
+    await waitFor(() => expect(pendingTick).not.toBeNull());
+
+    // energy spikes at now=0 then drops back before SPEECH_ONSET_MS elapses
+    currentRms = 0.1;
+    tick();
+    currentRms = 0;
+    mockNow = 50;
+    tick();
+    mockNow = 900;
+    tick();
+
+    expect(recorderDataHandler).toBeNull();
+    expect(asrMock).not.toHaveBeenCalled();
   });
 
   it('keeps recording the next utterance while the previous one is still transcribing', async () => {
@@ -117,15 +138,17 @@ describe('useWhisperMic', () => {
 
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
-    // first utterance: speak, go silent, finalize — kicks off a slow transcription
+    // first utterance: speak (past onset), go silent, finalize — kicks off a slow transcription
     currentRms = 0.1;
+    tick();
+    mockNow = 150;
     tick();
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk-1']) }));
     currentRms = 0;
-    mockNow = 100;
+    mockNow = 250;
     tick();
-    mockNow = 900;
+    mockNow = 950;
     tick();
     await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
 
@@ -134,12 +157,14 @@ describe('useWhisperMic', () => {
     currentRms = 0.1;
     mockNow = 1000;
     tick();
+    mockNow = 1150;
+    tick();
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk-2']) }));
     currentRms = 0;
-    mockNow = 1100;
+    mockNow = 1250;
     tick();
-    mockNow = 1900;
+    mockNow = 1950;
     tick();
 
     // release the first transcription now that the second has already queued

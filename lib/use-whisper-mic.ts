@@ -13,6 +13,10 @@ const SILENCE_RMS_THRESHOLD = 0.015;
 const SILENCE_HANG_MS = 700;
 // Ignore blips shorter than this — mic pops, breaths, keyboard clicks.
 const MIN_UTTERANCE_MS = 300;
+// Energy must stay above the floor for this long before it's treated as
+// real speech rather than a transient (cough, door, distant chatter) —
+// costs a little onset latency to avoid burning a Whisper call on noise.
+const SPEECH_ONSET_MS = 150;
 
 /** Continuously listens to the mic while `active`, using an in-browser Whisper
  *  pipeline gated by energy-based VAD. Recording never stops while a previous
@@ -36,6 +40,7 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
     let recorder: MediaRecorder | null = null;
     let speaking = false;
     let silenceStart: number | null = null;
+    let onsetStart: number | null = null;
     let speechStart = 0;
     const transcribeQueue = new SerialQueue();
 
@@ -77,7 +82,17 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
 
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            // AGC normalizes volume, which erases the natural loudness
+            // falloff with distance — a person across the room would get
+            // boosted to sound as close as the user. Leaving it off keeps
+            // the RMS threshold a usable (if rough) proximity filter.
+            autoGainControl: false,
+          },
+        });
       } catch (err) {
         console.error('mic permission denied', err);
         return;
@@ -104,17 +119,26 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
         const now = performance.now();
         if (rms > SILENCE_RMS_THRESHOLD) {
           if (!speaking) {
-            speaking = true;
-            speechStart = now;
-            startUtteranceRecording();
+            if (onsetStart === null) onsetStart = now;
+            if (now - onsetStart >= SPEECH_ONSET_MS) {
+              speaking = true;
+              speechStart = onsetStart;
+              startUtteranceRecording();
+            }
           }
           silenceStart = null;
-        } else if (speaking) {
-          if (silenceStart === null) silenceStart = now;
-          else if (now - silenceStart >= SILENCE_HANG_MS) {
-            speaking = false;
-            silenceStart = null;
-            finalizeUtterance();
+        } else {
+          // Dropped back to silence before the onset window confirmed —
+          // that was a blip, not speech. Reset so the next crossing gets
+          // its own fresh onset check.
+          onsetStart = null;
+          if (speaking) {
+            if (silenceStart === null) silenceStart = now;
+            else if (now - silenceStart >= SILENCE_HANG_MS) {
+              speaking = false;
+              silenceStart = null;
+              finalizeUtterance();
+            }
           }
         }
         requestAnimationFrame(tick);
