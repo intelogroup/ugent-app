@@ -55,7 +55,11 @@ instance:
   resumes.
 - On mount, `GET /api/clea-chat?id=<id>` to fetch prior history, then
   `setMessages(loaded)` before the user sends anything new — this is what
-  actually makes the reload-persistence goal visible in the UI.
+  actually makes the reload-persistence goal visible in the UI. If the loaded
+  history is empty (new chat id, nothing sent yet), `setMessages` seeds a
+  single static welcome message (moved from `CleaChat.tsx`'s current
+  `WELCOME_MESSAGE` constant) instead of leaving the list empty — preserves
+  today's first-open greeting without persisting it into the chat file.
 - `transport`: `DefaultChatTransport` pointed at `/api/clea-chat`, with
   `prepareSendMessagesRequest` sending only `{ id, message: lastMessage }`
   (last-message-only pattern — server holds the rest), and dynamic `body`
@@ -63,9 +67,24 @@ instance:
 - Exposes `messages`, `sendMessage`, `status`, `error`, `stop` — same shape
   `useChat` gives natively, re-exported through the hook.
 
-Provider nesting: `WatchProvider` stays outermost (activity must be readable
-inside `CleaAgentProvider`); `CleaAgentProvider` wraps its children next, above
-`DashboardLayout`'s content.
+Provider nesting: `WatchProvider` already wraps `<CleaChat />` + `<FloatingAvatar />`
+directly inside `components/DashboardLayout.tsx` (both mount unconditionally,
+simultaneously, on every dashboard page). `CleaAgentProvider` is added inside
+`DashboardLayout.tsx`, nested inside `WatchProvider`, wrapping those same two
+components — not a separate top-level layout layer.
+
+Shared mic toggle: `CleaChat.tsx` and `FloatingAvatar.tsx` each currently run
+their own independent `useContinuousMic` call with their own local mic-on
+state (`isMicActive` / `micOn`). Both mount together, and with a shared
+conversation both mic loops would call the same `sendMessage` — turning both
+mics on (e.g. Live mode auto-arms the avatar's mic while the chat mic is still
+on from before) would transcribe the same speech twice into one visible
+thread. To avoid this, `isMicActive` moves into `CleaAgentProvider` as a single
+shared boolean (`micActive`, `setMicActive`/`toggleMic`) exposed via
+`useCleaAgent()`. Only one `useContinuousMic` call remains, owned by the
+provider; `CleaChat.tsx` and `FloatingAvatar.tsx` both read `micActive` (for
+their mic-button UI state) and call `toggleMic()` instead of managing their own
+mic state.
 
 ### Rewrite: `app/api/clea-chat/route.ts`
 
@@ -104,15 +123,18 @@ inside `CleaAgentProvider`); `CleaAgentProvider` wraps its children next, above
 ### Component changes
 
 - **`CleaChat.tsx`**: remove `useState<Message[]>`, `sendText`, `nextMessageId`,
-  `consumeCleaStream` import. Use `useCleaAgent()` for `messages`, `sendMessage`,
-  `status`. Render loop switches from `message.text` to walking
-  `message.parts`, rendering `part.type === 'text'` segments (tool-call/result
-  parts not rendered yet — no UI need this pass). Mic/voice input (`sendText`
-  caller in `useContinuousMic`) calls `sendMessage({ text })` instead.
+  `WELCOME_MESSAGE` constant, `consumeCleaStream` import, and its own
+  `isMicActive` state. Use `useCleaAgent()` for `messages`, `sendMessage`,
+  `status`, `micActive`, `toggleMic`. Render loop switches from `message.text`
+  to walking `message.parts`, rendering `part.type === 'text'` segments
+  (tool-call/result parts not rendered yet — no UI need this pass). Mic button
+  calls `toggleMic()`; mic transcripts flow through the provider's single
+  `useContinuousMic` call, not a component-local one.
 - **`FloatingAvatar.tsx`**: replace its own `fetch('/api/clea-chat')` +
-  `consumeCleaStream` block with `useCleaAgent()`; feed the final assistant
-  message's joined text parts into the existing `stripMarkdown` → TTS →
-  lipsync flow, unchanged from that point on.
+  `consumeCleaStream` block and its own `micOn` state with `useCleaAgent()`
+  (`sendMessage`, `messages`, `micActive`, `toggleMic`); feed the final
+  assistant message's joined text parts into the existing `stripMarkdown` →
+  TTS → lipsync flow, unchanged from that point on.
 - **`CleaLiveOrb.tsx`**: no changes.
 - **Delete** `lib/clea-stream.ts` once both call sites migrate.
 
