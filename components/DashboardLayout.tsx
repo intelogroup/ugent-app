@@ -3,6 +3,8 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import MobileNav from './MobileNav';
+import CleaChat from './CleaChat';
+import FloatingAvatar from './FloatingAvatar';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +13,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <Sidebar />
       {/* Top tabs nav: mobile only */}
       <MobileNav />
+      <CleaChat />
+      <FloatingAvatar />
       {/* Main content: offset by sidebar on md+, no offset on mobile */}
       <main className="md:ml-64 px-4 py-6 md:p-10">
         {children}
