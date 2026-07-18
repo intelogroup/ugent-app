@@ -34,8 +34,8 @@ type ActivitySnapshot = {
   page: 'quiz';
   questionNumber: number;   // 1-indexed
   totalQuestions: number;
-  subject: string | null;
-  system: string | null;
+  subject: string | null;   // from the current question (questions[currentIndex].subject),
+  system: string | null;    // NOT the route-level ?subject=/?system= filter params
   difficulty: string;
   isAnswered: boolean;
   correctSoFar: number;
@@ -109,7 +109,8 @@ now," not survive a reload.
   since `watchEnabled` is an effect dependency) publishes a snapshot
   immediately.
 - User navigates away from the quiz (or finishes it and is routed to
-  results) with Watch still on: unmount cleanup clears `activity`, so
+  `/dashboard` — there is no separate results screen) with Watch still on:
+  unmount cleanup clears `activity`, so
   `CleaChat`'s label disappears and the placeholder reverts to its generic
   form until the user is back on a page that publishes.
 - Quiz page unmounted before `questions` finishes loading (still `null`):
