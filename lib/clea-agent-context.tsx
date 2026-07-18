@@ -6,6 +6,7 @@ import { DefaultChatTransport, generateId, type UIMessage } from 'ai';
 import { useWatch } from '@/lib/watch-context';
 import { useContinuousMic } from '@/lib/use-continuous-mic';
 import { useWhisperMic } from '@/lib/use-whisper-mic';
+import { getWhisperPipeline } from '@/lib/whisper-pipeline';
 
 const CHAT_ID_KEY = 'clea-chat-id';
 
@@ -118,6 +119,15 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   // Where it's unavailable (Safari, older browsers), fall back to the
   // browser's built-in SpeechRecognition — worse VAD control, but zero setup.
   const hasWebGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
+
+  // Warm the Whisper pipeline as soon as the app mounts, not on first mic
+  // use — so the multi-hundred-MB model is already downloaded/compiled by
+  // the time the user actually presses the mic button.
+  useEffect(() => {
+    if (hasWebGpu) void getWhisperPipeline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const onTranscript = (text: string) => queuedSendMessage({ text });
 
   const { modelLoading: whisperLoading } = useWhisperMic(micActive && hasWebGpu, onTranscript);
