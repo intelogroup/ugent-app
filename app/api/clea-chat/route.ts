@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   const result = streamText({
     model: deepseek('deepseek-chat'),
     system: buildSystemPrompt(activity),
-    messages: convertToModelMessages(validatedMessages),
+    messages: await convertToModelMessages(validatedMessages),
     tools,
     stopWhen: stepCountIs(4),
     onError: ({ error }) => {

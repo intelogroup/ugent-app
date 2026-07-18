@@ -11,30 +11,17 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import CleaLiveOrb from './CleaLiveOrb';
-import { useWatch, buildWatchReply } from '@/lib/watch-context';
+import { useWatch } from '@/lib/watch-context';
+import { useCleaAgent } from '@/lib/clea-agent-context';
 
 type CleaMode = 'closed' | 'chat' | 'live';
 
-type Message = {
-  id: number;
-  role: 'clea' | 'user';
-  text: string;
-};
-
-const WELCOME_MESSAGE: Message = {
-  id: 1,
-  role: 'clea',
-  text: "Hi, I'm Clea, your Ugent study assistant. My full tutoring abilities are coming soon. You can try the chat interface now.",
-};
-
 export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
+  const { messages, sendMessage, status, micActive, toggleMic } = useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
-  const [isMicActive, setIsMicActive] = useState(false);
   const [draft, setDraft] = useState('');
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const nextMessageId = useRef(2);
 
   useEffect(() => {
     if (mode === 'closed') return;
@@ -43,27 +30,26 @@ export default function CleaChat() {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMode('closed');
-        setIsMicActive(false);
+        if (micActive) toggleMic();
       }
     };
 
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const closeClea = () => {
     setMode('closed');
-    setIsMicActive(false);
+    if (micActive) toggleMic();
   };
-
-  const toggleMicrophone = () => setIsMicActive((active) => !active);
 
   const [orbPos, setOrbPos] = useState({ x: 300, y: 100 });
   const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
 
   const startLive = () => {
     setMode('live');
-    setIsMicActive(true);
+    if (!micActive) toggleMic();
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -95,32 +81,22 @@ export default function CleaChat() {
     document.addEventListener('touchend', onEnd);
   };
 
-  const sendMessage = (event: FormEvent<HTMLFormElement>) => {
+  const handleSend = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = draft.trim();
     if (!text) return;
-
-    const reply = buildWatchReply(
-      'Clea is in placeholder mode for now. Soon I will use your Ugent study material to help answer this.',
-      activity
-    );
-
-    setMessages((current) => [
-      ...current,
-      { id: nextMessageId.current++, role: 'user', text },
-      { id: nextMessageId.current++, role: 'clea', text: reply },
-    ]);
     setDraft('');
+    sendMessage({ text });
   };
 
   const microphoneButton = (compact = false) => (
     <button
       type="button"
-      onClick={toggleMicrophone}
-      aria-label={isMicActive ? 'Stop visual microphone' : 'Start visual microphone'}
-      aria-pressed={isMicActive}
+      onClick={toggleMic}
+      aria-label={micActive ? 'Stop visual microphone' : 'Start visual microphone'}
+      aria-pressed={micActive}
       className={`${compact ? 'h-9 w-9' : 'h-11 w-11'} flex items-center justify-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-        isMicActive
+        micActive
           ? 'border-primary-500 bg-primary-600 text-white shadow-md'
           : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-300 hover:text-primary-600'
       }`}
@@ -208,13 +184,22 @@ export default function CleaChat() {
                     ? 'rounded-br-md bg-primary-600 text-white'
                     : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-700'
                 }`}>
-                  {message.text}
+                  {message.parts
+                    .filter((part) => part.type === 'text')
+                    .map((part, index) => <span key={index}>{(part as { text: string }).text}</span>)}
                 </p>
               </div>
             ))}
+            {status === 'submitted' && (
+              <div className="flex justify-start">
+                <p className="max-w-[85%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
+                  Clea is thinking…
+                </p>
+              </div>
+            )}
           </div>
 
-          <form onSubmit={sendMessage} className="flex items-center gap-2 border-t border-neutral-200 bg-white p-3">
+          <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-neutral-200 bg-white p-3">
             {microphoneButton(true)}
             <label htmlFor="clea-message" className="sr-only">Message Clea</label>
             <input
@@ -222,7 +207,7 @@ export default function CleaChat() {
               id="clea-message"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              placeholder={isMicActive ? 'Listening...' : 'Ask Clea...'}
+              placeholder={micActive ? 'Listening...' : 'Ask Clea...'}
               autoComplete="off"
               className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-50"
             />
@@ -249,7 +234,7 @@ export default function CleaChat() {
               Clea
             </button>
           </div>
-          {isMicActive && (
+          {micActive && (
             <p className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-medium text-primary-600 shadow-sm" aria-live="polite">
               Listening...
             </p>

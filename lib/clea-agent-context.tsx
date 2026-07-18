@@ -51,6 +51,8 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   });
 
   const hasHydratedRef = useRef(false);
+  const messagesRef = useRef(chat.messages);
+  messagesRef.current = chat.messages;
 
   useEffect(() => {
     if (hasHydratedRef.current) return;
@@ -61,6 +63,10 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`/api/clea-chat?id=${encodeURIComponent(chatId)}`);
       const loaded: UIMessage[] = res.ok ? await res.json() : [];
       if (cancelled) return;
+      // The user may have already sent a message while this GET was in
+      // flight (e.g. typed and submitted immediately on mount) — don't
+      // clobber that with loaded/welcome history.
+      if (messagesRef.current.length > 0) return;
       chat.setMessages(loaded.length > 0 ? loaded : [WELCOME_MESSAGE]);
     })();
 

@@ -1,11 +1,33 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import CleaChat from '@/components/CleaChat';
 import { WatchProvider, useWatch, ActivitySnapshot } from '@/lib/watch-context';
+import { CleaAgentProvider } from '@/lib/clea-agent-context';
+
+// CleaChat now reads from CleaAgentProvider, which GETs history on mount and
+// POSTs new messages — mock fetch so these are pure component tests, not
+// integration tests against a real server.
+beforeEach(() => {
+  window.localStorage.clear();
+  global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!init) {
+      // GET history-on-mount
+      return { ok: true, json: async () => [] } as any;
+    }
+    // POST — return a response with no body so the component's stream
+    // consumption path isn't exercised in these tests (covered separately
+    // by clea-agent-context and clea-chat route tests).
+    return { ok: true, body: null, json: async () => ({}) } as any;
+  }) as any;
+});
+
+function renderWithProvider(children: React.ReactNode) {
+  return render(<CleaAgentProvider>{children}</CleaAgentProvider>);
+}
 
 describe('CleaChat', () => {
   it('opens from its floating trigger and closes with Escape', () => {
-    render(<CleaChat />);
+    renderWithProvider(<CleaChat />);
 
     const trigger = screen.getByRole('button', { name: 'Open Clea study assistant' });
     expect(trigger).toBeInTheDocument();
@@ -18,21 +40,22 @@ describe('CleaChat', () => {
     expect(screen.queryByRole('dialog', { name: 'Clea study assistant' })).not.toBeInTheDocument();
   });
 
-  it('adds a message and a placeholder reply', () => {
-    render(<CleaChat />);
+  it('shows the sent message immediately and clears the input', async () => {
+    renderWithProvider(<CleaChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
 
     const input = screen.getByLabelText('Message Clea');
     fireEvent.change(input, { target: { value: 'Help me review cardiology' } });
     fireEvent.submit(input.closest('form')!);
 
-    expect(screen.getByText('Help me review cardiology')).toBeInTheDocument();
-    expect(screen.getByText(/placeholder mode/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Help me review cardiology')).toBeInTheDocument();
+    });
     expect(input).toHaveValue('');
   });
 
-  it('toggles the visual microphone state without requesting audio', () => {
-    render(<CleaChat />);
+  it('toggles the shared microphone state without requesting audio', () => {
+    renderWithProvider(<CleaChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
 
     const microphone = screen.getByRole('button', { name: 'Start visual microphone' });
@@ -44,7 +67,7 @@ describe('CleaChat', () => {
   });
 
   it('enters and exits the visual Clea Live mode', () => {
-    render(<CleaChat />);
+    renderWithProvider(<CleaChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Start Clea Live' }));
@@ -81,14 +104,12 @@ const sampleActivity: ActivitySnapshot = {
 };
 
 describe('CleaChat + Watch', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-  });
-
   it('toggles Watch on and off from the chat header', () => {
     render(
       <WatchProvider>
-        <CleaChat />
+        <CleaAgentProvider>
+          <CleaChat />
+        </CleaAgentProvider>
       </WatchProvider>
     );
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
@@ -103,8 +124,10 @@ describe('CleaChat + Watch', () => {
   it('shows a Watching label when activity is published', () => {
     render(
       <WatchProvider>
-        <ActivityInjector activity={sampleActivity} />
-        <CleaChat />
+        <CleaAgentProvider>
+          <ActivityInjector activity={sampleActivity} />
+          <CleaChat />
+        </CleaAgentProvider>
       </WatchProvider>
     );
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
@@ -112,22 +135,5 @@ describe('CleaChat + Watch', () => {
 
     expect(screen.getByText(/Watching: Q3\/20/)).toBeInTheDocument();
     expect(screen.getByText(/Cardiovascular/)).toBeInTheDocument();
-  });
-
-  it('contextualizes the placeholder reply when watching', () => {
-    render(
-      <WatchProvider>
-        <ActivityInjector activity={sampleActivity} />
-        <CleaChat />
-      </WatchProvider>
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on Watch' }));
-
-    const input = screen.getByLabelText('Message Clea');
-    fireEvent.change(input, { target: { value: 'What should I focus on?' } });
-    fireEvent.submit(input.closest('form')!);
-
-    expect(screen.getByText(/question 3 of 20/)).toBeInTheDocument();
   });
 });
