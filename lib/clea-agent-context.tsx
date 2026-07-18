@@ -124,7 +124,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   // use — so the multi-hundred-MB model is already downloaded/compiled by
   // the time the user actually presses the mic button.
   useEffect(() => {
-    if (hasWebGpu) void getWhisperPipeline();
+    if (hasWebGpu) getWhisperPipeline().catch((err) => console.error('whisper warm-up failed', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

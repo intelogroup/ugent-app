@@ -50,15 +50,20 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
         if (performance.now() - speechStart < MIN_UTTERANCE_MS || chunks.length === 0) return;
         const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
 
-        void transcribeQueue.push(async () => {
-          const pcm = await resampleTo16kMono(blob);
-          setModelLoading(true);
-          const asr = await getWhisperPipeline();
-          setModelLoading(false);
-          const result: any = await asr(pcm);
-          const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
-          if (text && !stopped) onTranscriptRef.current(text);
-        });
+        transcribeQueue
+          .push(async () => {
+            const pcm = await resampleTo16kMono(blob);
+            setModelLoading(true);
+            const asr = await getWhisperPipeline();
+            setModelLoading(false);
+            const result: any = await asr(pcm);
+            const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
+            if (text && !stopped) onTranscriptRef.current(text);
+          })
+          .catch((err) => {
+            setModelLoading(false);
+            console.error('whisper transcription failed', err);
+          });
       };
       rec.start();
       recorder = rec;
