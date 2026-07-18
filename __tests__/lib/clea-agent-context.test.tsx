@@ -1,6 +1,13 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CleaAgentProvider, useCleaAgent } from '@/lib/clea-agent-context';
 
+jest.mock('@/lib/use-whisper-mic', () => ({
+  useWhisperMic: jest.fn(() => ({ modelLoading: false })),
+}));
+jest.mock('@/lib/use-continuous-mic', () => ({
+  useContinuousMic: jest.fn(),
+}));
+
 // The provider issues a GET on mount to restore history — mock fetch so
 // tests don't hit a real server, and so we can assert both surfaces see
 // the same messages after a mocked round-trip.
@@ -73,5 +80,20 @@ describe('CleaAgentProvider / useCleaAgent', () => {
     expect(screen.getByTestId('mic-state')).toHaveTextContent('false');
     fireEvent.click(screen.getByText('toggle mic'));
     expect(screen.getByTestId('mic-state')).toHaveTextContent('true');
+  });
+
+  it('exposes micModelLoading from the active mic hook', async () => {
+    function LoadingConsumer() {
+      const { micModelLoading } = useCleaAgent();
+      return <p data-testid="mic-loading">{String(micModelLoading)}</p>;
+    }
+    render(
+      <CleaAgentProvider>
+        <LoadingConsumer />
+      </CleaAgentProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('mic-loading')).toHaveTextContent('false');
+    });
   });
 });

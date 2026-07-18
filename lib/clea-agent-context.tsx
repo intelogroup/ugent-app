@@ -5,6 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, generateId, type UIMessage } from 'ai';
 import { useWatch } from '@/lib/watch-context';
 import { useContinuousMic } from '@/lib/use-continuous-mic';
+import { useWhisperMic } from '@/lib/use-whisper-mic';
 
 const CHAT_ID_KEY = 'clea-chat-id';
 
@@ -19,9 +20,17 @@ const WELCOME_MESSAGE: UIMessage = {
   ],
 };
 
+export type VoiceSurface = 'avatar' | 'orb' | null;
+
 type CleaAgentValue = ReturnType<typeof useChat> & {
   micActive: boolean;
   toggleMic: () => void;
+  micModelLoading: boolean;
+  // Exactly one surface may own TTS playback at a time — setting this to a
+  // new surface implicitly evicts whichever one held it before, so the
+  // avatar and the live orb can never both speak the same reply.
+  voiceSurface: VoiceSurface;
+  setVoiceSurface: (surface: VoiceSurface) => void;
 };
 
 const CleaAgentContext = createContext<CleaAgentValue | null>(null);
@@ -54,6 +63,30 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const messagesRef = useRef(chat.messages);
   messagesRef.current = chat.messages;
 
+  // chat.sendMessage races if called again before the previous request
+  // finishes — the SDK doesn't serialize it, and the API route's
+  // load-append-save cycle then drops whichever turn's save loses the
+  // race. Queue sends client-side instead: a new one fires immediately
+  // only when idle, otherwise it waits for `ready` and is flushed in order.
+  const statusRef = useRef(chat.status);
+  statusRef.current = chat.status;
+  const sendQueueRef = useRef<Parameters<typeof chat.sendMessage>[]>([]);
+
+  useEffect(() => {
+    if (chat.status !== 'ready') return;
+    const next = sendQueueRef.current.shift();
+    if (next) void chat.sendMessage(...next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat.status]);
+
+  const queuedSendMessage: typeof chat.sendMessage = (...args) => {
+    if (statusRef.current === 'ready' && sendQueueRef.current.length === 0) {
+      return chat.sendMessage(...args);
+    }
+    sendQueueRef.current.push(args);
+    return Promise.resolve();
+  };
+
   useEffect(() => {
     if (hasHydratedRef.current) return;
     hasHydratedRef.current = true;
@@ -79,12 +112,30 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const [micActive, setMicActive] = useState(false);
   const toggleMic = () => setMicActive((active) => !active);
 
-  useContinuousMic(micActive, (text) => {
-    chat.sendMessage({ text });
-  });
+  const [voiceSurface, setVoiceSurface] = useState<VoiceSurface>(null);
+
+  // WebGPU is required for the in-browser Whisper pipeline (transformers.js).
+  // Where it's unavailable (Safari, older browsers), fall back to the
+  // browser's built-in SpeechRecognition — worse VAD control, but zero setup.
+  const hasWebGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
+  const onTranscript = (text: string) => queuedSendMessage({ text });
+
+  const { modelLoading: whisperLoading } = useWhisperMic(micActive && hasWebGpu, onTranscript);
+  useContinuousMic(micActive && !hasWebGpu, onTranscript);
+  const micModelLoading = hasWebGpu && whisperLoading;
 
   return (
-    <CleaAgentContext.Provider value={{ ...chat, micActive, toggleMic }}>
+    <CleaAgentContext.Provider
+      value={{
+        ...chat,
+        sendMessage: queuedSendMessage,
+        micActive,
+        toggleMic,
+        micModelLoading,
+        voiceSurface,
+        setVoiceSurface,
+      }}
+    >
       {children}
     </CleaAgentContext.Provider>
   );
