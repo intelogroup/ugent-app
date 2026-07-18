@@ -56,7 +56,7 @@ export function useWhisperMic(active: boolean, onTranscript: (text: string) => v
             setModelLoading(true);
             const asr = await getWhisperPipeline();
             setModelLoading(false);
-            const result: any = await asr(pcm);
+            const result: any = await asr(pcm, { language: 'english' });
             const text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
             if (text && !stopped) onTranscriptRef.current(text);
           })
