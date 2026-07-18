@@ -13,6 +13,7 @@ import {
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/solid';
+import { useWatch, buildQuizSnapshot } from '@/lib/watch-context';
 
 interface AnswerOption {
   text: string;
@@ -46,7 +47,7 @@ function saveAttempt(attempt: QuizAttempt) {
   localStorage.setItem(key, JSON.stringify(existing));
 }
 
-function QuizContent() {
+export function QuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const subject = searchParams.get('subject');
@@ -89,6 +90,23 @@ function QuizContent() {
 
   const currentQuestion = questions?.[currentIndex];
   const isLastQuestion = questions ? currentIndex === questions.length - 1 : false;
+
+  const { watchEnabled, setActivity } = useWatch();
+
+  useEffect(() => {
+    if (!watchEnabled || !questions || !currentQuestion) return;
+    setActivity(
+      buildQuizSnapshot(
+        currentQuestion,
+        currentIndex + 1,
+        questions.length,
+        isSubmitted,
+        correctCount,
+        currentIndex + (isSubmitted ? 1 : 0)
+      )
+    );
+    return () => setActivity(null);
+  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, correctCount, setActivity]);
 
   const handleSubmit = () => {
     if (selectedIndex === null || !currentQuestion) return;
