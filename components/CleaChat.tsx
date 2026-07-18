@@ -18,7 +18,8 @@ type CleaMode = 'closed' | 'chat' | 'live';
 
 export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
-  const { messages, sendMessage, status, micActive, toggleMic } = useCleaAgent();
+  const { messages, sendMessage, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface } =
+    useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +30,7 @@ export default function CleaChat() {
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        leaveLive();
         setMode('closed');
         if (micActive) toggleMic();
       }
@@ -39,7 +41,15 @@ export default function CleaChat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  // Releases the orb's voice-surface claim, but only if it still holds it —
+  // the avatar may have taken it over in the meantime, and this must not
+  // clobber that.
+  const leaveLive = () => {
+    if (voiceSurface === 'orb') setVoiceSurface(null);
+  };
+
   const closeClea = () => {
+    leaveLive();
     setMode('closed');
     if (micActive) toggleMic();
   };
@@ -49,8 +59,19 @@ export default function CleaChat() {
 
   const startLive = () => {
     setMode('live');
+    setVoiceSurface('orb');
     if (!micActive) toggleMic();
   };
+
+  // The avatar taking the voice surface means live mode must close, not
+  // just fall silent — otherwise both widgets would sit open at once.
+  useEffect(() => {
+    if (mode === 'live' && voiceSurface === 'avatar') {
+      setMode('chat');
+      if (micActive) toggleMic();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, voiceSurface]);
 
   const handleDragStart = (e: React.MouseEvent) => {
     dragRef.current = { startX: e.clientX, startY: e.clientY, posX: orbPos.x, posY: orbPos.y };
@@ -93,9 +114,10 @@ export default function CleaChat() {
     <button
       type="button"
       onClick={toggleMic}
-      aria-label={micActive ? 'Stop visual microphone' : 'Start visual microphone'}
+      disabled={micModelLoading}
+      aria-label={micModelLoading ? 'Loading voice model' : micActive ? 'Stop visual microphone' : 'Start visual microphone'}
       aria-pressed={micActive}
-      className={`${compact ? 'h-9 w-9' : 'h-11 w-11'} flex items-center justify-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+      className={`${compact ? 'h-9 w-9' : 'h-11 w-11'} flex items-center justify-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-60 ${
         micActive
           ? 'border-primary-500 bg-primary-600 text-white shadow-md'
           : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-300 hover:text-primary-600'

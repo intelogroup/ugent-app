@@ -32,6 +32,18 @@ export default function FloatingAvatar() {
   const [streaming, setStreaming] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Guards against overlapping speak() calls (e.g. a fast second reply while
+  // the first is still streaming) stacking multiple audio/WS flows at once.
+  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket } | null>(null);
+
+  const stopSpeaking = () => {
+    const active = activeSpeechRef.current;
+    if (!active) return;
+    activeSpeechRef.current = null;
+    active.ws.close();
+    active.audio.pause();
+    setStreaming(false);
+  };
 
   const runLipsync = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -56,6 +68,10 @@ export default function FloatingAvatar() {
   };
 
   const speak = async (rawText: string) => {
+    // Only one voice may play at a time — cancel whatever this widget was
+    // already saying before starting the next reply.
+    stopSpeaking();
+
     const text = stripMarkdown(rawText);
     setLoading(true);
     setLatencyMs(null);
@@ -79,6 +95,7 @@ export default function FloatingAvatar() {
       await new Promise<void>((resolve, reject) => {
         const ws = new WebSocket(STREAM_WS_URL);
         ws.binaryType = 'arraybuffer';
+        activeSpeechRef.current = { audio, ws };
 
         ws.onopen = () => ws.send(audioBuf);
 
@@ -124,6 +141,7 @@ export default function FloatingAvatar() {
               }
               if (!audio.ended) requestAnimationFrame(paint);
               else {
+                activeSpeechRef.current = null;
                 setStreaming(false);
                 resolve();
               }
@@ -137,6 +155,7 @@ export default function FloatingAvatar() {
     } catch (err) {
       console.error('tts stream failed', err);
       setLatencyMs(-1);
+      activeSpeechRef.current = null;
       setStreaming(false);
     } finally {
       setLoading(false);
@@ -149,7 +168,7 @@ export default function FloatingAvatar() {
     if (text) void speak(text);
   };
 
-  const { messages, status, micActive, toggleMic } = useCleaAgent();
+  const { messages, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface } = useCleaAgent();
   const lastSpokenIdRef = useRef<string | null>(null);
   const hasSeenInitialMessagesRef = useRef(false);
 
@@ -165,6 +184,10 @@ export default function FloatingAvatar() {
     }
 
     if (status !== 'ready') return;
+    // Only the surface the user is actually looking at speaks — a reply
+    // sent from the plain text chat (or while the orb owns voice) must
+    // stay silent here, otherwise text replies get spoken unexpectedly.
+    if (voiceSurface !== 'avatar') return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== 'assistant' || last.id === lastSpokenIdRef.current) return;
 
@@ -175,7 +198,21 @@ export default function FloatingAvatar() {
       .join('');
     if (text.trim()) void speak(text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, status]);
+  }, [messages, status, voiceSurface]);
+
+  // Stop any in-flight audio/WS as soon as this widget loses (or never
+  // holds) the voice surface — e.g. the orb takes over — and on unmount.
+  useEffect(() => {
+    if (voiceSurface !== 'avatar') stopSpeaking();
+    return () => stopSpeaking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceSurface]);
+
+  // The orb taking the voice surface means the widget itself must close,
+  // not just go silent — otherwise both would sit open at once.
+  useEffect(() => {
+    if (expanded && voiceSurface === 'orb') setExpanded(false);
+  }, [expanded, voiceSurface]);
 
   const clampPos = (x: number, y: number) => ({
     x: Math.min(Math.max(x, 0), window.innerWidth - SIZE),
@@ -230,7 +267,10 @@ export default function FloatingAvatar() {
     return (
       <button
         type="button"
-        onClick={() => setExpanded(true)}
+        onClick={() => {
+          setExpanded(true);
+          setVoiceSurface('avatar');
+        }}
         aria-label="Open Clea avatar"
         className="fixed right-[104px] top-20 z-50 h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 md:right-[124px] md:top-6"
       >
@@ -273,6 +313,7 @@ export default function FloatingAvatar() {
           onClick={(e) => {
             e.stopPropagation();
             setExpanded(false);
+            if (voiceSurface === 'avatar') setVoiceSurface(null);
           }}
           aria-label="Close avatar"
           className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
@@ -294,9 +335,10 @@ export default function FloatingAvatar() {
             e.stopPropagation();
             toggleMic();
           }}
-          aria-label={micActive ? 'Stop listening' : 'Start listening'}
+          disabled={micModelLoading}
+          aria-label={micModelLoading ? 'Loading voice model' : micActive ? 'Stop listening' : 'Start listening'}
           aria-pressed={micActive}
-          className={`absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full text-white transition disabled:opacity-50 ${
+          className={`absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full text-white transition disabled:cursor-wait disabled:opacity-50 ${
             micActive ? 'bg-primary-600' : 'bg-black/50 hover:bg-black/70'
           }`}
         >
