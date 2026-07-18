@@ -4,11 +4,14 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   BoltIcon,
   ChatBubbleLeftRightIcon,
+  EyeIcon,
+  EyeSlashIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import CleaLiveOrb from './CleaLiveOrb';
+import { useWatch, buildWatchReply } from '@/lib/watch-context';
 
 type CleaMode = 'closed' | 'chat' | 'live';
 
@@ -25,6 +28,7 @@ const WELCOME_MESSAGE: Message = {
 };
 
 export default function CleaChat() {
+  const { watchEnabled, toggleWatch, activity } = useWatch();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [isMicActive, setIsMicActive] = useState(false);
   const [draft, setDraft] = useState('');
@@ -96,7 +100,10 @@ export default function CleaChat() {
     const text = draft.trim();
     if (!text) return;
 
-    const reply = 'Clea is in placeholder mode for now. Soon I will use your Ugent study material to help answer this.';
+    const reply = buildWatchReply(
+      'Clea is in placeholder mode for now. Soon I will use your Ugent study material to help answer this.',
+      activity
+    );
 
     setMessages((current) => [
       ...current,
@@ -151,9 +158,28 @@ export default function CleaChat() {
               <div>
                 <h2 className="text-sm font-semibold text-neutral-900">Clea</h2>
                 <p className="text-xs text-neutral-500">Study Assistant</p>
+                {watchEnabled && activity && (
+                  <p className="text-xs font-medium text-primary-600">
+                    Watching: Q{activity.questionNumber}/{activity.totalQuestions}
+                    {activity.subject ? ` · ${activity.subject}` : ''}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={toggleWatch}
+                aria-label={watchEnabled ? 'Turn off Watch' : 'Turn on Watch'}
+                aria-pressed={watchEnabled}
+                className={`flex items-center justify-center rounded-full p-1.5 transition focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  watchEnabled
+                    ? 'bg-primary-50 text-primary-600'
+                    : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+                }`}
+              >
+                {watchEnabled ? <EyeIcon className="h-4 w-4" /> : <EyeSlashIcon className="h-4 w-4" />}
+              </button>
               <button
                 type="button"
                 onClick={startLive}
