@@ -14,8 +14,6 @@ import type { ActivitySnapshot } from '@/lib/watch-context';
 import { queryQbank, queryCurriculum } from '@/lib/clea-tools';
 import { loadChat, saveChat } from '@/lib/clea-chat-store';
 
-const tools = { queryQbank, queryCurriculum };
-
 function buildSystemPrompt(activity: ActivitySnapshot | null): string {
   const base =
     "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Keep answers short and focused.";
@@ -54,7 +52,11 @@ export async function POST(request: NextRequest) {
   try {
     validatedMessages = await validateUIMessages({
       messages: [...previousMessages, message],
-      tools,
+      // validateUIMessages infers per-tool input/output types from a fully
+      // parameterized UIMessage<...> generic; without one, TS can't unify
+      // our concrete tool() definitions with its default unknown/unknown
+      // shape even though they're structurally compatible at runtime.
+      tools: { queryQbank, queryCurriculum } as unknown as Record<string, never>,
     });
   } catch (error) {
     if (error instanceof TypeValidationError) {
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
     model: deepseek('deepseek-chat'),
     system: buildSystemPrompt(activity),
     messages: await convertToModelMessages(validatedMessages),
-    tools,
+    tools: { queryQbank, queryCurriculum },
     stopWhen: stepCountIs(4),
     onError: ({ error }) => {
       console.error('clea-chat streamText error', error);
