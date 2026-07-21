@@ -25,13 +25,13 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-4">
               <Link
-                href="/login"
+                href="/auth/login"
                 className="text-neutral-600 hover:text-neutral-900 font-medium transition-colors"
               >
                 Sign In
               </Link>
               <Link
-                href="/signup"
+                href="/auth/signup"
                 className="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
               >
                 Get Started
@@ -63,14 +63,14 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/signup"
+              href="/auth/signup"
               className="bg-primary-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
             >
               Start Learning Free
               <ArrowRightIcon className="w-5 h-5" />
             </Link>
             <Link
-              href="/login"
+              href="/auth/login"
               className="bg-white text-neutral-900 px-8 py-4 rounded-xl font-semibold text-lg border-2 border-neutral-200 hover:border-primary-500 hover:bg-primary-50 transition-all"
             >
               View Demo
@@ -187,7 +187,7 @@ export default function LandingPage() {
             Join thousands of students who are already studying smarter with Ugent
           </p>
           <Link
-            href="/signup"
+            href="/auth/signup"
             className="inline-flex items-center gap-2 bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-neutral-50 transition-colors"
           >
             Get Started for Free
