@@ -51,6 +51,11 @@ Three warm servers, started manually (not auto-launched):
 
 Flow: LLM streams text → `FloatingAvatar.tsx` prefetches `/api/tts-audio` → full MP3 buffer sent to Wav2Lip WS as WAV bytes → server streams JPEG frames back → canvas paints frames, audio via MediaSource. `speak(fullText)` is single-shot (no per-sentence split, avoids per-call Wav2Lip tax). Send WAV sample rate to Wav2Lip or mouth-sync drifts.
 
+Wav2Lip URL configured via env vars (no longer hardcoded `localhost:8765`):
+- `NEXT_PUBLIC_WAV2LIP_WS_URL` — WebSocket URL (client-side, default `ws://localhost:8765/lipsync-stream`)
+- `WAV2LIP_HTTP_URL` — HTTP URL (server-side API routes, default `http://localhost:8765`)
+Set both to cloudflared tunnel URL (`wss:///https://`) to use from Vercel prod. Server binds `0.0.0.0` with CORS wildcard. Tunnel: `cloudflared tunnel --url http://localhost:8765`.
+
 ## Quiz Architecture (planned Supabase)
 Server-authoritative. Vercel serverless for `/api/quiz/start` (seed RNG, select questions), `/api/quiz/submit` (validate answer server-side, `correctAnswer` never in client bundle), `/api/quiz/complete` (INSERT attempt via RLS). Supabase holds questions + attempts; RLS `SELECT only` on questions, `INSERT own` on attempts. Client-thin renderer: UI, timer, progress. Rate-limit via Vercel Edge middleware. No separate Render server — Vercel handles quiz volume.
 
@@ -67,4 +72,5 @@ Knowledge graph at `graphify-out/`. For codebase questions run `graphify query "
 - ASR transcription flipped to OpenAI-primary (2026-07-21) — `gpt-4o-mini-transcribe` first with `language=en` forced (was missing, caused foreign-script hallucination); local whisper.cpp/in-browser Whisper now fallbacks only.
 - `lib/asr-dictionary.json` contains non-medical English words from scraping that caused false-positive corrections — fixed via `ENGLISH_STOPLIST` in `lib/asr-correct.ts`, extend as new collisions surface, don't prune the dictionary.
 - `lib/prisma.ts` deleted (2026-07-21) — zero callers, leftover from removed Prisma backend.
+- Wav2Lip server URL env-var-ified (2026-07-21) — `NEXT_PUBLIC_WAV2LIP_WS_URL` + `WAV2LIP_HTTP_URL` replace hardcoded `localhost:8765`. Prod 501 guards removed. Server binds `0.0.0.0`, CORS wildcard. Use cloudflared tunnel to expose for Vercel prod.
 <!-- forge-learnings:end -->
