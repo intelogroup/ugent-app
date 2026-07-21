@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { readDataFile } from '../data-source';
 import type {
   TopicNode,
   DependencyGraph,
@@ -441,7 +440,7 @@ function parsePrerequisites(prereqTexts: string[], _system: string): string[] {
   return [...new Set(ids)];
 }
 
-export function analyzeQuestions(): {
+export async function analyzeQuestions(): Promise<{
   graph: DependencyGraph;
   topicMap: Map<string, TopicNode>;
   allNodes: TopicNode[];
@@ -455,7 +454,7 @@ export function analyzeQuestions(): {
     dependencyDepth: number;
   };
   systemDiseaseMap: Record<string, DiseaseEntry[]>;
-} {
+}> {
   const questionHashes = new Set<string>();
   const topicMap = new Map<string, TopicNode>();
   const systemCount: Record<string, number> = {};
@@ -504,9 +503,8 @@ export function analyzeQuestions(): {
   }
 
   // Load classified questions for subject/system frequency
-  const classifiedPath = path.resolve(process.cwd(), 'data/classified-questions.jsonl');
-  if (fs.existsSync(classifiedPath)) {
-    const lines = fs.readFileSync(classifiedPath, 'utf-8').trim().split('\n');
+  {
+    const lines = (await readDataFile('classified-questions.jsonl')).trim().split('\n');
     for (const line of lines) {
       try {
         const q = JSON.parse(line);
@@ -519,9 +517,8 @@ export function analyzeQuestions(): {
   }
 
   // Load enriched questions for topic extraction
-  const enrichedPath = path.resolve(process.cwd(), 'data/medicospira-enriched.jsonl');
-  if (fs.existsSync(enrichedPath)) {
-    const lines = fs.readFileSync(enrichedPath, 'utf-8').trim().split('\n');
+  {
+    const lines = (await readDataFile('medicospira-enriched.jsonl')).trim().split('\n');
     for (const line of lines) {
       try {
         const raw = JSON.parse(line);
@@ -661,7 +658,7 @@ export function analyzeQuestions(): {
     dependencyDepth: maxDepth,
   };
 
-  return { graph, topicMap, allNodes: nodes, frequencyStats, systemDiseaseMap: getSystemDiseaseMap() };
+  return { graph, topicMap, allNodes: nodes, frequencyStats, systemDiseaseMap: await getSystemDiseaseMap() };
 }
 
 export interface DiseaseEntry {
@@ -672,13 +669,10 @@ export interface DiseaseEntry {
   mechanism: string;
 }
 
-export function getSystemDiseaseMap(): Record<string, DiseaseEntry[]> {
+export async function getSystemDiseaseMap(): Promise<Record<string, DiseaseEntry[]>> {
   const map: Record<string, DiseaseEntry[]> = {};
 
-  const enrichedPath = path.resolve(process.cwd(), 'data/medicospira-enriched.jsonl');
-  if (!fs.existsSync(enrichedPath)) return map;
-
-  const lines = fs.readFileSync(enrichedPath, 'utf-8').trim().split('\n');
+  const lines = (await readDataFile('medicospira-enriched.jsonl')).trim().split('\n');
   for (const line of lines) {
     try {
       const raw = JSON.parse(line);

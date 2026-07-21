@@ -4,6 +4,10 @@
 const LIPSYNC_SERVER = 'http://localhost:8765/lipsync';
 
 export async function POST(request: Request) {
+  if (process.env.VERCEL) {
+    return new Response('lipsync unavailable in prod (local Wav2Lip server only)', { status: 501 });
+  }
+
   const form = await request.formData();
 
   const res = await fetch(LIPSYNC_SERVER, {

@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { readDataFile } from './data-source';
 
 export interface ClassifiedQuestion {
   text: string;
@@ -12,9 +11,8 @@ export interface ClassifiedQuestion {
   difficulty: string;
 }
 
-export function loadQuestions(): ClassifiedQuestion[] {
-  const filePath = path.join(process.cwd(), 'data', 'classified-questions.jsonl');
-  const raw = fs.readFileSync(filePath, 'utf8');
+export async function loadQuestions(): Promise<ClassifiedQuestion[]> {
+  const raw = await readDataFile('classified-questions.jsonl');
   return raw
     .split('\n')
     .filter(Boolean)
@@ -30,14 +28,14 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-export function queryQuestions(opts: {
+export async function queryQuestions(opts: {
   subject?: string;
   system?: string;
   difficulty?: string;
   limit?: number;
 }) {
   const { subject, system, difficulty, limit = 20 } = opts;
-  const questions = loadQuestions();
+  const questions = await loadQuestions();
 
   let filtered = questions.filter((q) => q.options?.length);
   if (subject) filtered = filtered.filter((q) => q.subject === subject);

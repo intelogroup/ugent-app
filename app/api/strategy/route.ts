@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { analyzeQuestions, FIRST_AID_MAP, PATHOMA_MAP, PSYCH_DRUG_KEYWORDS } from "@/lib/curriculum/analyzer";
-import fs from "fs";
-import path from "path";
+import { readDataFile } from "@/lib/data-source";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +71,7 @@ function mapSystem(rawSystem: string, rawSubject?: string): string {
 
 export async function GET() {
   try {
-    const analysis = analyzeQuestions();
+    const analysis = await analyzeQuestions();
     const allNodes = analysis.allNodes;
 
     // Build graphData for StrategyGraphExplorer
@@ -226,14 +225,11 @@ export async function GET() {
 
     // Build geneticsPairs from JSON
     let geneticsPairs: any[] = [];
-    const geneticsPath = path.resolve(process.cwd(), 'data/genetics-discriminators.json');
-    if (fs.existsSync(geneticsPath)) {
-      try {
-        const geneticsJson = JSON.parse(fs.readFileSync(geneticsPath, 'utf-8'));
-        geneticsPairs = geneticsJson.topics || [];
-      } catch (err) {
-        console.error("Failed to parse genetics-discriminators.json", err);
-      }
+    try {
+      const geneticsJson = JSON.parse(await readDataFile('genetics-discriminators.json'));
+      geneticsPairs = geneticsJson.topics || [];
+    } catch (err) {
+      console.error("Failed to parse genetics-discriminators.json", err);
     }
 
     // Build dynamic question bank clues

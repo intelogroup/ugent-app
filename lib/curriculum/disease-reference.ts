@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { readDataFile } from '../data-source';
 
 export interface DiseaseManifestation {
   diseaseName: string;
@@ -362,11 +361,8 @@ function normalizeDiseaseName(name: string): string {
   return n;
 }
 
-export function getDiseaseReference(): SystemDiseaseGroup[] {
-  const enrichedPath = path.resolve(process.cwd(), 'data/medicospira-enriched.jsonl');
-  if (!fs.existsSync(enrichedPath)) return [];
-
-  const lines = fs.readFileSync(enrichedPath, 'utf-8').trim().split('\n');
+export async function getDiseaseReference(): Promise<SystemDiseaseGroup[]> {
+  const lines = (await readDataFile('medicospira-enriched.jsonl')).trim().split('\n');
 
   const systemMap: Record<string, Record<string, {
     count: number;

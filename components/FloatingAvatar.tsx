@@ -14,6 +14,9 @@ const SIZE = 140;
 // for the standalone version this was validated against (~350ms time-to-first-frame warm).
 const STREAM_WS_URL = 'ws://localhost:8765/lipsync-stream';
 const PREBUFFER_FRAMES = 2;
+// Wav2Lip only runs on the dev machine — prod builds fall back to audio-only
+// (static avatar, no lipsync video) instead of trying an unreachable localhost WS.
+const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development';
 
 export default function FloatingAvatar() {
   const [expanded, setExpanded] = useState(false);
@@ -38,7 +41,7 @@ export default function FloatingAvatar() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Guards against overlapping speak() calls (e.g. a fast second reply while
   // the first is still streaming) stacking multiple audio/WS flows at once.
-  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket } | null>(null);
+  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket | null } | null>(null);
   const orphanAudiosRef = useRef<Set<HTMLAudioElement>>(new Set());
   const lastSpokenTextRef = useRef<string | null>(null);
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +62,7 @@ export default function FloatingAvatar() {
     const active = activeSpeechRef.current;
     if (!active) return;
     activeSpeechRef.current = null;
-    active.ws.close();
+    active.ws?.close();
     active.audio.pause();
     active.audio.src = '';
     setStreaming(false);
@@ -145,8 +148,8 @@ export default function FloatingAvatar() {
         audio.src = URL.createObjectURL(mediaSource);
       }
 
-      const ws = new WebSocket(STREAM_WS_URL);
-      ws.binaryType = 'arraybuffer';
+      const ws = ENABLE_LIPSYNC ? new WebSocket(STREAM_WS_URL) : null;
+      if (ws) ws.binaryType = 'arraybuffer';
       activeSpeechRef.current = { audio, ws };
 
       // Strip WAV header from first chunk — Wav2Lip expects raw PCM.
@@ -182,7 +185,7 @@ export default function FloatingAvatar() {
           wavHeaderStripped = true;
           pendingSampleRate = stripped.sampleRate;
         }
-        if (pcm.length === 0) return;
+        if (pcm.length === 0 || !ws) return;
         if (ws.readyState === WebSocket.OPEN) {
           if (pendingSampleRate) {
             ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
@@ -231,7 +234,7 @@ export default function FloatingAvatar() {
             startAudioPlayback();
           }
           // For MP3 (ElevenLabs): send merged buffer after full download
-          if (!isWav && chunkCount > 0) {
+          if (!isWav && chunkCount > 0 && ws) {
             const total = chunks.reduce((sum, c) => sum + c.length, 0);
             const merged = new Uint8Array(total);
             let offset = 0;
@@ -247,6 +250,19 @@ export default function FloatingAvatar() {
           console.error('[tts] read error', err);
         }
       })();
+
+      if (!ws) {
+        // Audio-only prod fallback: no lipsync video, just wait for playback to finish.
+        await new Promise<void>((resolve) => {
+          audio.addEventListener('ended', () => {
+            activeSpeechRef.current = null;
+            orphanAudiosRef.current.delete(audio);
+            setIsSpeaking(false);
+            resolve();
+          }, { once: true });
+        });
+        return;
+      }
 
       await new Promise<void>((resolve, reject) => {
         ws.onclose = () => resolve();

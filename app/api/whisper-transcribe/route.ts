@@ -60,6 +60,12 @@ export async function POST(request: Request) {
     console.error('OPENAI_API_KEY not set, falling back to local whisper server');
   }
 
+  // Local whisper.cpp server only runs on the dev machine — skip the attempt
+  // entirely in prod instead of waiting out an ECONNREFUSED to localhost.
+  if (process.env.VERCEL) {
+    return new Response('OpenAI transcription unavailable', { status: 500 });
+  }
+
   try {
     const text = await transcribeLocal(audio, filename);
     console.log(

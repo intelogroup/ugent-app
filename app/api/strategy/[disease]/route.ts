@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { readDataFile } from "@/lib/data-source";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +10,7 @@ export async function GET(
   const params = await props.params;
   try {
     const diseaseName = decodeURIComponent(params.disease);
-    const enrichedPath = path.resolve(process.cwd(), "data/medicospira-enriched.jsonl");
-
-    if (!fs.existsSync(enrichedPath)) {
-      return NextResponse.json({ error: "Databank not found" }, { status: 404 });
-    }
-
-    const lines = fs.readFileSync(enrichedPath, "utf-8").trim().split("\n");
+    const lines = (await readDataFile("medicospira-enriched.jsonl")).trim().split("\n");
     
     const mechanismsSet = new Set<string>();
     const cluesSet = new Set<string>();

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const analysis = analyzeQuestions();
+    const analysis = await analyzeQuestions();
     const curriculum = generateCurriculum(analysis.graph, analysis.frequencyStats, analysis.systemDiseaseMap);
 
     return NextResponse.json({

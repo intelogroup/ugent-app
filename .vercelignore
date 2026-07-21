@@ -24,3 +24,4 @@ scripts/output
 
 # Large local data files (not tracked by git, uploaded separately)
 data/
+scratch/

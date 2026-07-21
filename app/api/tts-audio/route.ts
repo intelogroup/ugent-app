@@ -34,34 +34,37 @@ export async function POST(request: Request) {
     return new Response('text required', { status: 400 });
   }
 
-  try {
-    const kokoroRes = await fetch(LOCAL_KOKORO_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (kokoroRes.ok) {
-      console.log(`[tts-audio] via=kokoro chars=${text.length} time-to-first-byte=${(performance.now() - t0).toFixed(0)}ms`);
-      return streamWithLatencyLog(kokoroRes.body!, 'kokoro', text, t0, 'audio/wav');
+  // Kokoro/Piper only run on the dev machine — skip straight to ElevenLabs in prod.
+  if (!process.env.VERCEL) {
+    try {
+      const kokoroRes = await fetch(LOCAL_KOKORO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (kokoroRes.ok) {
+        console.log(`[tts-audio] via=kokoro chars=${text.length} time-to-first-byte=${(performance.now() - t0).toFixed(0)}ms`);
+        return streamWithLatencyLog(kokoroRes.body!, 'kokoro', text, t0, 'audio/wav');
+      }
+      console.error(`local kokoro server returned ${kokoroRes.status}, falling back to Piper`);
+    } catch (err) {
+      console.error('local kokoro server unreachable, falling back to Piper', err);
     }
-    console.error(`local kokoro server returned ${kokoroRes.status}, falling back to Piper`);
-  } catch (err) {
-    console.error('local kokoro server unreachable, falling back to Piper', err);
-  }
 
-  try {
-    const piperRes = await fetch(LOCAL_PIPER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (piperRes.ok) {
-      console.log(`[tts-audio] via=piper chars=${text.length} time-to-first-byte=${(performance.now() - t0).toFixed(0)}ms`);
-      return streamWithLatencyLog(piperRes.body!, 'piper', text, t0, 'audio/wav');
+    try {
+      const piperRes = await fetch(LOCAL_PIPER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (piperRes.ok) {
+        console.log(`[tts-audio] via=piper chars=${text.length} time-to-first-byte=${(performance.now() - t0).toFixed(0)}ms`);
+        return streamWithLatencyLog(piperRes.body!, 'piper', text, t0, 'audio/wav');
+      }
+      console.error(`local piper server returned ${piperRes.status}, falling back to ElevenLabs`);
+    } catch (err) {
+      console.error('local piper server unreachable, falling back to ElevenLabs', err);
     }
-    console.error(`local piper server returned ${piperRes.status}, falling back to ElevenLabs`);
-  } catch (err) {
-    console.error('local piper server unreachable, falling back to ElevenLabs', err);
   }
 
   const apiKey = process.env.ELEVENLABS_API_KEY;

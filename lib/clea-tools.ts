@@ -150,7 +150,7 @@ export const queryQbank = tool({
     limit: z.number().int().min(1).max(10).default(5),
   }),
   execute: async ({ subject, system, difficulty, limit }) => {
-    const { questions, matched } = queryQuestions({ subject, system, difficulty, limit });
+    const { questions, matched } = await queryQuestions({ subject, system, difficulty, limit });
     return {
       matched,
       sample: questions.map((q) => ({
@@ -218,8 +218,8 @@ export const queryCurriculum = tool({
     system: z.string().optional().describe('Limit disease list to one system, e.g. "Neurology"'),
   }),
   execute: async ({ system }) => {
-    const { frequencyStats } = analyzeQuestions();
-    const diseaseMap = getSystemDiseaseMap();
+    const { frequencyStats } = await analyzeQuestions();
+    const diseaseMap = await getSystemDiseaseMap();
     const diseases = system ? diseaseMap[system] ?? [] : Object.values(diseaseMap).flat();
     return {
       topSystemsByFrequency: frequencyStats.systems.slice(0, 8),

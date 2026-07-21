@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const mode = searchParams.get('mode');
 
   if (mode === 'filters') {
-    const questions = loadQuestions();
+    const questions = await loadQuestions();
     const subjects = Array.from(new Set(questions.map((q) => q.subject))).sort();
     const systems = Array.from(new Set(questions.map((q) => q.system))).sort();
     return NextResponse.json({ subjects, systems, total: questions.length });
@@ -19,6 +19,6 @@ export async function GET(request: NextRequest) {
   const difficulty = searchParams.get('difficulty') || undefined;
   const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-  const { questions, matched } = queryQuestions({ subject, system, difficulty, limit });
+  const { questions, matched } = await queryQuestions({ subject, system, difficulty, limit });
   return NextResponse.json({ questions, matched });
 }
