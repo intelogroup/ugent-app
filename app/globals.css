@@ -91,28 +91,47 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   display: none;                /* Chrome/Safari/Opera */
 }
 
-/* Clea Live — calm, low-distraction visual placeholder */
+/* ─────────────────────────────────────────────
+   Clea Live Orb  ·  blue · orange · red plasma
+   States: idle | listening | thinking | speaking
+   ───────────────────────────────────────────── */
+
+/* Shell — no outline, no border */
 .clea-orb-shell {
   position: relative;
-  width: 144px;
-  height: 144px;
+  width: 112px;
+  height: 112px;
   display: grid;
   place-items: center;
-  animation: clea-orb-glow 4.8s ease-in-out infinite;
+  /* brightness locked — no glow animation */
 }
 
+/* Core sphere */
 .clea-orb-core {
   position: relative;
   z-index: 2;
-  width: 128px;
-  height: 128px;
+  width: 96px;
+  height: 96px;
   overflow: hidden;
   border-radius: 9999px;
-  background: radial-gradient(circle at 34% 28%, #ffffff 0 5%, #bfdbfe 17%, #60a5fa 32%, #2563eb 55%, #3730a3 78%, #0f172a 100%);
-  box-shadow: 0 22px 48px rgba(37, 99, 235, 0.28), inset -10px -14px 24px rgba(15, 23, 42, 0.24);
+  /* cobalt apex → deep blue → purple → burnt-orange → ember-red → void */
+  background:
+    radial-gradient(circle at 36% 30%,
+      rgb(56,189,248)    0%   8%,
+      rgb(37,99,235)     28%,
+      rgb(88,28,135)     48%,
+      rgb(194,65,12)     65%,
+      rgb(220,38,38)     80%,
+      rgb(10,10,20)      100%
+    );
+  box-shadow:
+    0 16px 40px rgba(37,99,235,0.38),
+    0 6px 18px rgba(220,38,38,0.28),
+    inset -8px -12px 22px rgba(10,10,20,0.44);
   animation: clea-orb-breathe 4.8s ease-in-out infinite;
 }
 
+/* Plasma current base */
 .clea-orb-current {
   position: absolute;
   z-index: 1;
@@ -122,90 +141,94 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   pointer-events: none;
 }
 
+/* Blue plasma current — sweeps upper hemisphere */
 .clea-orb-current--one {
-  top: 12px;
+  top: 4px;
   left: -10px;
-  width: 92px;
-  height: 54px;
-  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.94), rgba(125, 211, 252, 0.48) 58%, transparent 76%);
+  width: 72px;
+  height: 44px;
+  background: radial-gradient(
+    ellipse,
+    rgb(56,189,248),
+    rgba(37,99,235,0.65) 55%,
+    transparent 78%
+  );
   animation: clea-orb-current-one 5.6s ease-in-out infinite;
 }
 
+/* Molten orange-red current — churns lower hemisphere */
 .clea-orb-current--two {
-  right: -16px;
-  bottom: -18px;
-  width: 78px;
-  height: 96px;
-  background: radial-gradient(ellipse, rgba(165, 180, 252, 0.88), rgba(96, 165, 250, 0.42) 60%, transparent 78%);
+  right: -12px;
+  bottom: -14px;
+  width: 66px;
+  height: 80px;
+  background: radial-gradient(
+    ellipse,
+    rgb(251,146,60),
+    rgba(220,38,38,0.72) 50%,
+    transparent 80%
+  );
   animation: clea-orb-current-two 7.2s ease-in-out infinite;
 }
 
+/* Ribbon ring — hidden */
 .clea-orb-ribbon {
-  position: absolute;
-  inset: 24px 10px;
-  z-index: 3;
-  border: 5px solid rgba(219, 234, 254, 0.74);
-  border-right-color: rgba(96, 165, 250, 0.08);
-  border-bottom-color: rgba(129, 140, 248, 0.34);
-  border-radius: 50%;
-  filter: blur(2px) drop-shadow(0 0 7px rgba(191, 219, 254, 0.72));
-  pointer-events: none;
-  animation: clea-orb-ribbon-spin 3.8s linear infinite;
+  display: none;
 }
 
+/* Tri-color rotating light wheel: blue → orange → red */
 .clea-orb-light {
   position: absolute;
   z-index: 2;
-  inset: 14px;
+  inset: 8px;
   border-radius: 9999px;
-  background: conic-gradient(from 35deg, transparent 0 14%, rgba(255,255,255,.88) 24%, transparent 38%, rgba(147,197,253,.8) 58%, transparent 74%);
-  filter: blur(7px);
-  opacity: 0.85;
-  animation: clea-orb-rotate 12s linear infinite;
+  background: conic-gradient(
+    from 35deg,
+    transparent        0%  10%,
+    rgb(37,99,235)     20%,
+    rgb(56,189,248)    30%,
+    transparent        42%,
+    rgb(251,146,60)    54%,
+    rgb(220,38,38)     64%,
+    transparent        76%,
+    rgba(37,99,235,0.55) 88%,
+    transparent        96%
+  );
+  filter: blur(6px);
+  opacity: 0.88; /* fixed — never changes */
+  animation: clea-orb-rotate 10s linear infinite;
 }
 
-.clea-orb-highlight {
-  position: absolute;
-  z-index: 3;
-  top: 18px;
-  left: 26px;
-  width: 30px;
-  height: 17px;
-  border-radius: 9999px;
-  background: rgba(255,255,255,.58);
-  filter: blur(5px);
-  animation: clea-orb-float 5.6s ease-in-out infinite alternate;
-}
-
+/* Ripple ring — hidden (outline line) */
 .clea-orb-ripple {
-  position: absolute;
-  inset: 6px;
-  z-index: 1;
-  border: 2px solid rgba(59, 130, 246, 0.3);
-  border-radius: 9999px;
-  animation: clea-orb-ripple 4.8s ease-out infinite;
+  display: none;
 }
+
+/* ── Base keyframes ── */
 
 @keyframes clea-orb-breathe {
   0%, 100% { transform: scale(0.96); }
-  50% { transform: scale(1.035); }
+  33%       { transform: scale(1.04); }
+  66%       { transform: scale(1.01); }
 }
 
 @keyframes clea-orb-current-one {
-  0%, 100% { transform: translate(-14px, -2px) rotate(-18deg) scale(1); opacity: 0.72; }
-  45% { transform: translate(54px, 28px) rotate(32deg) scale(1.24); opacity: 1; }
-  72% { transform: translate(26px, 52px) rotate(12deg) scale(1.08); opacity: 0.82; }
+  0%   { transform: translate(-12px, -4px)  rotate(-22deg) scale(1);    }
+  40%  { transform: translate(44px,  20px)  rotate(36deg)  scale(1.28); }
+  70%  { transform: translate(22px,  44px)  rotate(14deg)  scale(1.1);  }
+  100% { transform: translate(-12px, -4px)  rotate(-22deg) scale(1);    }
 }
 
 @keyframes clea-orb-current-two {
-  0%, 100% { transform: translate(14px, 18px) rotate(24deg) scale(1.16); opacity: 0.68; }
-  38% { transform: translate(-48px, -38px) rotate(-28deg) scale(1); opacity: 0.96; }
-  76% { transform: translate(-20px, -58px) rotate(10deg) scale(1.14); opacity: 0.8; }
+  0%   { transform: translate(12px,  18px)  rotate(28deg)  scale(1.18); }
+  35%  { transform: translate(-38px, -34px) rotate(-32deg) scale(1);    }
+  65%  { transform: translate(-18px, -48px) rotate(12deg)  scale(1.14); }
+  100% { transform: translate(12px,  18px)  rotate(28deg)  scale(1.18); }
 }
 
 @keyframes clea-orb-ribbon-spin {
-  from { transform: rotate(0deg) scaleX(0.88); }
-  to { transform: rotate(360deg) scaleX(0.88); }
+  from { transform: rotate(0deg)   scaleX(0.86); }
+  to   { transform: rotate(360deg) scaleX(0.86); }
 }
 
 @keyframes clea-orb-rotate {
@@ -213,34 +236,141 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
 }
 
 @keyframes clea-orb-ripple {
-  0% { transform: scale(0.9); opacity: 0; }
-  18% { opacity: 0.34; }
-  100% { transform: scale(1.18); opacity: 0; }
+  0%   { transform: scale(0.9);  opacity: 0;    }
+  14%  {                          opacity: 0.55; }
+  100% { transform: scale(1.24); opacity: 0;    }
 }
 
-@keyframes clea-orb-glow {
-  0%, 100% { filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.28)); }
-  50% { filter: drop-shadow(0 0 24px rgba(59, 130, 246, 0.48)); }
+/* Constant tri-color glow — brightness never changes */
+.clea-orb-shell {
+  filter: drop-shadow(0 0 16px rgba(37,99,235,0.50)) drop-shadow(0 0 8px rgba(220,38,38,0.30));
+  animation: none;
 }
 
-@keyframes clea-orb-float {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(9px, -7px) scale(1.08); }
+/* ─────────────────────────────────────────────
+   STATE: listening — user talking, STT active
+   Motion: soft radial inward mic-pulse with
+   amber/blue border breathing.
+   ───────────────────────────────────────────── */
+.clea-orb-status--listening .clea-orb-core {
+  animation: clea-orb-listen-breathe 1.1s ease-in-out infinite;
+  box-shadow:
+    0 0 0 3px rgba(251,146,60,0.62),
+    0 0 22px rgba(251,146,60,0.42),
+    inset -8px -12px 22px rgba(10,10,20,0.44);
+}
+.clea-orb-status--listening .clea-orb-ribbon {
+  animation: clea-orb-ribbon-spin 2.4s linear infinite;
+  border-color: rgba(251,146,60,0.9);
+  border-right-color: rgba(220,38,38,0.72);
+  border-bottom-color: rgba(147,197,253,0.55);
+}
+.clea-orb-status--listening .clea-orb-ripple {
+  animation: clea-orb-listen-ripple 0.9s ease-out infinite;
+  border-color: rgba(251,146,60,0.65);
+  border-right-color: rgba(220,38,38,0.55);
+}
+.clea-orb-status--listening .clea-orb-light {
+  animation: clea-orb-rotate 4s linear infinite;
+  opacity: 0.88; /* locked */
+}
+.clea-orb-status--listening .clea-orb-current--one {
+  animation: clea-orb-current-one 2.4s ease-in-out infinite;
+}
+.clea-orb-status--listening .clea-orb-current--two {
+  animation: clea-orb-current-two 3.2s ease-in-out infinite;
 }
 
+@keyframes clea-orb-listen-breathe {
+  0%, 100% { transform: scale(0.94); }
+  50%       { transform: scale(1.06); }
+}
+@keyframes clea-orb-listen-ripple {
+  0%   { transform: scale(0.88); opacity: 0.8;  }
+  100% { transform: scale(1.3);  opacity: 0;    }
+}
+/* clea-orb-listen-glow removed — brightness constant */
+
+/* ─────────────────────────────────────────────
+   STATE: thinking — AI processing / reasoning
+   Motion: slow deep-blue colour pulse, ribbon
+   counter-rotates slightly.
+   ───────────────────────────────────────────── */
+.clea-orb-status--thinking .clea-orb-core {
+  animation: clea-orb-breathe 2.2s ease-in-out infinite;
+}
+.clea-orb-status--thinking .clea-orb-ribbon {
+  animation: clea-orb-ribbon-spin 6s linear infinite reverse;
+  border-color: rgba(147,197,253,0.72);
+  border-right-color: rgba(99,44,194,0.52);
+  border-bottom-color: rgba(37,99,235,0.42);
+}
+.clea-orb-status--thinking .clea-orb-ripple {
+  animation: clea-orb-ripple 2.2s ease-out infinite;
+}
+.clea-orb-status--thinking .clea-orb-light {
+  animation: clea-orb-rotate 18s linear infinite;
+  opacity: 0.88; /* locked */
+}
+
+/* ─────────────────────────────────────────────
+   STATE: speaking — TTS audio streaming out
+   Motion: outward wave bursts, fast ribbon,
+   core pulses with the audio rhythm.
+   ───────────────────────────────────────────── */
+.clea-orb-status--speaking .clea-orb-core {
+  animation: clea-orb-speak-pulse 0.55s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 0 2px rgba(56,189,248,0.55),
+    0 14px 36px rgba(37,99,235,0.48),
+    0 4px 14px rgba(251,146,60,0.32),
+    inset -8px -12px 22px rgba(10,10,20,0.44);
+}
+.clea-orb-status--speaking .clea-orb-ribbon {
+  animation: clea-orb-ribbon-spin 1.2s linear infinite;
+  border-color: rgba(56,189,248,0.88);
+  border-right-color: rgba(251,146,60,0.82);
+  border-bottom-color: rgba(220,38,38,0.68);
+}
+.clea-orb-status--speaking .clea-orb-ripple {
+  animation: clea-orb-speak-wave 0.8s ease-out infinite;
+}
+.clea-orb-status--speaking .clea-orb-light {
+  animation: clea-orb-rotate 5s linear infinite;
+  opacity: 0.88; /* locked */
+}
+.clea-orb-status--speaking .clea-orb-current--one {
+  animation: clea-orb-current-one 1.8s ease-in-out infinite;
+}
+.clea-orb-status--speaking .clea-orb-current--two {
+  animation: clea-orb-current-two 2.2s ease-in-out infinite;
+}
+
+@keyframes clea-orb-speak-pulse {
+  0%   { transform: scale(0.97); }
+  100% { transform: scale(1.04); }
+}
+@keyframes clea-orb-speak-wave {
+  0%   { transform: scale(0.92); opacity: 0.7;  }
+  100% { transform: scale(1.35); opacity: 0;    }
+}
+/* clea-orb-speak-glow removed — brightness constant */
+
+/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .clea-orb-shell,
   .clea-orb-core,
   .clea-orb-current,
   .clea-orb-ribbon,
   .clea-orb-light,
-  .clea-orb-highlight,
   .clea-orb-ripple {
     animation: clea-orb-gentle-pulse 4.8s ease-in-out infinite;
   }
 }
 
 @keyframes clea-orb-gentle-pulse {
-  0%, 100% { opacity: 0.78; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.82; }
+  50%       { opacity: 1;    }
 }
+
+

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 interface TrackingConfig {
-  userId: string;
   testId?: string;
   questionId?: string;
   answerId?: string;
@@ -20,11 +20,13 @@ export const useInteractionTracking = (config: TrackingConfig) => {
       const durationMs = startTimeRef.current ? Date.now() - startTimeRef.current : undefined;
 
       try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         await fetch('/api/interactions/track', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: config.userId,
+            userId: user?.id,
             actionType,
             entityType,
             entityId,

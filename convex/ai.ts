@@ -450,7 +450,7 @@ export const extractSingleQuestion = internalAction({
         return { skipped: false };
       } catch (error) {
         lastError = error;
-        const msg = String(error?.message ?? error);
+        const msg = String(error instanceof Error ? error.message : error);
         console.error(`extractSingleQuestion attempt ${attempt + 1}: ${msg}`);
 
         if (attempt < MAX_RETRIES - 1 && isRetryable(error)) {

@@ -57,6 +57,7 @@ export interface TopicNode {
   system: string;
   systems?: string[];
   subjects?: string[];
+  entries?: { system: string; subject: string }[]; // (system, subject) pairs, one per source enriched entry
   questionCount: number;
   prerequisites: string[]; // IDs of prerequisite topics
   dependsOn: string[];     // same as prerequisites, for graph edges

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { analyzeQuestions, FIRST_AID_MAP, PATHOMA_MAP } from "@/lib/curriculum/analyzer";
-import type { TopicNode, TopicType } from "@/lib/curriculum/types";
+import { analyzeQuestions, FIRST_AID_MAP, PATHOMA_MAP, PSYCH_DRUG_KEYWORDS } from "@/lib/curriculum/analyzer";
 import fs from "fs";
 import path from "path";
 
@@ -66,6 +65,7 @@ function mapSystem(rawSystem: string, rawSubject?: string): string {
   if (subj.includes("rheum") || subj.includes("ortho")) return "Musculoskeletal";
   if (subj.includes("dermat")) return "Dermatology";
   if (subj.includes("obstet") || subj.includes("reproduct")) return "Reproductive";
+  if (subj.includes("pediatr")) return "Pediatrics";
 
   return "Other";
 }
@@ -75,38 +75,7 @@ export async function GET() {
     const analysis = analyzeQuestions();
     const allNodes = analysis.allNodes;
 
-    // 1. Build diseasePriority: sort diseases by frequency
-    // Ranked by frequency * (1 - successRate). Since successRate is null (Convex is down), priorityScore = frequency
-    const diseasePriority = allNodes
-      .filter((n) => n.type !== "PRINCIPLE")
-      .map((n) => ({
-        diseaseName: n.name,
-        topicType: n.type,
-        topClue: n.highLeverageClues[0] || "",
-        frequency: n.questionCount,
-        userSuccessRate: null,
-        priorityScore: n.questionCount,
-      }))
-      .sort((a, b) => b.priorityScore - a.priorityScore);
-
-    // 2. Build systemFreqs
-    const systemFreqs = analysis.frequencyStats.systems;
-
-    // 3. Build topicTypeFreqs
-    const topicTypeFreqs = analysis.frequencyStats.topicTypes;
-
-    // 4. Build confusableTopics: sort by discriminators count
-    const confusableTopics = allNodes
-      .filter((n) => n.discriminators.length > 0)
-      .map((n) => ({
-        diseaseName: n.name,
-        discriminatorCount: n.discriminators.length,
-        topicType: n.type,
-      }))
-      .sort((a, b) => b.discriminatorCount - a.discriminatorCount)
-      .slice(0, 8);
-
-    // 5. Build graphData for StrategyGraphExplorer
+    // Build graphData for StrategyGraphExplorer
     // Group: system -> topicType -> diseaseName -> count
     type LeafData = { diseaseName: string; count: number; successRate: number | null };
     type TypeData = { topicType: string; count: number; diseases: LeafData[] };
@@ -117,8 +86,10 @@ export async function GET() {
     for (const node of allNodes) {
       if (node.type === "PRINCIPLE" || !node.name) continue;
 
-      const rawSystems = node.systems && node.systems.length > 0 ? node.systems : [node.system];
-      const normalizedSystems = rawSystems.map(sys => mapSystem(sys || "Other", node.subject));
+      const rawEntries = node.entries && node.entries.length > 0
+        ? node.entries
+        : [{ system: node.system, subject: node.subject }];
+      const normalizedSystems = rawEntries.map(({ system, subject }) => mapSystem(system || "Other", subject));
       
       // Map cross-cutting subjects to basic science system circles
       const rawSubjects = node.subjects && node.subjects.length > 0 ? node.subjects : [node.subject];
@@ -178,6 +149,12 @@ export async function GET() {
       }
       if (nameLower.includes('marfan syndrome')) {
         normalizedSystems.push('Cardiovascular', 'Musculoskeletal', 'Ophthalmology', 'Genetics');
+      }
+
+      if (node.type === 'DRUG' || node.type === 'SYNDROME') {
+        if (PSYCH_DRUG_KEYWORDS.some(k => nameLower.includes(k))) {
+          normalizedSystems.push('Psychiatry');
+        }
       }
 
       const uniqueSystems = [...new Set(normalizedSystems)];
@@ -247,7 +224,7 @@ export async function GET() {
     // Sort systems by total count
     graphData.sort((a, b) => b.total - a.total);
 
-    // 6. Build geneticsPairs from JSON
+    // Build geneticsPairs from JSON
     let geneticsPairs: any[] = [];
     const geneticsPath = path.resolve(process.cwd(), 'data/genetics-discriminators.json');
     if (fs.existsSync(geneticsPath)) {
@@ -259,7 +236,7 @@ export async function GET() {
       }
     }
 
-    // 7. Build dynamic question bank clues
+    // Build dynamic question bank clues
     const questionBankClues = allNodes
       .filter((n) => n.type !== "PRINCIPLE" && (n.highLeverageClues.length > 0 || n.discriminators.length > 0))
       .map((n) => ({
@@ -272,10 +249,6 @@ export async function GET() {
       }));
 
     return NextResponse.json({
-      diseasePriority,
-      systemFreqs,
-      topicTypeFreqs,
-      confusableTopics,
       graphData,
       geneticsPairs,
       questionBankClues,

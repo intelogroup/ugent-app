@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import {
   HomeIcon,
@@ -10,25 +10,18 @@ import {
   ChartBarIcon,
   TrophyIcon,
   BookOpenIcon,
-  ArrowRightOnRectangleIcon,
   ChevronUpIcon,
   Cog6ToothIcon,
-  CreditCardIcon,
-  BeakerIcon
+  CreditCardIcon
 } from '@heroicons/react/24/outline';
 import UgentLogo from './UgentLogo';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import Avatar from './Avatar';
+import AvatarPicker from './AvatarPicker';
 import { navigation } from '@/lib/navigation';
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const { user } = useAuth();
-
-  const handleLogout = () => {
-    router.push('/login');
-  };
 
   return (
     <div className="hidden md:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-neutral-200 flex-col">
@@ -72,17 +65,9 @@ export default function Sidebar() {
           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           className="flex items-center gap-3 p-3 rounded-lg bg-neutral-50 hover:bg-neutral-100 transition-colors w-full"
         >
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-            <img
-              src={user?.profilePictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.firstName || user?.email?.split('@')[0] || 'Medical Student')}&background=ffffff&color=2563eb&size=200&bold=true`}
-              alt={user?.firstName || 'User'}
-              className="w-full h-full rounded-full object-cover"
-            />
-          </div>
+          <Avatar size="md" />
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-neutral-900 truncate">
-              {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email?.split('@')[0] || 'User'}
-            </p>
+            <p className="text-sm font-medium text-neutral-900 truncate">Student</p>
             <p className="text-xs text-neutral-500">Medical Student</p>
           </div>
           <ChevronUpIcon
@@ -95,13 +80,7 @@ export default function Sidebar() {
         {/* Dropdown Menu */}
         {isUserMenuOpen && (
           <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-neutral-200 rounded-lg shadow-lg overflow-hidden">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 w-full px-4 py-3 text-neutral-700 hover:bg-neutral-50 transition-colors"
-            >
-              <ArrowRightOnRectangleIcon className="w-5 h-5" />
-              <span>Logout</span>
-            </button>
+            <AvatarPicker />
           </div>
         )}
       </div>

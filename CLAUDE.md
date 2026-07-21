@@ -1,124 +1,94 @@
+# Response style
+No markdown in chat replies: no asterisks/bold, no bullet lists, no headers. Plain short sentences only.
+
 # Ugent — USMLE Study Platform
 
 ## Overview
-
-Next.js 16 app (App Router) with Convex backend and WorkOS AuthKit authentication.
-A data-driven USMLE Step 1 study platform that ingests, enriches, classifies medical questions and generates personalized study curricula.
+Next.js 16 (App Router) + Convex backend (disabled) + Supabase Auth. Data-driven USMLE Step 1 study platform: ingests, enriches, classifies medical questions and generates personalized study curricula.
 
 ## Stack
-
-- **Frontend**: Next.js 16 (React 19), Tailwind CSS v4, Recharts, Heroicons
-- **Backend**: Convex (currently disabled — free plan limit exceeded)
-- **Auth**: WorkOS AuthKit (`@workos-inc/authkit-nextjs`)
-- **Data**: Local JSONL files in `data/` — primary data source when Convex is down
-- **Testing**: Jest + Vitest + Playwright
+- Frontend: Next.js 16 (React 19), Tailwind v4, Recharts, Heroicons
+- Backend: Convex (disabled — free plan limit exceeded; local JSONL is the real data source)
+- Auth: Supabase (`@supabase/ssr`, `@supabase/supabase-js`) — email/password + magic link, session cookies via `middleware.ts`, RLS-backed `quiz_attempts`/`quiz_answers` (`supabase/migration.sql`)
+- Testing: Jest + Vitest + Playwright
 
 ## Key Directories
-
 ```
-convex/          — Convex backend (queries, mutations, schema, AI ingestion pipeline)
+convex/          — Convex backend (kept as future migration reference only, not live)
 data/            — Question bank JSONL files (primary data source)
-lib/curriculum/  — Curriculum generator (NEW — data-driven study plan engine)
+lib/curriculum/  — Curriculum generator (data-driven study plan engine)
 app/curriculum/  — Curriculum page (interactive 19-week study timeline)
 app/strategy/    — Strategy Hub (disease priority, clue training, graph explorer)
 components/      — Shared UI (Sidebar, MobileNav, DashboardLayout)
-lib/             — Shared utilities (navigation, hooks, stripe)
+lib/             — Shared utilities (curriculum, navigation, ASR, agent/voice, hooks)
 ```
 
-## Curriculum Generator Architecture (NEW)
+## Curriculum Generator
+`lib/curriculum/analyzer.ts` parses `data/classified-questions.jsonl` + `data/medicospira-enriched.jsonl`, builds a dependency graph and per-system disease frequency map. `lib/curriculum/generator.ts` produces a 19-week, 4-phase, 342-block `Curriculum` (FA + Pathoma refs). `app/api/curriculum/route.ts` wires analyzer → generator; `app/curriculum/page.tsx` is the interactive timeline UI.
 
-Purpose: Generate a data-driven 20-week USMLE study plan from the question bank.
+Phases (137 study days, 2.5h/day = `DAY_MINUTES=150`, 3 blocks/day = `BLOCK_MINUTES=50`, 6 days/week, Sunday rest):
+| Phase | Weeks | Content |
+|-------|-------|---------|
+| FOUNDATIONS | 1-6 (32%, 90h) | Physiology + basic principles by system |
+| ORGAN_SYSTEMS | 7-14 (42%, 120h) | Disease pairs, data-driven allocation from enriched bank |
+| INTEGRATION | 15-17 (16%, 45h) | Cross-system mixed blocks, discriminator drills |
+| FINAL_REVIEW | 18-19 (11%, 30h) | NBME simulations, weak-area targeting |
 
-### File layout
+ORGAN_SYSTEMS is fully data-driven, not hardcoded: `systemDiseaseMap` (disease → question count per system) drives proportional week allocation and auto-pairs adjacent diseases by frequency. `normalizeSystem()` maps 30+ raw enriched system names to standard FA chapters (direct match → `ENRICHED_TO_FA_SYSTEM` alias → best-matching part of a compound name split on `/`, `,`, ` & `, ` and `). Curriculum auto-adapts as new questions are enriched/classified — no cached data.
 
-```
-lib/curriculum/types.ts      — Type definitions (TopicNode, DependencyGraph, Curriculum, StudyBlock/StudyDay/StudyWeek)
-lib/curriculum/analyzer.ts   — Parses JSONL files, builds dependency graph, extracts disease frequencies by system
-lib/curriculum/generator.ts  — Generates the 19-week curriculum with phased allocation
-app/api/curriculum/route.ts  — API endpoint that wires analyzer → generator
-app/curriculum/page.tsx      — Client-side interactive timeline UI (expandable weeks/days/blocks, check-off tracking)
-lib/navigation.ts            — Sidebar/MobileNav links (Curriculum added between Strategy Hub and Leaderboard)
-```
-
-### Data pipeline
-
-1. `analyzeQuestions()` reads `data/classified-questions.jsonl` + `data/medicospira-enriched.jsonl`
-2. `getSystemDiseaseMap()` extracts disease-name → question-count per system from enriched data
-3. `generateCurriculum()` takes the graph + frequency stats + disease map
-4. Produces `Curriculum` object: 19 weeks, 4 phases, 342 blocks, with FA + Pathoma references
-
-### Phase structure (137 days, 2.5h/day)
-
-| Phase | Weeks | % | Content |
-|-------|-------|---|---------|
-| FOUNDATIONS | 1-6 (32%) | 90h | Physiology + basic principles by system |
-| ORGAN_SYSTEMS | 7-14 (42%) | 120h | Disease pairs, data-driven allocation from enriched bank |
-| INTEGRATION | 15-17 (16%) | 45h | Cross-system mixed blocks, discriminator drills |
-| FINAL_REVIEW | 18-19 (11%) | 30h | NBME simulations, weak-area targeting |
-
-### Organ systems phase is DATA-DRIVEN
-
-The generator no longer hardcodes disease pairs. Instead:
-1. Reads `systemDiseaseMap` from enriched JSONL (disease → question count per system)
-2. `normalizeSystem()` maps 30+ raw enriched system names to standard FA chapter names
-3. Allocates 8 weeks proportionally by system question count
-4. Auto-pairs adjacent diseases (by frequency) within each system for daily study blocks
-5. As new questions are enriched and classified, the curriculum auto-adapts on refresh
-
-### System normalization
-
-Enriched data uses varied system names. `normalizeSystem()` handles:
-- Direct matches against `FIRST_AID_MAP` keys
-- Mapping via `ENRICHED_TO_FA_SYSTEM` (Nervous System → Neurology, Immune System → Immunology, Digestive System → Gastrointestinal, etc.)
-- Compound names split on `/`, `,`, ` & `, ` and ` — best-matching part wins
+Block check-off state persists in `localStorage` key `curriculum-completed-blocks`.
 
 ## Data Files
+File | Role | When to update
+-----|------|----------------
+`data/medicospira-questions.jsonl` | Parsed Q&A (841 rows) | After scraping new questions
+`data/medicospira-enriched.jsonl` | AI-enriched (disease, system, discriminators, prerequisites) | After enrichment pipeline
+`data/classified-questions.jsonl` | Classified (subject, system, difficulty) | After classification pipeline
+`data/medicospira-blobs.jsonl` | Raw scraped page blobs | Source material, rarely needed directly
 
-File | Role | Lines | When to update
------|------|-------|----------------
-`data/medicospira-questions.jsonl` | Parsed Q&A (text, options, explanation) | 841 | After scraping new questions
-`data/medicospira-enriched.jsonl` | AI-enriched (diseaseName, system, discriminators, prerequisites) | 841 unique | After running enrichment pipeline on new questions
-`data/classified-questions.jsonl` | Classified (subject, system, difficulty assigned) | 841 | After running classification pipeline
-`data/medicospira-blobs.jsonl` | Raw scraped page blobs | 860 | Source material, rarely needed directly
+Only enriched + classified questions are curriculum-visible; raw questions are invisible until enriched. Currently 100% of the 841 questions are enriched/classified. Pipeline: `scripts/deepseek-enrich.mjs` (DeepSeek API, batch 5, resumable) → `scripts/classify-local.py` (keyword-based).
 
-**Curriculum visibility rule**: Only enriched and classified questions affect the curriculum. New raw questions are invisible until enriched.
-**Current state**: All 841 parsed questions are enriched and classified — 100% curriculum-visible.
-**Pipeline**: Enrich via `scripts/deepseek-enrich.mjs` (DeepSeek API, batch 5, resume-support), classify via `scripts/classify-local.py` (keyword-based, fast).
+Adding new questions: raw → `medicospira-questions.jsonl` (needs text, correctAnswer, options[], explanation, textHash) → enrich → classify → curriculum auto-updates on next load.
 
-## Operation Principles
+## UI / TypeScript conventions
+- Tailwind v4 theme vars in `globals.css` (`--color-primary-600`, `--color-neutral-*`); component classes `.card`, `.stat-card`, `.btn-primary`, `.btn-secondary`
+- Dashboard pages wrap in `<DashboardLayout>`; nav links added via `lib/navigation.ts` (auto-propagates to Sidebar + MobileNav)
+- No emojis unless requested
+- Legacy Convex server modules use `// @ts-nocheck`; new code doesn't. `convex/schema.ts` is the canonical (but currently inert) data model.
 
-### When working on the curriculum system
-1. The generator reads live JSONL files — no cached/static data
-2. `DAY_MINUTES` = 150 (2.5h), `BLOCK_MINUTES` = 50 (3 blocks/day)
-3. FA chapter pages and Pathoma video references are stored in `FIRST_AID_MAP` / `PATHOMA_MAP` in `analyzer.ts`
-4. Study days are 6 per week, Sunday is rest day
-5. Block check-off state persists in `localStorage` key `curriculum-completed-blocks`
+## Voice / ASR pipeline
+Mic capture: `useWhisperMic` (`lib/use-whisper-mic.ts`, WebGPU + energy VAD) or `useContinuousMic` (browser `SpeechRecognition` fallback) — both feed `onTranscript` in `lib/clea-agent-context.tsx`.
 
-### When adding new questions
-1. Raw questions go to `medicospira-questions.jsonl` (requires: text, correctAnswer, options[], explanation, textHash)
-2. Run enrichment pipeline to add `medicospira-enriched.jsonl` entries
-3. Run classification pipeline to add `classified-questions.jsonl` entries
-4. Curriculum auto-updates on next page load / API call
+Transcription order (`app/api/whisper-transcribe/route.ts`): OpenAI `gpt-4o-mini-transcribe` (primary, `language=en` forced) → local `scripts/local-whisper-server.py` (whisper.cpp/Metal, `ggml-medium.en.bin`, :8766) → in-browser `whisper-base.en` (`lib/whisper-pipeline.ts`) as last resort.
 
-### Convex is down
-The Convex deployment is disabled (free plan exceeded). All data operations use local JSONL files.
-When Convex is restored:
-- Migration path: `data/*.jsonl` → Convex `questions` table
-- Restore `convex/ingest.ts` pipeline for new question ingestion
-- Re-enable `convex/ai.ts` for enrichment pipeline
+Correction layer (`lib/asr-correct.ts`), runs client-side before text reaches the LLM:
+- `stripTranscriptNoise` — drops known noise tokens and any non-Latin-script transcript (CJK/Cyrillic hallucination)
+- `correctText` — soundex + Levenshtein against `lib/asr-dictionary.json`, plus `ALIASES` (single-word Whisper mangling), `MULTI_ALIASES` (Whisper-split multi-word terms), `ENGLISH_STOPLIST` (plain English words the scraped dictionary wrongly contains — e.g. `shaving`, `refused`, `non` — that would otherwise "correct" real speech at edit-distance 1)
 
-### UI patterns
-- Uses Tailwind v4 with CSS theme variables in `globals.css`
-- Design tokens: `--color-primary-600` (#2563EB), `--color-neutral-*` range
-- Component classes: `.card`, `.stat-card`, `.btn-primary`, `.btn-secondary`
-- Dashboard pages wrap in `<DashboardLayout>`
-- Navigation links added via `lib/navigation.ts` (auto-propagates to Sidebar + MobileNav)
-- No emojis unless explicitly requested
+Every voice turn (raw + corrected, including dropped/noise) logs to `data/asr-log.jsonl` via `lib/asr-log.ts` + `app/api/asr-log/route.ts`. Console helpers: `asrLog()` / `asrMisses()`. New dict misses or false positives go into `ALIASES`/`MULTI_ALIASES`/`ENGLISH_STOPLIST`, not a dictionary rewrite.
 
-### TypeScript
-- Some legacy files use `// @ts-nocheck` (Convex server modules)
-- New curriculum code uses proper types, no `@ts-nocheck`
-- Convex schema in `convex/schema.ts` defines the canonical data model for questions
+Gotcha: a full dev-server restart kills the HMR socket — open tabs run the stale bundle until manually refreshed.
 
-### Top tested diseases (from current bank)
-Pulmonary Embolism (3x), Tetralogy of Fallot (3x), Asthma (3x), TB (3x), Anaphylaxis (3x), Turner Syndrome (3x) — these reflect the current enriched bank and will shift as the bank grows.
+## Clea agent, TTS, and avatar (brief)
+`lib/clea-agent-context.tsx` wires the voice/chat loop; tools in `lib/clea-tools.ts` (`searchPathoma`, `searchFirstAid`, `queryQbank`, `queryCurriculum`). TTS/lipsync chain: Kokoro (:8767) / Piper (:8768) / ElevenLabs fallback (`app/api/tts-audio`, `app/api/elevenlabs-tts`) → local Wav2Lip (:8765) for lipsync video (`app/api/lipsync-tts`, `app/api/lipsync-test`, dev-only, proxied server-side to dodge CSP). Avatar UI: `components/FloatingAvatar.tsx`, `Avatar.tsx`, `CleaLiveOrb.tsx`. `lib/watch-context.tsx` = watch-mode toggle (`clea-watch-enabled`). `lib/agent-error-logger.ts` logs AI SDK `APICallError`s to disk.
+
+## Other modules
+- `lib/qbank.ts` / `lib/quizAttempts.ts` — question bank reader + localStorage quiz-attempt tracking
+- `app/api/disease-reference` → `lib/curriculum/disease-reference.ts` — Strategy Hub per-disease data (`app/strategy/[disease]`, `app/strategy/clue-training`)
+- `lib/zod-schemas.ts` — shared Zod schemas for agent tool I/O
+- `app/analytics`, `leaderboard`, `settings` — thin pages. `app/auth/login`, `app/auth/signup`, `app/auth/callback`, `app/auth/confirm` — Supabase auth flow (`lib/supabase/client.ts`, `lib/supabase/server.ts`); root `middleware.ts` gates protected routes via `supabase.auth.getUser()`
+
+## Top tested diseases (current bank)
+Pulmonary Embolism (3x), Tetralogy of Fallot (3x), Asthma (3x), TB (3x), Anaphylaxis (3x), Turner Syndrome (3x) — will shift as the bank grows.
+
+<!-- forge-learnings:start -->
+## Learnings (auto-maintained by /um — human edits go ABOVE this block)
+- Convex fully disconnected from the live app (2026-07-08) — no `convex/react`/`convex/nextjs` imports under `app/`. `convex/` kept only as migration reference.
+- Billing/Stripe removed entirely (no `/pricing`, no `app/api/stripe/*`, no `lib/stripe.ts`).
+- Quiz-taking runs on `data/classified-questions.jsonl` via `app/api/quiz-data/route.ts` + localStorage `quiz-attempts` — no DB.
+- Before deleting an `app/api/*` route, confirm zero callers with `grep -rl '/api/x' app --include='*.tsx'` — ~35 routes were orphaned dead code from a removed Prisma backend.
+- After deleting routes, `rm -rf .next` before trusting `tsc --noEmit` — stale `.next/dev/types/validator.ts` reports phantom missing-module errors.
+- ASR transcription flipped to OpenAI-primary (2026-07-21) — `gpt-4o-mini-transcribe` first with `language=en` forced (previously omitted, caused foreign-script hallucination on short clips); local whisper.cpp and in-browser Whisper are now fallbacks only.
+- `lib/asr-dictionary.json` contains non-medical English words from scraping (`shaving`, `refused`, `non`, `dad`, `mine`, `rob`...) that caused false-positive corrections at edit-distance 1. Fixed via `ENGLISH_STOPLIST` in `lib/asr-correct.ts` — extend the stoplist as new collisions surface, don't prune the dictionary wholesale.
+- `lib/prisma.ts` deleted (2026-07-21) — zero callers, leftover from the already-removed Prisma backend.
+<!-- forge-learnings:end -->

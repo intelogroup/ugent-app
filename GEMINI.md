@@ -74,3 +74,37 @@ lib/             shared utilities
 - `.card`, `.stat-card`, `.btn-primary`, `.btn-secondary`
 - Dashboard pages wrap in `<DashboardLayout>`
 - No emojis unless explicitly requested
+
+## Context-Mode Sandbox Routing
+- **Think in Code**: Program analysis, search, or comparison tasks by running Node.js scripts via `mcp__context-mode__ctx_execute` instead of reading large raw files into the context window.
+- **Tool Offloading**:
+  - For large command outputs or batch tasks, use `mcp__context-mode__ctx_batch_execute`.
+  - For URL fetching, use `mcp__context-mode__ctx_fetch_and_index`.
+  - Use `mcp__context-mode__ctx_search` to query FTS5 indexed content.
+- **File Reads**: To analyze or explore a file without modifying it, use `mcp__context-mode__ctx_execute_file`.
+
+## Caveman Mode (Conciseness)
+- **Rules**: Drop pleasantries, filler words, and articles. Respond terse like smart caveman. Pattern: `[thing] [action] [reason]. [next step].` Code block and files remain unchanged.
+
+## Ponytail (YAGNI & Simplicity)
+- **Ladder**: 1) Necessity? (YAGNI), 2) Reuse code?, 3) Stdlib?, 4) Native feature?, 5) Existing dep?, 6) One line?, 7) Write min code.
+- **Rules**: Deletion > addition. No unrequested abstractions. Boring > clever. Shortest correct diff wins. Fix root cause, not symptom. Question complex requests.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+<!-- forge-learnings:start -->
+## Learnings (auto-maintained by /um — human edits go ABOVE this block)
+- Convex is fully disconnected from the live app (2026-07-08), not just "disabled" — no `convex/react`/`convex/nextjs` imports remain under `app/`. `convex/` dir kept only as a future migration reference.
+- Billing/Stripe removed entirely (no `/pricing`, no `app/api/stripe/*`, no `lib/stripe.ts`) — do not assume payments exist.
+- Quiz-taking runs on `data/classified-questions.jsonl` via `app/api/quiz-data/route.ts` + localStorage key `quiz-attempts` (mirrors curriculum's `curriculum-completed-blocks` pattern) — no DB.
+- Before deleting an `app/api/*` route, confirm zero callers with `grep -rl '/api/x' app --include='*.tsx'` (excluding `app/api` itself) — ~35 routes were fully orphaned dead code from a removed Prisma backend.
+- After deleting routes, `rm -rf .next` before trusting `tsc --noEmit` — stale `.next/dev/types/validator.ts` reports phantom missing-module errors for deleted routes.
+<!-- forge-learnings:end -->

@@ -8,6 +8,10 @@ import type {
   SubChapterNode,
 } from './types';
 
+// Psychopharm drugs get enriched with system="Nervous System" (organ affected)
+// instead of Psychiatry (tested discipline) — used to route them to both.
+export const PSYCH_DRUG_KEYWORDS = ['lithium', 'ssri', 'snri', 'maoi', 'tricyclic', 'antidepressant', 'antipsychotic', 'benzodiazepine', 'sertraline', 'fluoxetine', 'paroxetine', 'citalopram', 'escitalopram', 'venlafaxine', 'duloxetine', 'haloperidol', 'clozapine', 'olanzapine', 'risperidone', 'buspirone', 'mood stabilizer', 'anxiolytic'];
+
 export const FIRST_AID_MAP: Record<string, { chapter: string; pages: string; subChapters: SubChapterNode[] }> = {
   Neurology: {
     chapter: 'Neurology',
@@ -465,6 +469,7 @@ export function analyzeQuestions(): {
     if (!topicMap.has(node.id)) {
       node.systems = node.system ? [node.system] : [];
       node.subjects = node.subject ? [node.subject] : [];
+      node.entries = [{ system: node.system, subject: node.subject }];
       topicMap.set(node.id, node);
       nodes.push(node);
     } else {
@@ -484,6 +489,12 @@ export function analyzeQuestions(): {
       }
       if (node.subject && !existing.subjects.includes(node.subject)) {
         existing.subjects.push(node.subject);
+      }
+      if (!existing.entries) {
+        existing.entries = [{ system: existing.system, subject: existing.subject }];
+      }
+      if (!existing.entries.some(e => e.system === node.system && e.subject === node.subject)) {
+        existing.entries.push({ system: node.system, subject: node.subject });
       }
       if (node.subject && !existing.subject) {
         existing.subject = node.subject;

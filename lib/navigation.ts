@@ -3,11 +3,11 @@ import {
   PlusCircleIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
-  BeakerIcon,
   ChartBarIcon,
   AcademicCapIcon,
   CalendarDaysIcon,
   DocumentTextIcon,
+  TrophyIcon,
 } from '@heroicons/react/24/outline';
 
 export const navigation = [
@@ -17,8 +17,7 @@ export const navigation = [
   { name: 'AI Analytics', shortName: 'Analytics', href: '/analytics',       icon: ChartBarIcon },
   { name: 'Strategy Hub',   shortName: 'Strategy',   href: '/strategy',        icon: AcademicCapIcon },
   { name: 'Curriculum',     shortName: 'Curriculum', href: '/curriculum',      icon: CalendarDaysIcon },
-  { name: 'Simulators',     shortName: 'Sims',       href: '/simulators',      icon: BeakerIcon },
+  { name: 'Leaderboard',    shortName: 'Rank',       href: '/leaderboard',     icon: TrophyIcon },
   { name: 'Disease Ref',  shortName: 'Diseases',  href: '/diseases',        icon: DocumentTextIcon },
   { name: 'Settings',     shortName: 'Settings',  href: '/settings',        icon: Cog6ToothIcon },
 ];
-

@@ -164,7 +164,6 @@ const SYSTEM_NORMALIZE: Record<string, string> = {
   'Genitourinary': 'Renal',
   'Urogenital': 'Renal',
   'Urogenital / Cardiovascular': 'Renal',
-  'Endocrine/Metabolic': 'Endocrine',
   'Respiratory, Gastrointestinal, Endocrine': 'Respiratory',
   'Respiratory, Cardiovascular, Renal': 'Respiratory',
   'Respiratory and Cardiovascular': 'Respiratory',
@@ -194,7 +193,6 @@ const SYSTEM_NORMALIZE: Record<string, string> = {
   'Nervous System, Hematologic': 'Neurology',
   'Nervous System, Cardiovascular, Integumentary': 'Neurology',
   'Nervous System, Respiratory System, Metabolic': 'Neurology',
-  'Integumentary, Gastrointestinal, Nervous': 'Neurology',
   'Female Reproductive System': 'Reproductive',
   'Head and Neck': 'Head and Neck',
   'Infectious Disease': 'Infectious Disease',
@@ -407,17 +405,17 @@ export function getDiseaseReference(): SystemDiseaseGroup[] {
 
       if (e.keySymptoms) {
         const arr = Array.isArray(e.keySymptoms) ? e.keySymptoms : [e.keySymptoms];
-        arr.forEach(s => { if (s) d.symptoms.add(s); });
+        arr.forEach((s: string) => { if (s) d.symptoms.add(s); });
       }
 
       if (e.discriminators) {
         const arr = Array.isArray(e.discriminators) ? e.discriminators : [e.discriminators];
-        arr.forEach(disc => { if (disc?.distractor) d.distractors.add(disc.distractor); });
+        arr.forEach((disc: { distractor: string }) => { if (disc?.distractor) d.distractors.add(disc.distractor); });
       }
 
       if (e.highLeverageClues) {
         const arr = Array.isArray(e.highLeverageClues) ? e.highLeverageClues : [e.highLeverageClues];
-        arr.forEach(c => { if (c) d.clues.add(c); });
+        arr.forEach((c: string) => { if (c) d.clues.add(c); });
       }
     } catch { /* skip */ }
   }

@@ -44,7 +44,10 @@ type Props = {
   questionBankClues: QuestionBankClue[];
 };
 
-export default function MemorizeTab({ geneticsPairs, questionBankClues }: Props) {
+const FLASHCARD_STORAGE_KEY = 'ugent-flashcards-mastered';
+const LEGACY_MASTERY_STORAGE_KEY = 'ugent-memorize-mastered';
+
+export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Props) {
   const [subTab, setSubTab] = useState<'qbank' | 'concepts'>('qbank');
   const [selectedSystem, setSelectedSystem] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,7 +60,8 @@ export default function MemorizeTab({ geneticsPairs, questionBankClues }: Props)
   const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const saved = localStorage.getItem('ugent-memorize-mastered');
+    const saved = localStorage.getItem(FLASHCARD_STORAGE_KEY)
+      ?? localStorage.getItem(LEGACY_MASTERY_STORAGE_KEY);
     if (saved) {
       try {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -70,7 +74,7 @@ export default function MemorizeTab({ geneticsPairs, questionBankClues }: Props)
 
   const saveMastered = (ids: string[]) => {
     setMasteredIds(ids);
-    localStorage.setItem('ugent-memorize-mastered', JSON.stringify(ids));
+    localStorage.setItem(FLASHCARD_STORAGE_KEY, JSON.stringify(ids));
   };
 
   const toggleMastered = (id: string, e: React.MouseEvent) => {

@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { getQuizAttempts, getCompletedCurriculumBlocks, QuizAttempt } from '@/lib/quizAttempts';
 
 const CHART_COLORS = ['var(--color-primary-600)', 'var(--color-neutral-700)', 'var(--color-neutral-500)', 'var(--color-neutral-300)'];
@@ -33,14 +32,13 @@ function buildSubjectBreakdown(attempts: QuizAttempt[]) {
 }
 
 export default function Home() {
-  const { user } = useAuth();
-  const userName = user?.firstName || user?.email?.split('@')[0] || 'there';
+  const userName = 'there';
 
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [blocksCompleted, setBlocksCompleted] = useState(0);
 
   useEffect(() => {
-    setAttempts(getQuizAttempts());
+    getQuizAttempts().then(setAttempts);
     setBlocksCompleted(getCompletedCurriculumBlocks().length);
   }, []);
 

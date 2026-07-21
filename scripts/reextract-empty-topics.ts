@@ -24,7 +24,7 @@ function delay(ms: number) {
 
 async function main() {
   const feed = await client.query(api.research.getExtractionFeed, { limit: 1000 });
-  const blanks = feed.filter(f => !f.diseaseName || f.diseaseName.trim() === "");
+  const blanks = feed.filter((f: any) => !f.diseaseName || f.diseaseName.trim() === "");
   console.log(`Found ${blanks.length} blank diseaseName records`);
 
   let patched = 0;

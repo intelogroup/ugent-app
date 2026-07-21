@@ -16,6 +16,7 @@ const BLOCK_ICONS: Record<StudyBlock['type'], string> = {
   VIDEO: '🎬',
   QUESTIONS: '✏️',
   REVIEW: '🔄',
+  PHARMACOLOGY: '💊',
 };
 
 function formatTime(totalMinutes: number): string {

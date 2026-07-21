@@ -16,7 +16,6 @@ import type { QuizAttempt } from '@/lib/quizAttempts';
 import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts } from '@/lib/clea-tools';
 import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
 import { createClient } from '@/lib/supabase/server'
-import { LOCAL_USER_ID, getQuizState } from '@/lib/quiz-server-store';
 import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
 
 // Full history is always persisted (loadChat/saveChat use the untrimmed
@@ -154,8 +153,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'id and message are required' }, { status: 400 });
   }
 
-  const serverState = await getQuizState(LOCAL_USER_ID);
-  const activity = serverState.activity ?? clientActivity;
+  const serverState = null;
+  const activity = clientActivity;
 
   const supabase = await createClient()
   const { data: attemptsData } = await supabase

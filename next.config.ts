@@ -5,7 +5,7 @@ const contentSecurityPolicy = [
   "base-uri 'self'",
   "frame-ancestors 'self'",
   "frame-src 'self' https://embed.liveavatar.com",
-  "form-action 'self' https://*.workos.com",
+  "form-action 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:",
   "style-src 'self' 'unsafe-inline' https:",
   "img-src 'self' data: blob: https:",
@@ -27,6 +27,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     'ai',
     '@ai-sdk/deepseek',
+    '@ai-sdk/openai',
     '@ai-sdk/react',
     '@ai-sdk/gateway',
     '@ai-sdk/provider',

@@ -30,7 +30,7 @@ function delay(ms: number) {
 
 async function main() {
   const feed = await client.query(api.research.getExtractionFeed, { limit: 3000 });
-  const clinical = feed.filter(f =>
+  const clinical = feed.filter((f: any) =>
     (f.topicType === "DISEASE" || f.topicType === "SYNDROME") &&
     (!f.keySymptoms || f.keySymptoms.length === 0)
   );
@@ -79,8 +79,8 @@ async function main() {
           }).filter((s: string) => s.length > 0);
         }
         if (symptoms.length > 0) break;
-      } catch (err) {
-        const msg = String(err?.message ?? err);
+      } catch (err: unknown) {
+        const msg = String(err instanceof Error ? err.message : err);
         const retryable = msg.includes('429') || msg.includes('timeout') || msg.includes('500') || msg.includes('503');
         if (!retryable) break;
       }

@@ -10,7 +10,6 @@ import warnings
 # Suppress PyTorch and third-party UserWarnings (e.g. istft shape/deprecation warnings)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import soundfile as sf
 import numpy as np
 from kokoro import KPipeline
 
@@ -84,20 +83,12 @@ generation_finished = False
 def generate_chunks():
     global generation_finished
     generator = pipeline(text, voice=voice, speed=1.0, split_pattern=r'\n+')
-    chunk_idx = 0
     for gs, ps, audio in generator:
         if audio is not None:
-            if hasattr(audio, 'numpy'):
-                audio_np = audio.detach().cpu().numpy()
-            else:
-                audio_np = audio
-            
-            chunk_file = f"/tmp/ugent_stream_chunk_{chunk_idx}.wav"
-            sf.write(chunk_file, audio_np, 24000)
-            
-            chunk_queue.put((chunk_idx, chunk_file))
-            chunk_idx += 1
-            
+            audio_np = audio.detach().cpu().numpy() if hasattr(audio, 'numpy') else audio
+            pcm = (np.clip(audio_np, -1.0, 1.0) * 32767).astype('<i2').tobytes()
+            chunk_queue.put(pcm)
+
     generation_finished = True
     chunk_queue.put(None)
 
@@ -107,31 +98,34 @@ gen_thread.start()
 
 print("Streaming started...", flush=True)
 
+# One persistent sox process instead of afplay-per-chunk: spawning a new
+# playback process per chunk opens a fresh CoreAudio session each time,
+# which forces a Bluetooth output re-negotiation (audible glitch/cut) at
+# every chunk boundary. A single process fed raw PCM over stdin keeps one
+# continuous audio session for the whole reply.
+player = subprocess.Popen(
+    ["sox", "-t", "raw", "-r", "24000", "-e", "signed", "-b", "16", "-c", "1", "-", "-d"],
+    stdin=subprocess.PIPE,
+)
+with open("/tmp/tts_stream_play_active.pid", "w") as f:
+    f.write(str(player.pid))
+
 try:
     while True:
         item = chunk_queue.get()
         if item is None:
             break
-        
-        idx, path = item
-        
-        p = subprocess.Popen(["afplay", path])
-        with open("/tmp/tts_stream_play_active.pid", "w") as f:
-            f.write(str(p.pid))
-            
-        p.wait()
-        
-        # Cleanup file after playback
         try:
-            if os.path.exists(path):
-                os.remove(path)
-        except Exception:
-            pass
+            player.stdin.write(item)
+            player.stdin.flush()
+        except BrokenPipeError:
+            break
 
+    player.stdin.close()
+    player.wait()
     print("Playback complete.", flush=True)
 
 finally:
-    # Final cleanup of lock/pid files
     for f in [PID_FILE, "/tmp/tts_stream_play_active.pid"]:
         try:
             if os.path.exists(f):
