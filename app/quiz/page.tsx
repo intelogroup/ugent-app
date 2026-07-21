@@ -40,11 +40,12 @@ interface QuizAttempt {
   timeSpentSeconds: number;
 }
 
-function saveAttempt(attempt: QuizAttempt) {
-  const key = 'quiz-attempts';
-  const existing: QuizAttempt[] = JSON.parse(localStorage.getItem(key) || '[]');
-  existing.push(attempt);
-  localStorage.setItem(key, JSON.stringify(existing));
+function postQuizActivity(body: { activity?: unknown; attempt?: QuizAttempt }) {
+  fetch('/api/quiz-activity', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => {});
 }
 
 export function QuizContent() {
@@ -95,18 +96,21 @@ export function QuizContent() {
 
   useEffect(() => {
     if (!watchEnabled || !questions || !currentQuestion) return;
-    setActivity(
-      buildQuizSnapshot(
-        currentQuestion,
-        currentIndex + 1,
-        questions.length,
-        isSubmitted,
-        correctCount,
-        currentIndex + (isSubmitted ? 1 : 0)
-      )
+    const snapshot = buildQuizSnapshot(
+      currentQuestion,
+      currentIndex + 1,
+      questions.length,
+      isSubmitted,
+      selectedIndex !== null,
+      isSubmitted ? (currentQuestion.options[selectedIndex!]?.isCorrect ?? null) : null,
+      correctCount,
+      currentIndex + (isSubmitted ? 1 : 0),
+      selectedIndex
     );
+    setActivity(snapshot);
+    postQuizActivity({ activity: snapshot });
     return () => setActivity(null);
-  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, correctCount, setActivity]);
+  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, setActivity]);
 
   const handleSubmit = () => {
     if (selectedIndex === null || !currentQuestion) return;
@@ -117,14 +121,15 @@ export function QuizContent() {
 
   const finishQuiz = () => {
     if (!questions) return;
-    saveAttempt({
+    const attempt = {
       timestamp: Date.now(),
       subject,
       system,
       total: questions.length,
       correct: correctCount,
       timeSpentSeconds: elapsedTime,
-    });
+    };
+    postQuizActivity({ attempt });
     router.push('/dashboard');
   };
 

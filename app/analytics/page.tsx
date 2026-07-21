@@ -37,7 +37,7 @@ export default function Analytics() {
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
 
   useEffect(() => {
-    setAttempts(getQuizAttempts());
+    getQuizAttempts().then(setAttempts);
   }, []);
 
   const totalQuestions = attempts.reduce((s, a) => s + a.total, 0);

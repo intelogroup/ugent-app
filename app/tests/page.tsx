@@ -15,7 +15,7 @@ export default function Tests() {
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
 
   useEffect(() => {
-    setAttempts([...getQuizAttempts()].reverse());
+    getQuizAttempts().then((a) => setAttempts([...a].reverse()));
   }, []);
 
   const avgScore =
