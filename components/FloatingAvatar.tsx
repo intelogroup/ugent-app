@@ -7,18 +7,13 @@ import { stripMarkdown } from '@/lib/strip-markdown';
 
 const SIZE = 140;
 
-// Proxied through /api/lipsync-test (server-side) since the app's CSP connect-src only
-// allows 'self' — the browser can't fetch localhost:8765 directly. Backs onto the local
-// Wav2Lip warm server (scratch/lipsync_test/Wav2Lip/server.py) — dev-only latency test.
-const LIPSYNC_SERVER = '/api/lipsync-test';
-
 // Streaming path connects straight to the warm server's WebSocket (allowed via
 // the ws://localhost:8765 CSP connect-src entry) instead of round-tripping a
 // full mp4 through Next — frames paint as they arrive instead of waiting for
 // TTS + inference + mux to fully finish. See scratch/lipsync_test/Wav2Lip/stream_test.html
 // for the standalone version this was validated against (~350ms time-to-first-frame warm).
 const STREAM_WS_URL = 'ws://localhost:8765/lipsync-stream';
-const PREBUFFER_FRAMES = 8;
+const PREBUFFER_FRAMES = 2;
 
 export default function FloatingAvatar() {
   const [expanded, setExpanded] = useState(false);
@@ -26,7 +21,16 @@ export default function FloatingAvatar() {
     x: typeof window === 'undefined' ? 300 : window.innerWidth - SIZE - 24,
     y: 24,
   }));
-  const [videoSrc, setVideoSrc] = useState('/clea1-avatar-480p.mp4');
+  const videoSrc = '/clea_avatar.mp4';
+  // Prefetch /api/tts-audio while LLM streams. On each text tick, abort
+  // old request and restart with accumulated text. When LLM finishes, the
+  // last prefetched response (if resolved) is handed directly to Wav2Lip —
+  // saving one Kokoro round-trip from the critical path.
+  const prefetchRef = useRef<{
+    controller: AbortController;
+    text: string;
+    response: Promise<Response | null>;
+  } | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
@@ -35,36 +39,38 @@ export default function FloatingAvatar() {
   // Guards against overlapping speak() calls (e.g. a fast second reply while
   // the first is still streaming) stacking multiple audio/WS flows at once.
   const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket } | null>(null);
+  const orphanAudiosRef = useRef<Set<HTMLAudioElement>>(new Set());
+  const lastSpokenTextRef = useRef<string | null>(null);
+  const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Playback queue for manual replay/test clips and completed assistant replies.
+  // speak() resolves only once the current audio+lipsync clip fully finishes.
+  const queueRef = useRef<string[]>([]);
+  const pumpingRef = useRef(false);
 
+  // Called at the top of every speak() too (cancels a stray previous clip),
+  // so it must NOT clear queueRef. Callers that want a full interrupt
+  // (barge-in, surface switch, manual replay) clear queueRef themselves first.
   const stopSpeaking = () => {
+    for (const el of orphanAudiosRef.current) {
+      el.pause();
+      el.src = '';
+    }
+    orphanAudiosRef.current.clear();
     const active = activeSpeechRef.current;
     if (!active) return;
     activeSpeechRef.current = null;
     active.ws.close();
     active.audio.pause();
+    active.audio.src = '';
     setStreaming(false);
     setIsSpeaking(false);
   };
 
-  const runLipsync = async (e: React.MouseEvent) => {
+  const replayLast = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLoading(true);
-    setLatencyMs(null);
-    const t0 = performance.now();
-    try {
-      const audioBlob = await (await fetch('/test-lipsync-audio.wav')).blob();
-      const form = new FormData();
-      form.append('audio', audioBlob, 'audio.wav');
-      const res = await fetch(LIPSYNC_SERVER, { method: 'POST', body: form });
-      if (!res.ok) throw new Error(`server returned ${res.status}`);
-      const videoBlob = await res.blob();
-      setVideoSrc(URL.createObjectURL(videoBlob));
-      setLatencyMs(performance.now() - t0);
-    } catch (err) {
-      console.error('lipsync test failed', err);
-      setLatencyMs(-1);
-    } finally {
-      setLoading(false);
+    if (lastSpokenTextRef.current) {
+      interruptSpeech();
+      enqueueSpeech(lastSpokenTextRef.current);
     }
   };
 
@@ -74,31 +80,171 @@ export default function FloatingAvatar() {
     stopSpeaking();
 
     const text = stripMarkdown(rawText);
+    lastSpokenTextRef.current = text;
     setLoading(true);
     setLatencyMs(null);
     const t0 = performance.now();
-
+    const audio = new Audio();
+    orphanAudiosRef.current.add(audio);
     try {
-      const audioRes = await fetch('/api/tts-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (!audioRes.ok) throw new Error(`tts-audio returned ${audioRes.status}: ${await audioRes.text()}`);
-      const audioBlob = await audioRes.blob();
-      const audioBuf = await audioBlob.arrayBuffer();
+      // Check prefetch cache first — background fetch started while LLM
+      // was still streaming may have already downloaded this audio.
+      let audioRes: Response | null = null;
+      const cached = prefetchRef.current;
 
-      const audio = new Audio(URL.createObjectURL(audioBlob));
+      if (cached && cached.text === text) {
+        audioRes = await cached.response;
+        console.log(`[tts] prefetch HIT text=${text.length}chars ok=${audioRes?.ok} at +${(performance.now() - t0).toFixed(0)}ms`);
+        if (!audioRes?.ok) audioRes = null;
+        prefetchRef.current = null;
+      }
+      if (!audioRes) {
+        console.log(`[tts] prefetch MISS (or text mismatch), aborting stale prefetch, fetching fresh`);
+        prefetchRef.current?.controller.abort();
+        prefetchRef.current = null;
+        audioRes = await fetch('/api/tts-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+      }
+      if (!audioRes.ok || !audioRes.body) {
+        throw new Error(`tts-audio returned ${audioRes.status}: ${audioRes.body ? await audioRes.text() : 'no body'}`);
+      }
+
       const frames = new Map<number, ImageBitmap>();
       let fps = 25;
-      let started = false;
+      let videoStarted = false;
+      let audioStarted = false;
+      let chunkCount = 0;
+      const chunks: Uint8Array[] = [];
+
+      const startAudioPlayback = () => {
+        if (audioStarted) return;
+        audioStarted = true;
+        const ms = performance.now() - t0;
+        console.log(`[tts] AUDIO STARTED at +${ms.toFixed(0)}ms (after ${chunkCount} chunk(s))`);
+        setIsSpeaking(true);
+        setLatencyMs(ms);
+        audio.play().catch((err) => console.error('audio.play() failed', err));
+      };
+
+      // Detect audio format from response — local TTS returns WAV,
+      // ElevenLabs fallback returns MP3.
+      const isWav = audioRes.headers.get('content-type')?.includes('wav') ?? true;
+      console.log(`[tts] audio format=${isWav ? 'WAV' : 'MP3'}`);
+
+      // Try MediaSource streaming. WAV path uses incremental PCM to Wav2Lip;
+      // MP3 (ElevenLabs fallback) uses old full-buffer approach.
+      const canStreamAudio = typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(isWav ? 'audio/wav' : 'audio/mpeg');
+
+      let mediaSource: MediaSource | null = null;
+      let sourceBuffer: SourceBuffer | null = null;
+      if (canStreamAudio) {
+        mediaSource = new MediaSource();
+        audio.src = URL.createObjectURL(mediaSource);
+      }
+
+      const ws = new WebSocket(STREAM_WS_URL);
+      ws.binaryType = 'arraybuffer';
+      activeSpeechRef.current = { audio, ws };
+
+      // Strip WAV header from first chunk — Wav2Lip expects raw PCM.
+      // Search for "data" marker to handle any ffmpeg-produced variant.
+      function stripWavHeader(chunk: Uint8Array): Uint8Array {
+        for (let i = 0; i < Math.min(chunk.length - 4, 256); i++) {
+          if (chunk[i] === 0x64 && chunk[i+1] === 0x61 &&
+              chunk[i+2] === 0x74 && chunk[i+3] === 0x61) {
+            return chunk.slice(i + 8);
+          }
+        }
+        return chunk;
+      }
+
+      const reader = audioRes.body!.getReader();
+      let wavHeaderStripped = false;
+      const pcmBuffer: Uint8Array[] = [];
+
+      const processChunk = (value: Uint8Array) => {
+        chunkCount++;
+        chunks.push(value);
+        if (!isWav) return; // MP3: no incremental Wav2Lip
+        let pcm = value;
+        if (!wavHeaderStripped) {
+          pcm = stripWavHeader(value);
+          wavHeaderStripped = true;
+        }
+        if (pcm.length === 0) return;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(pcm);
+        } else {
+          pcmBuffer.push(pcm);
+        }
+      };
+
+      // Start reading chunks immediately. Await sourceBuffer setup before
+      // appending — reader yields for network (localhost ~ms), sourceopen is
+      // a microtask, so this is safe in practice.
+      (async () => {
+        if (mediaSource) {
+          await new Promise<void>((resolve) => {
+            mediaSource!.addEventListener('sourceopen', () => resolve(), { once: true });
+          });
+          sourceBuffer = mediaSource.addSourceBuffer(isWav ? 'audio/wav' : 'audio/mpeg');
+        }
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            processChunk(value);
+            if (sourceBuffer) {
+              const isFirst = chunkCount === 1;
+              await new Promise<void>((resolve, reject) => {
+                sourceBuffer!.addEventListener('updateend', () => resolve(), { once: true });
+                sourceBuffer!.addEventListener('error', () => reject(new Error('sourceBuffer append failed')), { once: true });
+                sourceBuffer!.appendBuffer(value as BufferSource);
+              });
+              if (isFirst) startAudioPlayback();
+            }
+          }
+          if (mediaSource && mediaSource.readyState === 'open') mediaSource.endOfStream();
+          console.log(`[tts] all chunks received at +${(performance.now() - t0).toFixed(0)}ms (${chunkCount} total)`);
+          if (!canStreamAudio) {
+            const audioType = isWav ? 'audio/wav' : 'audio/mpeg';
+            const total = chunks.reduce((sum, c) => sum + c.length, 0);
+            const merged = new Uint8Array(total);
+            let offset = 0;
+            for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+            audio.src = URL.createObjectURL(new Blob([merged], { type: audioType }));
+            startAudioPlayback();
+          }
+          // For MP3 (ElevenLabs): send merged buffer after full download
+          if (!isWav && chunkCount > 0) {
+            const total = chunks.reduce((sum, c) => sum + c.length, 0);
+            const merged = new Uint8Array(total);
+            let offset = 0;
+            for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(merged);
+            } else {
+              pcmBuffer.push(merged);
+            }
+            console.log(`[tts] sent/queued merged MP3 buffer (${total} bytes) for Wav2Lip`);
+          }
+        } catch (err) {
+          console.error('[tts] read error', err);
+        }
+      })();
 
       await new Promise<void>((resolve, reject) => {
-        const ws = new WebSocket(STREAM_WS_URL);
-        ws.binaryType = 'arraybuffer';
-        activeSpeechRef.current = { audio, ws };
+        ws.onclose = () => resolve();
 
-        ws.onopen = () => ws.send(audioBuf);
+        ws.onopen = () => {
+          console.log(`[tts] lipsync WS open at +${(performance.now() - t0).toFixed(0)}ms`);
+          // Flush buffered PCM chunks
+          for (const pcm of pcmBuffer) ws.send(pcm);
+          pcmBuffer.length = 0;
+        };
 
         ws.onmessage = async (ev) => {
           if (typeof ev.data === 'string') {
@@ -110,17 +256,13 @@ export default function FloatingAvatar() {
           const bitmap = await createImageBitmap(new Blob([buf.slice(4)], { type: 'image/jpeg' }));
           frames.set(idx, bitmap);
 
-          if (!started && frames.size >= PREBUFFER_FRAMES) {
-            started = true;
+          if (!videoStarted && frames.size >= PREBUFFER_FRAMES) {
+            videoStarted = true;
+            console.log(`[tts] VIDEO STARTED (${PREBUFFER_FRAMES} frames prebuffered) at +${(performance.now() - t0).toFixed(0)}ms`);
             setStreaming(true);
-            setIsSpeaking(true);
-            setLatencyMs(performance.now() - t0);
-            audio.play().catch((err) => console.error('stream audio.play() failed', err));
 
             let lastDrawnIdx = -1;
             const canvas = canvasRef.current;
-            // Raster resolution defaults to the CSS box size (SIZE), which is
-            // soft on HiDPI screens — <video> scales natively, canvas doesn't.
             if (canvas) {
               const dpr = window.devicePixelRatio || 1;
               canvas.width = SIZE * dpr;
@@ -131,8 +273,6 @@ export default function FloatingAvatar() {
               const wantIdx = Math.floor(audio.currentTime * fps);
               const bitmap = frames.get(wantIdx) ?? frames.get(lastDrawnIdx);
               if (bitmap && ctx && canvas) {
-                // object-fit: cover, done by hand — drawImage has no such mode,
-                // and source frames (480x270) aren't square like the canvas.
                 const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
                 const sw = canvas.width / scale;
                 const sh = canvas.height / scale;
@@ -143,7 +283,9 @@ export default function FloatingAvatar() {
               }
               if (!audio.ended) requestAnimationFrame(paint);
               else {
+                console.log(`[tts] DONE at +${(performance.now() - t0).toFixed(0)}ms`);
                 activeSpeechRef.current = null;
+                orphanAudiosRef.current.delete(audio);
                 setStreaming(false);
                 setIsSpeaking(false);
                 resolve();
@@ -159,6 +301,7 @@ export default function FloatingAvatar() {
       console.error('tts stream failed', err);
       setLatencyMs(-1);
       activeSpeechRef.current = null;
+      orphanAudiosRef.current.delete(audio);
       setStreaming(false);
       setIsSpeaking(false);
     } finally {
@@ -169,13 +312,46 @@ export default function FloatingAvatar() {
   const runTtsStream = (e: React.MouseEvent) => {
     e.stopPropagation();
     const text = window.prompt('Text for Clea to say:', 'Hello, welcome back to Ugent. Ready to study?');
-    if (text) void speak(text);
+    if (text) {
+      interruptSpeech();
+      enqueueSpeech(text);
+    }
   };
 
-  const { messages, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface, setIsSpeaking } =
-    useCleaAgent();
+  const {
+    messages,
+    status,
+    micActive,
+    toggleMic,
+    micModelLoading,
+    voiceSurface,
+    setVoiceSurface,
+    setIsSpeaking,
+    registerSpeechInterrupt,
+  } = useCleaAgent();
   const lastSpokenIdRef = useRef<string | null>(null);
   const hasSeenInitialMessagesRef = useRef(false);
+  // Which assistant message is currently forming or playing. A fresh reply
+  // interrupts older playback instead of stacking audio over it.
+  const activeMessageIdRef = useRef<string | null>(null);
+
+  const pumpQueue = async () => {
+    if (pumpingRef.current) return;
+    pumpingRef.current = true;
+    try {
+      while (queueRef.current.length > 0) {
+        const next = queueRef.current.shift()!;
+        await speak(next);
+      }
+    } finally {
+      pumpingRef.current = false;
+    }
+  };
+
+  const enqueueSpeech = (text: string) => {
+    queueRef.current.push(text);
+    void pumpQueue();
+  };
 
   useEffect(() => {
     // Skip the very first non-empty messages snapshot — that's history
@@ -188,28 +364,83 @@ export default function FloatingAvatar() {
       return;
     }
 
-    if (status !== 'ready') return;
     // Only the surface the user is actually looking at speaks — a reply
     // sent from the plain text chat (or while the orb owns voice) must
     // stay silent here, otherwise text replies get spoken unexpectedly.
     if (voiceSurface !== 'avatar') return;
     const last = messages[messages.length - 1];
-    if (!last || last.role !== 'assistant' || last.id === lastSpokenIdRef.current) return;
+    if (!last || last.role !== 'assistant') return;
+    if (last.id === lastSpokenIdRef.current && status !== 'streaming') return;
 
-    lastSpokenIdRef.current = last.id;
+    if (last.id !== activeMessageIdRef.current) {
+      interruptSpeech();
+      activeMessageIdRef.current = last.id;
+    }
+
     const text = last.parts
       .filter((part) => part.type === 'text')
       .map((part) => (part as { text: string }).text)
       .join('');
-    if (text.trim()) void speak(text);
+
+    // Prefetch TTS audio while LLM streams. Debounce 300ms — avoids flooding
+    // Kokoro's single uvicorn worker with aborted connections (observed >80
+    // stale FDs starving the server).
+    if (status === 'streaming' && text.length > 10) {
+      if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+      prefetchTimerRef.current = setTimeout(() => {
+        prefetchRef.current?.controller.abort();
+        const controller = new AbortController();
+        prefetchRef.current = {
+          controller,
+          text,
+          response: fetch('/api/tts-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+            signal: controller.signal,
+          }).catch(() => null),
+        };
+      }, 300);
+    }
+
+    // Speak full reply as ONE clip once LLM finishes.
+    // Per-sentence streaming created ~2-3s gaps between sentences
+    // (each sentence paid full Wav2Lip round-trip tax). Kokoro
+    // internally comma-splits streaming within a single request,
+    // so one shot plays gaplessly.
+    if (status !== 'streaming') {
+      if (text.trim()) enqueueSpeech(text);
+      lastSpokenIdRef.current = last.id;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, status, voiceSurface]);
 
   // Stop any in-flight audio/WS as soon as this widget loses (or never
   // holds) the voice surface — e.g. the orb takes over — and on unmount.
+  const interruptSpeech = () => {
+    queueRef.current = [];
+    stopSpeaking();
+  };
+
   useEffect(() => {
-    if (voiceSurface !== 'avatar') stopSpeaking();
-    return () => stopSpeaking();
+    if (voiceSurface !== 'avatar') {
+      if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+      interruptSpeech();
+    }
+    return () => {
+      if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+      interruptSpeech();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceSurface]);
+
+  // Let the mic's barge-in detector kill this widget's TTS the moment it
+  // fires — only while this widget actually owns the voice surface, so a
+  // barge-in never reaches into a surface that isn't speaking.
+  useEffect(() => {
+    if (voiceSurface !== 'avatar') return;
+    registerSpeechInterrupt(interruptSpeech);
+    return () => registerSpeechInterrupt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceSurface]);
 
@@ -279,7 +510,7 @@ export default function FloatingAvatar() {
         aria-label="Open Clea avatar"
         className="fixed right-[104px] top-20 z-50 h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 md:right-[124px] md:top-6"
       >
-        <img src="/clea-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" />
+        <img src="/clea2-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" />
       </button>
     );
   }
@@ -299,8 +530,8 @@ export default function FloatingAvatar() {
             key={videoSrc}
             src={videoSrc}
             autoPlay
-            loop={videoSrc === '/clea1-avatar-480p.mp4'}
-            muted={videoSrc === '/clea1-avatar-480p.mp4'}
+            loop
+            muted
             playsInline
             className="h-full w-full object-cover"
             style={{ display: streaming ? 'none' : 'block' }}
@@ -327,9 +558,9 @@ export default function FloatingAvatar() {
         </button>
         <button
           type="button"
-          onClick={runLipsync}
-          disabled={loading}
-          aria-label="Run lipsync test"
+          onClick={replayLast}
+          disabled={loading || !lastSpokenTextRef.current}
+          aria-label="Replay last reply"
           className="absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70 disabled:opacity-50"
         >
           <PlayIcon className="h-3.5 w-3.5" />
