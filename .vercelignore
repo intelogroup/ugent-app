@@ -21,3 +21,6 @@ scraped_pathoma
 temp_scripts
 scripts/temp
 scripts/output
+
+# Large local data files (not tracked by git, uploaded separately)
+data/
