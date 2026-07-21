@@ -19,8 +19,13 @@ function Consumer() {
             system: 'Cardiovascular',
             difficulty: 'medium',
             isAnswered: false,
+            hasSelectedAnswer: false,
+            currentQuestionCorrect: null,
             correctSoFar: 1,
             totalAnsweredSoFar: 2,
+            questionText: 'A 45-year-old man presents with chest pain.',
+            optionTexts: ['MI', 'GERD'],
+            selectedOptionText: null,
           })
         }
       >
@@ -86,14 +91,28 @@ describe('WatchProvider / useWatch', () => {
 });
 
 describe('buildQuizSnapshot', () => {
-  it('builds a snapshot from question fields and counters', () => {
+  it.each([
+    { desc: 'no selection', hasSelected: false, correct: null },
+    { desc: 'selected not submitted', hasSelected: true, correct: null },
+    { desc: 'submitted correct', hasSelected: true, correct: true },
+    { desc: 'submitted wrong', hasSelected: true, correct: false },
+  ])('builds snapshot — $desc', ({ hasSelected, correct }) => {
     const snapshot = buildQuizSnapshot(
-      { subject: 'Cardiovascular', system: 'Cardiovascular', difficulty: 'medium' },
+      {
+        subject: 'Cardiovascular',
+        system: 'Cardiovascular',
+        difficulty: 'medium',
+        text: 'A 45-year-old man presents with chest pain.',
+        options: [{ text: 'MI' }, { text: 'GERD' }],
+      },
       3,
       20,
-      false,
+      correct !== null,
+      hasSelected,
+      correct ?? null,
       1,
-      2
+      2,
+      hasSelected ? 0 : null
     );
     expect(snapshot).toEqual<ActivitySnapshot>({
       page: 'quiz',
@@ -102,9 +121,14 @@ describe('buildQuizSnapshot', () => {
       subject: 'Cardiovascular',
       system: 'Cardiovascular',
       difficulty: 'medium',
-      isAnswered: false,
+      isAnswered: correct !== null,
+      hasSelectedAnswer: hasSelected,
+      currentQuestionCorrect: correct ?? null,
       correctSoFar: 1,
       totalAnsweredSoFar: 2,
+      questionText: 'A 45-year-old man presents with chest pain.',
+      optionTexts: ['MI', 'GERD'],
+      selectedOptionText: hasSelected ? 'MI' : null,
     });
   });
 });
@@ -125,8 +149,13 @@ describe('buildWatchReply', () => {
       system: 'Cardiovascular',
       difficulty: 'medium',
       isAnswered: false,
+      hasSelectedAnswer: false,
+      currentQuestionCorrect: null,
       correctSoFar: 1,
       totalAnsweredSoFar: 2,
+      questionText: 'A 45-year-old man presents with chest pain.',
+      optionTexts: ['MI', 'GERD'],
+      selectedOptionText: null,
     };
     const result = buildWatchReply(base, activity);
     expect(result).toContain(base);
@@ -143,8 +172,13 @@ describe('buildWatchReply', () => {
       system: null,
       difficulty: 'easy',
       isAnswered: false,
+      hasSelectedAnswer: false,
+      currentQuestionCorrect: null,
       correctSoFar: 0,
       totalAnsweredSoFar: 0,
+      questionText: 'A patient presents with fatigue.',
+      optionTexts: ['A', 'B'],
+      selectedOptionText: null,
     };
     expect(buildWatchReply(base, activity)).not.toContain('()');
   });

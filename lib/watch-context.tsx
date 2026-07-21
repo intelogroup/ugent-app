@@ -12,15 +12,24 @@ export type ActivitySnapshot = {
   system: string | null;
   difficulty: string;
   isAnswered: boolean;
+  hasSelectedAnswer: boolean;
+  currentQuestionCorrect: boolean | null;
   correctSoFar: number;
   totalAnsweredSoFar: number;
+  questionText: string;
+  optionTexts: string[];
+  selectedOptionText: string | null;
 };
+
+export type AgentStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 type WatchContextValue = {
   watchEnabled: boolean;
   toggleWatch: () => void;
   activity: ActivitySnapshot | null;
   setActivity: (activity: ActivitySnapshot | null) => void;
+  agentStatus: AgentStatus;
+  setAgentStatus: (status: AgentStatus) => void;
 };
 
 const WatchContext = createContext<WatchContextValue>({
@@ -28,6 +37,8 @@ const WatchContext = createContext<WatchContextValue>({
   toggleWatch: () => {},
   activity: null,
   setActivity: () => {},
+  agentStatus: 'idle',
+  setAgentStatus: () => {},
 });
 
 export function WatchProvider({ children }: { children: ReactNode }) {
@@ -36,6 +47,7 @@ export function WatchProvider({ children }: { children: ReactNode }) {
     return window.localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const [activity, setActivity] = useState<ActivitySnapshot | null>(null);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, String(watchEnabled));
@@ -44,7 +56,9 @@ export function WatchProvider({ children }: { children: ReactNode }) {
   const toggleWatch = () => setWatchEnabled((enabled) => !enabled);
 
   return (
-    <WatchContext.Provider value={{ watchEnabled, toggleWatch, activity, setActivity }}>
+    <WatchContext.Provider
+      value={{ watchEnabled, toggleWatch, activity, setActivity, agentStatus, setAgentStatus }}
+    >
       {children}
     </WatchContext.Provider>
   );
@@ -55,12 +69,15 @@ export function useWatch() {
 }
 
 export function buildQuizSnapshot(
-  question: { subject: string; system: string; difficulty: string },
+  question: { subject: string; system: string; difficulty: string; text: string; options: { text: string }[] },
   questionNumber: number,
   totalQuestions: number,
   isAnswered: boolean,
+  hasSelectedAnswer: boolean,
+  currentQuestionCorrect: boolean | null,
   correctSoFar: number,
-  totalAnsweredSoFar: number
+  totalAnsweredSoFar: number,
+  selectedIndex: number | null
 ): ActivitySnapshot {
   return {
     page: 'quiz',
@@ -70,8 +87,13 @@ export function buildQuizSnapshot(
     system: question.system,
     difficulty: question.difficulty,
     isAnswered,
+    hasSelectedAnswer,
+    currentQuestionCorrect,
     correctSoFar,
     totalAnsweredSoFar,
+    questionText: question.text,
+    optionTexts: question.options.map((o) => o.text),
+    selectedOptionText: selectedIndex !== null ? question.options[selectedIndex]?.text ?? null : null,
   };
 }
 

@@ -35,6 +35,7 @@ beforeEach(() => {
   (navigator as any).mediaDevices = {
     getUserMedia: jest.fn(async () => ({
       getTracks: () => [{ stop: jest.fn() }],
+      getAudioTracks: () => [{ label: 'test-mic', stop: jest.fn() }],
     })),
   };
 
@@ -70,21 +71,22 @@ beforeEach(() => {
     }
   };
 
-  (global as any).requestAnimationFrame = (cb: FrameRequestCallback) => {
+  const rafStub = (cb: FrameRequestCallback) => {
     pendingTick = cb;
     return 1;
   };
+  (global as any).requestAnimationFrame = rafStub;
+  (window as any).requestAnimationFrame = rafStub;
 });
 
 describe('useWhisperMic', () => {
   it('transcribes a completed utterance after the VAD detects silence', async () => {
     const onTranscript = jest.fn();
-    renderHook(() => useWhisperMic(true, onTranscript));
+    renderHook(() => useWhisperMic(true, false, onTranscript, jest.fn()));
 
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
-    // energy crosses the floor at now=0, but speaking isn't confirmed until
-    // it's sustained past SPEECH_ONSET_MS (150ms) — rejects transient blips
+    // energy crosses floor at now=0, sustained past SPEECH_ONSET_MS (150ms)
     currentRms = 0.1;
     tick();
     mockNow = 150;
@@ -92,13 +94,17 @@ describe('useWhisperMic', () => {
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk']) }));
 
-    // go silent — starts the silence-hang timer at now=250
-    currentRms = 0;
-    mockNow = 250;
+    // keep speaking past MIN_UTTERANCE_MS (300ms) so utterance is long enough
+    mockNow = 400;
     tick();
 
-    // advance past SILENCE_HANG_MS (700ms) from silenceStart — utterance finalizes
-    mockNow = 950;
+    // go silent — starts silence-hang timer at 500
+    currentRms = 0;
+    mockNow = 500;
+    tick();
+
+    // advance past SILENCE_HANG_MS (1000ms) from silenceStart — utterance finalizes
+    mockNow = 1500;
     tick();
 
     await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
@@ -107,7 +113,7 @@ describe('useWhisperMic', () => {
 
   it('ignores a brief noise blip that never sustains past the onset window', async () => {
     const onTranscript = jest.fn();
-    renderHook(() => useWhisperMic(true, onTranscript));
+    renderHook(() => useWhisperMic(true, false, onTranscript, jest.fn()));
 
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
@@ -134,37 +140,42 @@ describe('useWhisperMic', () => {
     );
 
     const onTranscript = jest.fn();
-    renderHook(() => useWhisperMic(true, onTranscript));
+    renderHook(() => useWhisperMic(true, false, onTranscript, jest.fn()));
 
     await waitFor(() => expect(pendingTick).not.toBeNull());
 
-    // first utterance: speak (past onset), go silent, finalize — kicks off a slow transcription
+    // first utterance: speak past onset, sustain past MIN_UTTERANCE_MS, go silent,
+    // wait past SILENCE_HANG_MS — kicks off a slow transcription
     currentRms = 0.1;
     tick();
     mockNow = 150;
     tick();
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk-1']) }));
-    currentRms = 0;
-    mockNow = 250;
+    mockNow = 400;
     tick();
-    mockNow = 950;
+    currentRms = 0;
+    mockNow = 500;
+    tick();
+    mockNow = 1500;
     tick();
     await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
 
-    // second utterance arrives and finalizes while the first is still pending —
-    // recording/VAD must not be blocked by the in-flight transcription
+    // second utterance arrives and finalizes while first still pending —
+    // recording/VAD must not block on in-flight transcription
     currentRms = 0.1;
-    mockNow = 1000;
+    mockNow = 1550;
     tick();
-    mockNow = 1150;
+    mockNow = 1700;
     tick();
     await waitFor(() => expect(recorderDataHandler).not.toBeNull());
     act(() => recorderDataHandler!({ data: new Blob(['chunk-2']) }));
-    currentRms = 0;
-    mockNow = 1250;
-    tick();
     mockNow = 1950;
+    tick();
+    currentRms = 0;
+    mockNow = 2050;
+    tick();
+    mockNow = 3050;
     tick();
 
     // release the first transcription now that the second has already queued

@@ -15,8 +15,8 @@ describe('getWhisperPipeline', () => {
     expect(pipelineMock).toHaveBeenCalledTimes(1);
     expect(pipelineMock).toHaveBeenCalledWith(
       'automatic-speech-recognition',
-      'onnx-community/whisper-large-v3-turbo',
-      expect.objectContaining({ device: 'webgpu' })
+      'onnx-community/whisper-base.en',
+      expect.objectContaining({ device: 'webgpu', dtype: 'q8' })
     );
   });
 });

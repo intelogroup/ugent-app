@@ -11,10 +11,15 @@ let pipelinePromise: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
  *  re-loading on each mic toggle would re-download/re-init a multi-hundred-MB model. */
 export function getWhisperPipeline(): Promise<AutomaticSpeechRecognitionPipeline> {
   if (!pipelinePromise) {
-    // whisper-large-v3-turbo: large-v3 accuracy, turbo's pruned decoder — plain
-    // whisper-large is too heavy to be worth it in-browser over WebGPU.
-    pipelinePromise = pipeline('automatic-speech-recognition', 'onnx-community/whisper-large-v3-turbo', {
+    // whisper-base.en: large-v3-turbo was taking 2.3-4.7s of inference per
+    // utterance in practice — too slow for a live voice conversation. base
+    // trades accuracy (weaker on medical terminology) for a much smaller
+    // decoder; .en since transcription is forced to English anyway, so the
+    // multilingual decoder head is dead weight. Re-measure and bump back up
+    // if accuracy turns out to be the bottleneck instead of latency.
+    pipelinePromise = pipeline('automatic-speech-recognition', 'onnx-community/whisper-base.en', {
       device: 'webgpu',
+      dtype: 'q8',
     }) as Promise<AutomaticSpeechRecognitionPipeline>;
   }
   return pipelinePromise;
