@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     const questions = await loadQuestions();
     const subjects = Array.from(new Set(questions.map((q) => q.subject))).sort();
     const systems = Array.from(new Set(questions.map((q) => q.system))).sort();
-    return NextResponse.json({ subjects, systems, total: questions.length });
+    return NextResponse.json(
+      { subjects, systems, total: questions.length },
+      { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=3600' } }
+    );
   }
 
   const subject = searchParams.get('subject') || undefined;

@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
   if (typeof raw !== 'string' || typeof corrected !== 'string') {
     return NextResponse.json({ error: 'raw and corrected must be strings' }, { status: 400 });
   }
+  // ponytail: Vercel's FS is read-only outside /tmp — this log is a dev-only
+  // tool for tuning the ASR dictionary, not needed in prod.
+  if (process.env.VERCEL) return NextResponse.json({ ok: true });
   await appendFile(LOG_PATH, JSON.stringify({ t: Date.now(), raw, corrected }) + '\n');
   return NextResponse.json({ ok: true });
 }

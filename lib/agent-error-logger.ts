@@ -21,6 +21,10 @@ export async function logAgentError(context: { chatId: string; route: string }, 
 
   console.error('agent error', entry);
 
+  // ponytail: Vercel's FS is read-only outside /tmp, and console output is
+  // already captured as function logs there — local jsonl is dev-only.
+  if (process.env.VERCEL) return;
+
   if (!existsSync(LOG_DIR)) mkdirSync(LOG_DIR, { recursive: true });
   await appendFile(LOG_FILE, `${JSON.stringify(entry)}\n`);
 }

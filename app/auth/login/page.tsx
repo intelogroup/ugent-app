@@ -1,14 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+
+const ERROR_MESSAGES: Record<string, string> = {
+  verification_failed: 'That verification link is invalid or expired.',
+  auth_failed: 'Sign-in failed. Please try again.',
+  email_unverified: 'Please confirm your email before signing in — check your inbox.',
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
+  const [error, setError] = useState<string | null>(
+    urlError ? ERROR_MESSAGES[urlError] ?? 'Something went wrong. Please try again.' : null
+  )
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 

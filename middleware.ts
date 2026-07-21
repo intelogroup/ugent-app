@@ -46,7 +46,17 @@ export async function middleware(request: NextRequest) {
     return Response.redirect(url)
   }
 
-  if (user && request.nextUrl.pathname.startsWith('/auth/login')) {
+  if (isProtected && user && !user.email_confirmed_at) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.searchParams.set('error', 'email_unverified')
+    return Response.redirect(url)
+  }
+
+  if (user && user.email_confirmed_at && (
+    request.nextUrl.pathname.startsWith('/auth/login') ||
+    request.nextUrl.pathname.startsWith('/auth/signup')
+  )) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return Response.redirect(url)
