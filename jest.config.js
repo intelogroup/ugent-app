@@ -16,8 +16,10 @@ const customJestConfig = {
     '**/__tests__/**/*.[jt]s?(x)',
   ],
   testPathIgnorePatterns: [
-    '<rootDir>/__tests__/auth/',
     '<rootDir>/__tests__/quiz-questions.test.ts',
+    // vitest-authored tests (use vi.mock/vi.fn) — run these via `npx vitest run <path>`, not jest
+    '<rootDir>/__tests__/api/quiz-activity.test.ts',
+    '<rootDir>/__tests__/lib/supabase/queries.test.ts',
     '<rootDir>/e2e/',
     '<rootDir>/tests/',
   ],

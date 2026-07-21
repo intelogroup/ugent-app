@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
+import Avatar from '@/components/Avatar';
+import AvatarPicker from '@/components/AvatarPicker';
 import {
   UserIcon,
   BellIcon,
   ShieldCheckIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
-import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
 
   const tabs = [
@@ -55,30 +55,44 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="space-y-6">
           {activeTab === 'account' && (
-            <div className="card">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-4">Account Information</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Name</label>
-                  <input
-                    type="text"
-                    value={user?.firstName || ''}
-                    disabled
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
-                  />
-                  <p className="text-xs text-neutral-500 mt-1">Contact support to update your name</p>
+            <>
+              <div className="card">
+                <h2 className="text-xl font-semibold text-neutral-900 mb-4">Profile Avatar</h2>
+                <AvatarPicker />
+              </div>
+
+              <div className="card">
+                <h2 className="text-xl font-semibold text-neutral-900 mb-4">Account Information</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 pb-4 border-b border-neutral-100">
+                    <Avatar size="lg" />
+                    <div>
+                      <p className="text-sm font-medium text-neutral-900">Student</p>
+                      <p className="text-xs text-neutral-500"></p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value=""
+                      disabled
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Name</label>
+                    <input
+                      type="text"
+                      value=""
+                      disabled
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600"
+                    />
+                    <p className="text-xs text-neutral-500 mt-1">Contact support to update your name</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
 
           {activeTab === 'notifications' && (

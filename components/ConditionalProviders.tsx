@@ -1,23 +1,22 @@
-'use client';
+'use client'
 
-import { usePathname } from 'next/navigation';
-import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
-import type { ReactNode } from 'react';
-
-const PUBLIC_PREFIXES = ['/', '/login', '/signup', '/auth'];
-
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_PREFIXES.some((prefix) =>
-    prefix === '/' ? pathname === '/' : pathname.startsWith(prefix),
-  );
-}
+import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 
 export function ConditionalProviders({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+  const [ready, setReady] = useState(false)
+  const router = useRouter()
 
-  if (isPublicRoute(pathname)) {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      router.refresh()
+    })
+    setReady(true)
+    return () => subscription.unsubscribe()
+  }, [router])
 
-  return <AuthKitProvider>{children}</AuthKitProvider>;
+  if (!ready) return null
+  return <>{children}</>
 }

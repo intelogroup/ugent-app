@@ -31,7 +31,10 @@ scraped_pathoma/
 .vercel/
 .superpowers/
 .claude/
+.agents/
+.gemini/
 .worktrees/
+graphify-out/
 /*.png
 *.log
 temp_scripts/
@@ -62,3 +65,9 @@ public/temp-blobs.json
 
 # local Clea chat persistence (stopgap until Convex/Supabase)
 data/.clea-chats/
+asr-log.jsonl
+reminders.db
+skills-lock.json
+
+# Supabase CLI local cache
+supabase/.temp/
