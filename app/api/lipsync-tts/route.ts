@@ -1,13 +1,6 @@
-// Dev-only: ElevenLabs TTS -> local Wav2Lip warm server -> lipsynced mp4.
-// Same CSP-avoidance reasoning as /api/lipsync-test: browser only calls 'self',
-// this route does both cross-origin hops (ElevenLabs, localhost:8765) server-side.
-const LIPSYNC_SERVER = 'http://localhost:8765/lipsync';
+const LIPSYNC_SERVER = (process.env.WAV2LIP_HTTP_URL || 'http://localhost:8765') + '/lipsync';
 
 export async function POST(request: Request) {
-  if (process.env.VERCEL) {
-    return new Response('lipsync unavailable in prod (local Wav2Lip server only)', { status: 501 });
-  }
-
   const { text } = await request.json();
   if (!text) {
     return new Response('text required', { status: 400 });

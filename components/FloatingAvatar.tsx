@@ -7,16 +7,9 @@ import { stripMarkdown } from '@/lib/strip-markdown';
 
 const SIZE = 140;
 
-// Streaming path connects straight to the warm server's WebSocket (allowed via
-// the ws://localhost:8765 CSP connect-src entry) instead of round-tripping a
-// full mp4 through Next — frames paint as they arrive instead of waiting for
-// TTS + inference + mux to fully finish. See scratch/lipsync_test/Wav2Lip/stream_test.html
-// for the standalone version this was validated against (~350ms time-to-first-frame warm).
-const STREAM_WS_URL = 'ws://localhost:8765/lipsync-stream';
+const STREAM_WS_URL = process.env.NEXT_PUBLIC_WAV2LIP_WS_URL || 'ws://localhost:8765/lipsync-stream';
 const PREBUFFER_FRAMES = 2;
-// Wav2Lip only runs on the dev machine — prod builds fall back to audio-only
-// (static avatar, no lipsync video) instead of trying an unreachable localhost WS.
-const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development';
+const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development' || !!process.env.NEXT_PUBLIC_WAV2LIP_WS_URL;
 
 export default function FloatingAvatar() {
   const [expanded, setExpanded] = useState(false);
