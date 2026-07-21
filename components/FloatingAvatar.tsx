@@ -151,19 +151,25 @@ export default function FloatingAvatar() {
 
       // Strip WAV header from first chunk — Wav2Lip expects raw PCM.
       // Search for "data" marker to handle any ffmpeg-produced variant.
-      function stripWavHeader(chunk: Uint8Array): Uint8Array {
+      // Also read the sample rate (bytes 24-27, little-endian) so Wav2Lip
+      // can resample to its expected 16kHz — Kokoro emits 24kHz, Piper
+      // 22050Hz, and feeding either straight into the 16kHz-assumed mel
+      // pipeline made mouth movement drift out of sync with the audio.
+      function stripWavHeader(chunk: Uint8Array): { pcm: Uint8Array; sampleRate: number | null } {
         for (let i = 0; i < Math.min(chunk.length - 4, 256); i++) {
           if (chunk[i] === 0x64 && chunk[i+1] === 0x61 &&
               chunk[i+2] === 0x74 && chunk[i+3] === 0x61) {
-            return chunk.slice(i + 8);
+            const sampleRate = new DataView(chunk.buffer, chunk.byteOffset, chunk.byteLength).getUint32(24, true);
+            return { pcm: chunk.slice(i + 8), sampleRate };
           }
         }
-        return chunk;
+        return { pcm: chunk, sampleRate: null };
       }
 
       const reader = audioRes.body!.getReader();
       let wavHeaderStripped = false;
       const pcmBuffer: Uint8Array[] = [];
+      let pendingSampleRate: number | null = null;
 
       const processChunk = (value: Uint8Array) => {
         chunkCount++;
@@ -171,11 +177,17 @@ export default function FloatingAvatar() {
         if (!isWav) return; // MP3: no incremental Wav2Lip
         let pcm = value;
         if (!wavHeaderStripped) {
-          pcm = stripWavHeader(value);
+          const stripped = stripWavHeader(value);
+          pcm = stripped.pcm;
           wavHeaderStripped = true;
+          pendingSampleRate = stripped.sampleRate;
         }
         if (pcm.length === 0) return;
         if (ws.readyState === WebSocket.OPEN) {
+          if (pendingSampleRate) {
+            ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
+            pendingSampleRate = null;
+          }
           ws.send(pcm);
         } else {
           pcmBuffer.push(pcm);
@@ -241,6 +253,10 @@ export default function FloatingAvatar() {
 
         ws.onopen = () => {
           console.log(`[tts] lipsync WS open at +${(performance.now() - t0).toFixed(0)}ms`);
+          if (pendingSampleRate) {
+            ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
+            pendingSampleRate = null;
+          }
           // Flush buffered PCM chunks
           for (const pcm of pcmBuffer) ws.send(pcm);
           pcmBuffer.length = 0;
