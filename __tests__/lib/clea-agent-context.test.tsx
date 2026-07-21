@@ -100,7 +100,7 @@ describe('CleaAgentProvider / useCleaAgent', () => {
     });
   });
 
-  it('pauses mic capture while TTS is speaking, to avoid transcribing itself', async () => {
+  it('passes isSpeaking flag to mic hook for barge-in handling', async () => {
     (navigator as any).gpu = {};
     const { useWhisperMic } = jest.requireMock('@/lib/use-whisper-mic') as {
       useWhisperMic: jest.Mock;
@@ -129,7 +129,7 @@ describe('CleaAgentProvider / useCleaAgent', () => {
 
     fireEvent.click(screen.getByText('toggle speaking'));
     await waitFor(() => {
-      expect(useWhisperMic.mock.calls.at(-1)?.[0]).toBe(false);
+      expect(useWhisperMic.mock.calls.at(-1)?.[1]).toBe(true);
     });
 
     delete (navigator as any).gpu;

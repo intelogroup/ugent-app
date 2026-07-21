@@ -1,6 +1,15 @@
+import { useWatch } from '@/lib/watch-context';
+
 export default function CleaLiveOrb() {
+  const { agentStatus } = useWatch();
+
   return (
-    <div className="clea-orb-shell" data-testid="clea-live-orb" aria-hidden="true">
+    <div
+      className={`clea-orb-shell clea-orb-status--${agentStatus}`}
+      data-testid="clea-live-orb"
+      data-agent-status={agentStatus}
+      aria-hidden="true"
+    >
       <div className="clea-orb-ripple" />
       <div className="clea-orb-core">
         <div className="clea-orb-current clea-orb-current--one" />

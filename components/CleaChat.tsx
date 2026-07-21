@@ -4,10 +4,13 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   BoltIcon,
   ChatBubbleLeftRightIcon,
+  ClipboardIcon,
   EyeIcon,
   EyeSlashIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
+  SpeakerWaveIcon,
+  TrashIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import CleaLiveOrb from './CleaLiveOrb';
@@ -18,11 +21,19 @@ type CleaMode = 'closed' | 'chat' | 'live';
 
 export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
-  const { messages, sendMessage, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface } =
-    useCleaAgent();
+  const {
+    messages, sendMessage, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface,
+    setMessages, id: chatId,
+  } = useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof scrollRef.current?.scrollTo !== 'function') return;
+    scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, status, mode]);
 
   useEffect(() => {
     if (mode === 'closed') return;
@@ -110,6 +121,39 @@ export default function CleaChat() {
     sendMessage({ text });
   };
 
+  function getMessageText(message: (typeof messages)[number]): string {
+    return message.parts
+      .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+      .map((part) => part.text)
+      .join(' ');
+  }
+
+  const copyMessage = (message: (typeof messages)[number]) => {
+    navigator.clipboard.writeText(getMessageText(message));
+  };
+
+  const playMessage = async (text: string) => {
+    try {
+      const res = await fetch('/api/tts-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {}
+  };
+
+  const clearChat = async () => {
+    await fetch('/api/clea-chat', { method: 'DELETE', body: JSON.stringify({ id: chatId }) });
+    setMessages([]);
+    localStorage.removeItem('clea-chat-id');
+  };
+
   const microphoneButton = (compact = false) => (
     <button
       type="button"
@@ -184,8 +228,16 @@ export default function CleaChat() {
                 aria-label="Start Clea Live"
                 className="flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1.5 text-xs font-semibold text-primary-600 transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <BoltIcon className="h-3.5 w-3.5" />
+                    <BoltIcon className="h-3.5 w-3.5" />
                 Live
+              </button>
+              <button
+                type="button"
+                onClick={clearChat}
+                aria-label="Clear chat"
+                className="rounded-lg p-2 text-neutral-400 transition hover:bg-neutral-100 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <TrashIcon className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -198,20 +250,46 @@ export default function CleaChat() {
             </div>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto bg-neutral-50 p-4" aria-live="polite">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <p className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                  message.role === 'user'
-                    ? 'rounded-br-md bg-primary-600 text-white'
-                    : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-700'
-                }`}>
-                  {message.parts
-                    .filter((part) => part.type === 'text')
-                    .map((part, index) => <span key={index}>{(part as { text: string }).text}</span>)}
-                </p>
-              </div>
-            ))}
+          <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-neutral-50 p-4" aria-live="polite">
+            {messages.map((message, index) => {
+              const isUser = message.role === 'user';
+              const text = getMessageText(message);
+              return (
+                <div key={message.id || index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    isUser
+                      ? 'rounded-br-md bg-primary-600 text-white'
+                      : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-700'
+                  }`}>
+                    <p>
+                      {message.parts
+                        .filter((part) => part.type === 'text')
+                        .map((part, index) => <span key={index}>{(part as { text: string }).text}</span>)}
+                    </p>
+                    <div className={`mt-1.5 flex gap-1 ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'opacity-60' : 'opacity-40'} hover:opacity-100 transition-opacity`}>
+                      <button
+                        type="button"
+                        onClick={() => copyMessage(message)}
+                        aria-label="Copy message"
+                        className={`rounded p-0.5 transition ${isUser ? 'hover:text-white' : 'hover:text-neutral-900'}`}
+                      >
+                        <ClipboardIcon className="h-3.5 w-3.5" />
+                      </button>
+                      {!isUser && (
+                        <button
+                          type="button"
+                          onClick={() => playMessage(text)}
+                          aria-label="Play message"
+                          className="rounded p-0.5 transition hover:text-neutral-900"
+                        >
+                          <SpeakerWaveIcon className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
             {status === 'submitted' && (
               <div className="flex justify-start">
                 <p className="max-w-[85%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">

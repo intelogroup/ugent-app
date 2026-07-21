@@ -3,6 +3,7 @@ import {
   convertToModelMessages,
   createUIMessageStreamResponse,
   streamText,
+  generateText,
   stepCountIs,
   toUIMessageStream,
   validateUIMessages,
@@ -11,15 +12,112 @@ import {
 } from 'ai';
 import { deepseek } from '@ai-sdk/deepseek';
 import type { ActivitySnapshot } from '@/lib/watch-context';
-import { queryQbank, queryCurriculum } from '@/lib/clea-tools';
-import { loadChat, saveChat } from '@/lib/clea-chat-store';
+import type { QuizAttempt } from '@/lib/quizAttempts';
+import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts } from '@/lib/clea-tools';
+import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
+import { createClient } from '@/lib/supabase/server'
+import { LOCAL_USER_ID, getQuizState } from '@/lib/quiz-server-store';
+import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
 
-function buildSystemPrompt(activity: ActivitySnapshot | null): string {
+// Full history is always persisted (loadChat/saveChat use the untrimmed
+// list). The model's window is everything from `upTo` (how far the summary
+// has caught up to) onward — not a fixed last-40 slice — so nothing is ever
+// dropped from context before it's been folded into the summary. That window
+// is allowed to float between MAX_MODEL_HISTORY and MAX_MODEL_HISTORY +
+// SUMMARY_BATCH_SIZE; once it exceeds the ceiling, the oldest
+// SUMMARY_BATCH_SIZE messages get folded into the summary in one call and
+// `upTo` jumps forward, snapping the window back down near MAX_MODEL_HISTORY.
+// Batching trades summarization frequency (every ~5 turns instead of every
+// turn) for a temporarily larger model window — never a context gap.
+// ponytail: fixed-count tail, not token-aware — bump this or add real token
+// counting if replies start losing relevant older context.
+const MAX_MODEL_HISTORY = 40;
+const SUMMARY_BATCH_SIZE = 10;
+
+function messageText(message: UIMessage): string {
+  return message.parts
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+    .map((part) => part.text)
+    .join(' ');
+}
+
+// Returns the summary text to use this turn, and how many messages (from the
+// start of `allMessages`) it now covers. Only calls the model when enough
+// overflow has piled up past MAX_MODEL_HISTORY + SUMMARY_BATCH_SIZE.
+async function updateSummary(
+  chatId: string,
+  allMessages: UIMessage[]
+): Promise<{ text: string; upTo: number }> {
+  const stored = await loadSummary(chatId);
+  const upTo = stored?.upTo ?? 0;
+  const text = stored?.text ?? '';
+
+  const unsummarizedTail = allMessages.length - upTo;
+  if (unsummarizedTail <= MAX_MODEL_HISTORY + SUMMARY_BATCH_SIZE) {
+    return { text, upTo };
+  }
+
+  const foldCount = unsummarizedTail - MAX_MODEL_HISTORY;
+  const toFold = allMessages.slice(upTo, upTo + foldCount);
+  const transcript = toFold
+    .map((m) => `${m.role}: ${messageText(m)}`)
+    .filter((line) => line.trim().length > 0)
+    .join('\n');
+
+  if (!transcript) {
+    const updated = { text, upTo: upTo + foldCount };
+    await saveSummary(chatId, updated);
+    return updated;
+  }
+
+  const { text: newText } = await generateText({
+    model: deepseek('deepseek-chat'),
+    system:
+      'Summarize this study-assistant conversation excerpt in under 150 words. Keep concrete facts (topics covered, questions asked, decisions made) that would help the assistant continue the conversation naturally. Be terse.',
+    prompt: text
+      ? `Existing summary of earlier turns:\n${text}\n\nNew turns to fold in:\n${transcript}`
+      : `Turns to summarize:\n${transcript}`,
+  });
+
+  const updated = { text: newText, upTo: upTo + foldCount };
+  await saveSummary(chatId, updated);
+  return updated;
+}
+
+function buildAttemptSummary(attempts: QuizAttempt[]): string {
+  if (attempts.length === 0) return '';
+  const total = attempts.length;
+  const totalQ = attempts.reduce((s, a) => s + a.total, 0);
+  const totalCorrect = attempts.reduce((s, a) => s + a.correct, 0);
+  const overallPct = totalQ > 0 ? Math.round((totalCorrect / totalQ) * 100) : 0;
+  const last = attempts[attempts.length - 1];
+  const lastPct = last.total > 0 ? Math.round((last.correct / last.total) * 100) : 0;
+  return ` The student has completed ${total} quiz session(s) (${totalQ} questions, ${overallPct}% overall). Most recent: ${lastPct}% on ${last.subject ?? 'mixed'} (${last.system ?? 'any system'}).`;
+}
+
+function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[]): string {
   const base =
-    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Keep answers short and focused.";
-  if (!activity) return base;
-  const subjectLabel = activity.subject ? ` (${activity.subject}${activity.system ? `, ${activity.system}` : ''})` : '';
-  return `${base} The student is currently on quiz question ${activity.questionNumber} of ${activity.totalQuestions}${subjectLabel}, difficulty: ${activity.difficulty}. They have answered ${activity.totalAnsweredSoFar} questions so far, ${activity.correctSoFar} correctly. Use this context to tailor your answer when relevant.`;
+    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Answer in 1-3 short sentences, plain prose. Use simple, everyday words over medical jargon or fancy vocabulary whenever a plain word means the same thing — this helps students understand complex concepts. When a technical term is necessary, briefly say what it means in plain words. Always call searchPathoma and/or searchFirstAid before answering any USMLE content question, and base your answer on their returned excerpts rather than on your own training knowledge — only fall back to your own knowledge if both searches return no hits. You can call queryMyAttempts to see the student's past quiz performance. Never use markdown formatting of any kind: no asterisks, no **bold**, no bullet points, no numbered lists, no headers, no dashes-as-bullets. If you need to list options, name them inline in a single sentence separated by commas. The user speaks through automatic speech recognition which can mishear words. If a word seems like a phonetic misspelling of a medical term, infer the intended term and respond accordingly.";
+  const selectionLine = activity && activity.hasSelectedAnswer
+    ? activity.currentQuestionCorrect !== null
+      ? activity.currentQuestionCorrect
+        ? ' They got this question correct.'
+        : ' They got this question wrong.'
+      : ' They have selected an answer but not yet submitted it.'
+    : '';
+  const questionBlock = activity
+    ? ` Current question text: "${activity.questionText}" Answer choices: ${activity.optionTexts
+        .map((t, i) => `${String.fromCharCode(65 + i)}) ${t}`)
+        .join(', ')}.${activity.selectedOptionText ? ` They have selected: "${activity.selectedOptionText}".` : ''}`
+    : '';
+  const activityLine = activity
+    ? ` The student is currently on quiz question ${activity.questionNumber} of ${activity.totalQuestions}${
+        activity.subject ? ` (${activity.subject}${activity.system ? `, ${activity.system}` : ''})` : ''
+      }, difficulty: ${activity.difficulty}. They have answered ${activity.totalAnsweredSoFar} questions so far, ${activity.correctSoFar} correctly.${selectionLine}${questionBlock} Use this context to tailor your answer when relevant — if asked "what's on my screen" or for help on the current question, answer directly from this text instead of saying you can't see it.`
+    : '';
+  const attemptBlock = buildAttemptSummary(attempts);
+  const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
+  return `${base}${activityLine}${attemptBlock}${summaryBlock}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -31,20 +129,49 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(messages);
 }
 
+export async function DELETE(request: NextRequest) {
+  const { id } = (await request.json()) as { id: string };
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+  await deleteChat(id);
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(request: NextRequest) {
   if (!process.env.DEEPSEEK_API_KEY) {
     return NextResponse.json({ error: 'DEEPSEEK_API_KEY not configured' }, { status: 500 });
   }
 
-  const { id, message, activity } = (await request.json()) as {
+  const { id, message, activity: clientActivity, quizAttempts: clientAttempts } = (await request.json()) as {
     id: string;
     message: UIMessage;
     activity: ActivitySnapshot | null;
+    quizAttempts: QuizAttempt[];
   };
 
   if (!id || !message) {
     return NextResponse.json({ error: 'id and message are required' }, { status: 400 });
   }
+
+  const serverState = await getQuizState(LOCAL_USER_ID);
+  const activity = serverState.activity ?? clientActivity;
+
+  const supabase = await createClient()
+  const { data: attemptsData } = await supabase
+    .from('quiz_attempts')
+    .select('*')
+    .order('created_at', { ascending: false })
+  const attempts: QuizAttempt[] = (attemptsData || []).map((row: any) => ({
+    timestamp: new Date(row.created_at).getTime(),
+    subject: row.subject,
+    system: row.system,
+    total: row.total_questions,
+    correct: row.correct_answers,
+    timeSpentSeconds: row.time_spent_seconds,
+  }))
+
+  const queryMyAttempts = makeQueryMyAttempts(attempts);
 
   const previousMessages = await loadChat(id);
 
@@ -56,7 +183,7 @@ export async function POST(request: NextRequest) {
       // parameterized UIMessage<...> generic; without one, TS can't unify
       // our concrete tool() definitions with its default unknown/unknown
       // shape even though they're structurally compatible at runtime.
-      tools: { queryQbank, queryCurriculum } as unknown as Record<string, never>,
+      tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts } as unknown as Record<string, never>,
     });
   } catch (error) {
     if (error instanceof TypeValidationError) {
@@ -67,14 +194,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const { text: summary, upTo } = await updateSummary(id, validatedMessages);
+  const recentMessages = validatedMessages.slice(upTo);
+
   const result = streamText({
     model: deepseek('deepseek-chat'),
-    system: buildSystemPrompt(activity),
-    messages: await convertToModelMessages(validatedMessages),
-    tools: { queryQbank, queryCurriculum },
-    stopWhen: stepCountIs(4),
+    system: buildSystemPrompt(activity, summary, attempts),
+    messages: await convertToModelMessages(recentMessages),
+    tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts },
+    stopWhen: stepCountIs(8),
     onError: ({ error }) => {
-      console.error('clea-chat streamText error', error);
+      void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);
     },
   });
 
@@ -84,6 +214,7 @@ export async function POST(request: NextRequest) {
     stream: toUIMessageStream({
       stream: result.stream,
       originalMessages: validatedMessages,
+      onError: clientErrorMessage,
       onEnd: ({ messages }) => {
         void saveChat({ chatId: id, messages });
       },

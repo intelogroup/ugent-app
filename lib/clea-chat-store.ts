@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from 'fs';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import type { UIMessage } from 'ai';
 
@@ -39,4 +39,36 @@ export async function saveChat({
   const file = getChatFile(chatId);
   if (!existsSync(STORE_DIR)) mkdirSync(STORE_DIR, { recursive: true });
   await writeFile(file, JSON.stringify(messages, null, 2));
+}
+
+export type ChatSummary = {
+  text: string;
+  // Count of messages (from the start of the full history) already folded
+  // into `text` — lets the caller re-summarize only the newly aged-out
+  // messages instead of redoing the whole conversation each time.
+  upTo: number;
+};
+
+function getSummaryFile(id: string): string {
+  return getChatFile(id).replace(/\.json$/, '.summary.json');
+}
+
+export async function loadSummary(id: string): Promise<ChatSummary | null> {
+  const file = getSummaryFile(id);
+  if (!existsSync(file)) return null;
+  const raw = await readFile(file, 'utf8');
+  return JSON.parse(raw) as ChatSummary;
+}
+
+export async function deleteChat(id: string): Promise<void> {
+  const file = getChatFile(id);
+  const summaryFile = getSummaryFile(id);
+  await unlink(file).catch(() => {});
+  await unlink(summaryFile).catch(() => {});
+}
+
+export async function saveSummary(id: string, summary: ChatSummary): Promise<void> {
+  const file = getSummaryFile(id);
+  if (!existsSync(STORE_DIR)) mkdirSync(STORE_DIR, { recursive: true });
+  await writeFile(file, JSON.stringify(summary, null, 2));
 }

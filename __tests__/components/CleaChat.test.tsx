@@ -99,8 +99,13 @@ const sampleActivity: ActivitySnapshot = {
   system: 'Cardiovascular',
   difficulty: 'medium',
   isAnswered: false,
+  hasSelectedAnswer: false,
+  currentQuestionCorrect: null,
   correctSoFar: 1,
   totalAnsweredSoFar: 2,
+  questionText: 'A 45-year-old man presents with chest pain.',
+  optionTexts: ['MI', 'GERD'],
+  selectedOptionText: null,
 };
 
 describe('CleaChat + Watch', () => {

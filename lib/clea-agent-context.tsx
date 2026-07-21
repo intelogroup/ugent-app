@@ -7,6 +7,9 @@ import { useWatch } from '@/lib/watch-context';
 import { useContinuousMic } from '@/lib/use-continuous-mic';
 import { useWhisperMic } from '@/lib/use-whisper-mic';
 import { getWhisperPipeline } from '@/lib/whisper-pipeline';
+import { correctText, stripTranscriptNoise } from '@/lib/asr-correct';
+import { logAsrTurn, getAsrLog, getAsrCorrections } from '@/lib/asr-log';
+import { getQuizAttempts } from '@/lib/quizAttempts';
 
 const CHAT_ID_KEY = 'clea-chat-id';
 
@@ -32,11 +35,16 @@ type CleaAgentValue = ReturnType<typeof useChat> & {
   // avatar and the live orb can never both speak the same reply.
   voiceSurface: VoiceSurface;
   setVoiceSurface: (surface: VoiceSurface) => void;
-  // True while TTS audio is actually playing out loud. Without speakers
-  // muting the mic, Clea's own voice re-enters the mic and gets transcribed
-  // as if the user said it — so mic capture pauses whenever this is true.
+  // True while TTS audio is actually playing out loud. The Whisper mic path
+  // (use-whisper-mic.ts) stays capturing through this and treats a loud,
+  // sustained onset as a barge-in; the SpeechRecognition fallback has no
+  // energy-level access to do the same, so it still hard-mutes on this flag.
   isSpeaking: boolean;
   setIsSpeaking: (speaking: boolean) => void;
+  // Whichever surface is currently playing TTS (e.g. FloatingAvatar) registers
+  // its stop function here so a mic-detected barge-in can kill that playback
+  // immediately, regardless of which component owns the audio element.
+  registerSpeechInterrupt: (handler: (() => void) | null) => void;
 };
 
 const CleaAgentContext = createContext<CleaAgentValue | null>(null);
@@ -60,7 +68,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
     transport: new DefaultChatTransport({
       api: '/api/clea-chat',
       prepareSendMessagesRequest: ({ id, messages }) => ({
-        body: { id, message: messages[messages.length - 1], activity: activityRef.current },
+        body: { id, message: messages[messages.length - 1], activity: activityRef.current, quizAttempts: getQuizAttempts() },
       }),
     }),
   });
@@ -131,14 +139,38 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   // the time the user actually presses the mic button.
   useEffect(() => {
     if (hasWebGpu) getWhisperPipeline().catch((err) => console.error('whisper warm-up failed', err));
+    // Console handles to review ASR turns and mine dictionary candidates.
+    (window as unknown as Record<string, unknown>).asrLog = getAsrLog;
+    (window as unknown as Record<string, unknown>).asrMisses = getAsrCorrections;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onTranscript = (text: string) => queuedSendMessage({ text });
+  const onTranscript = (text: string) => {
+    const cleaned = stripTranscriptNoise(text);
+    const corrected = cleaned ? correctText(cleaned) : '';
+    logAsrTurn(text, corrected); // record raw + what reached the LLM
+    if (!corrected) return;
+    queuedSendMessage({ text: corrected });
+  };
 
-  const micCaptureActive = micActive && !isSpeaking;
-  const { modelLoading: whisperLoading } = useWhisperMic(micCaptureActive && hasWebGpu, onTranscript);
-  useContinuousMic(micCaptureActive && !hasWebGpu, onTranscript);
+  const speechInterruptRef = useRef<(() => void) | null>(null);
+  const registerSpeechInterrupt = (handler: (() => void) | null) => {
+    speechInterruptRef.current = handler;
+  };
+  const onBargeIn = () => {
+    speechInterruptRef.current?.();
+    setIsSpeaking(false);
+  };
+
+  const { modelLoading: whisperLoading } = useWhisperMic(
+    micActive && hasWebGpu,
+    isSpeaking,
+    onTranscript,
+    onBargeIn
+  );
+  // No raw audio access via SpeechRecognition, so it can't tell a barge-in
+  // from TTS bleed — keep the hard mute for this fallback path.
+  useContinuousMic(micActive && !isSpeaking && !hasWebGpu, onTranscript);
   const micModelLoading = hasWebGpu && whisperLoading;
 
   return (
@@ -153,6 +185,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
         setVoiceSurface,
         isSpeaking,
         setIsSpeaking,
+        registerSpeechInterrupt,
       }}
     >
       {children}
