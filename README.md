@@ -1,160 +1,157 @@
 # UGent - AI-Powered Medical Education Platform
 
-A comprehensive, data-heavy medical education platform with user interaction tracking, personalized learning paths, and AI-powered recommendations.
+A comprehensive USMLE study platform with AI-powered analytics, personalized curriculum, voice assistant, and talking avatar.
 
-## 🚀 Quick Start
+## Quick Start
 
-### Get Started in 3 Steps
-
-1. **Set Up Environment Variables**
-   - Copy `.env.example` to `.env.local`
-   - Fill in your Convex, WorkOS, OpenAI, and Stripe keys
-
-2. **Run Development Server**
+1. **Copy env file**
    ```bash
+   cp .env.example .env.local
+   ```
+2. **Install + run**
+   ```bash
+   npm install
    npm run dev
    ```
+3. **Ensure data files** exist in `data/` (see Data Files below)
 
-3. **Start Convex Backend** (in a separate terminal)
-   ```bash
-   npx convex dev
-   ```
-
-## ✨ Features
+## Features
 
 ### Frontend
-- Modern dashboard with analytics
-- Interactive test creation (26 medical systems, 250+ topics)
+- Dashboard with performance analytics (Recharts)
+- 19-week data-driven study curriculum
 - Quiz interface with real-time feedback
-- Study notes management
-- Performance analytics with charts
-- Responsive design (mobile-first)
+- Clea AI study assistant (chat + voice + avatar)
+- Disease reference, leaderboard, strategy hub
+- Responsive (mobile-first)
 
 ### Backend
-- **Convex** - Real-time database and backend functions
-- **WorkOS** - Authentication and user management
-- **Stripe** - Payments and subscriptions
-- **OpenAI** - AI-powered insights and recommendations
-- **Comprehensive tracking** - Every user action logged and analyzed
+- **Supabase Auth** - Login/session management
+- **Local JSONL** - Question bank (Convex disabled, kept as migration ref)
+- **Clea chat** - AI assistant via DeepSeek/OpenAI
+- **ASR pipeline** - OpenAI Whisper -> local whisper.cpp -> in-browser fallback
+- **TTS + Wav2Lip** - Kokoro TTS + Wav2Lip avatar (local GPU servers)
 
-## 🏗️ Architecture & Data Flow
+## Architecture & Data Flow
 
-Currently, the platform runs in a hybrid mode. **Convex backend functions are disabled** due to free plan limits. Therefore:
-- The UI reads primary study data directly from local JSONL files in `data/`.
-- Local services in `lib/services/` act as data layers.
-- Speech-to-Text (STT) and Text-to-Speech (TTS) models (e.g. Kokoro, MeloTTS) run locally on macOS MPS (Apple Silicon).
+All study data reads from local JSONL files. Convex backend is disabled (free-plan limit). Auth via Supabase. Voice/TTS/Wav2Lip run as local Python servers.
 
 ```
-[Next.js 16 App Router (React 19)]
-        │ (Reads local data / fallback services)
-        ├──► [lib/curriculum/ (Generator Engine)] ◄──┐
-        │                                            │ (JSONL data)
-        ├──► [lib/services/ (Question Services)] ◄───┼──► [data/*.jsonl]
-        │                                            │
-        └──► [macOS Local TTS / STT Scripts] ◄───────┘
+[Next.js 16 (Vercel)]
+  │
+  ├──► [Supabase Auth] ───── login/session
+  │
+  ├──► [data/*.jsonl] ────── question bank + curriculum
+  │
+  ├──► [/api/clea-chat] ──── DeepSeek/OpenAI AI assistant
+  │
+  └──► Local warm servers (macOS): ─── optional for prod via tunnel
+        ├── Kokoro TTS  :8767
+        ├── Piper TTS   :8768  (fallback)
+        └── Wav2Lip     :8765  (env-var-ified, tunnel to Vercel)
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ugent-app/
-├── .agents/                 # Workspace customizations and rules
-├── app/                     # Next.js 16 App Router (UI Pages & API Routes)
-│   ├── actions/             # Next.js Server Actions
-│   ├── analytics/           # Student performance charts & metrics
-│   ├── api/                 # API Endpoints (e.g., /api/curriculum)
-│   ├── auth/                # Sign-in and sign-up interfaces
-│   ├── callback/            # WorkOS AuthKit callback redirect handler
-│   ├── create-test/         # Custom quiz creation configuration
-│   ├── curriculum/          # 19-week data-driven study curriculum UI
-│   ├── dashboard/           # Main summary dashboard & statistics
-│   ├── diseases/            # Disease explorer and details
-│   ├── leaderboard/         # Peer performance leaderboard page
-│   ├── notes/               # Study notes management dashboard
-│   ├── quiz/                # Interactive question-by-question quiz runner
-│   ├── research/            # Ingester UI for extracting questions via AI/Vision
-│   ├── search/              # Multi-book and Qbank search page
-│   ├── settings/            # Student profile & system configuration
-│   ├── simulators/          # NBME simulator interface
-│   ├── strategy/            # Strategy Hub (Priority diseases, clue trainer, graph)
-│   └── tests/               # Historical quiz sessions list
-├── components/              # Shared & layout UI components
-│   ├── auth/                # Authentication guards and forms
-│   ├── research/            # Ingestion cards and dropzones
-│   ├── strategy/            # Disease priority tables, visual dependency graph
-│   ├── DashboardLayout.tsx  # Master layout shell
-│   ├── Sidebar.tsx          # Navigation sidebar
-│   └── MobileNav.tsx        # Mobile navigation header
-├── convex/                  # Convex serverless functions (Schemas, AI Ingest, Queries)
-│   ├── schema.ts            # Canonical data definitions
-│   ├── questions.ts         # Qbank operations
-│   ├── ai.ts                # DeepSeek-based enrichment
-│   └── _generated/          # Autogenerated Convex client/server files
-├── data/                    # Local Qbank files (Primary database fallback)
-│   ├── medicospira-questions.jsonl # Raw Q&A pairs (text, choices, answer)
-│   ├── medicospira-enriched.jsonl  # AI-enriched metadata (disease, system, discriminators)
-│   ├── classified-questions.jsonl  # Parsed & keyword-classified question files
-│   └── medicospira-blobs.jsonl     # Raw scraped raw HTML page blobs
-├── lib/                     # System Engines & Utilities
-│   ├── curriculum/          # Curriculum Generator engine
-│   │   ├── analyzer.ts      # Parses JSONL, builds dependency graph, maps systems
-│   │   ├── generator.ts     # Rules-based study days/blocks generator
-│   │   └── types.ts         # TypeScript interfaces for curriculum logic
-│   ├── services/            # Local file operations fallback service layer
-│   │   ├── questionService.ts # Local Qbank file reader/writer
-│   │   └── aiPatternService.ts # Local diagnostic pattern analyzer
-│   ├── hooks/               # Shared React custom hooks
-│   ├── navigation.ts        # Sidebar & MobileNav routes configuration
-│   └── stripe.ts            # Stripe payment processor integration helper
-├── scripts/                 # Developer scripts, local models & pipeline utilities
-│   ├── tts_stream_play.py   # High-performance Kokoro TTS audio player (MPS)
-│   ├── kokoro_tts.py        # Kokoro engine bindings
-│   ├── tutor-daemon.py      # Background study assistant daemon
-│   ├── extract-vision.mjs   # Puppeteer script for image-based USMLE questions
-│   ├── classify-local.py    # Local keyword-based system classifier
-│   ├── deepseek-enrich.mjs  # AI enrichment batch processor (DeepSeek API)
-│   ├── index_books.py       # First Aid and Pathoma PDF indexing tool
-│   ├── rebuild_lancedb.py   # RAG vector database manager
-│   └── audit-quality.ts     # Qbank answer validation & audit script
-├── tests/                   # Jest & Playwright integration/unit tests
-└── __tests__/               # Frontend & logic unit tests (Vitest)
+├── app/                     # Next.js 16 App Router
+│   ├── analytics/           # Performance charts
+│   ├── api/                 # API routes
+│   │   ├── clea-chat/       # AI assistant chat
+│   │   ├── curriculum/      # Curriculum generator
+│   │   ├── quiz-data/       # Question bank access
+│   │   ├── tts-audio/       # Kokoro TTS proxy
+│   │   ├── whisper-transcribe/ # ASR
+│   │   ├── lipsync-test/    # Wav2Lip proxy (env-var-ified)
+│   │   ├── lipsync-tts/     # ElevenLabs + Wav2Lip
+│   │   └── ...
+│   ├── auth/                # Supabase Auth pages
+│   ├── create-test/         # Quiz creation
+│   ├── curriculum/          # 19-week study timeline UI
+│   ├── dashboard/           # Main dashboard
+│   ├── diseases/            # Disease reference
+│   ├── leaderboard/         # Peer comparison
+│   ├── quiz/                # Quiz runner
+│   ├── settings/            # User settings
+│   ├── strategy/            # Strategy hub
+│   └── tests/               # Test history
+├── components/
+│   ├── CleaChat.tsx         # Chat sidebar
+│   ├── CleaLiveOrb.tsx      # Live orb UI
+│   ├── FloatingAvatar.tsx   # Wav2Lip avatar canvas
+│   ├── DashboardLayout.tsx  # Layout shell
+│   ├── Sidebar.tsx          # Nav sidebar
+│   └── MobileNav.tsx        # Mobile nav
+├── convex/                  # Kept as migration reference (not live)
+├── data/                    # Question bank JSONL files
+│   ├── classified-questions.jsonl
+│   ├── medicospira-enriched.jsonl
+│   ├── medicospira-questions.jsonl
+│   └── medicospira-blobs.jsonl
+├── lib/
+│   ├── clea-agent-context.tsx  # Voice/chat state machine
+│   ├── asr-correct.ts          # ASR correction layer
+│   ├── asr-dictionary.json     # Medical term dictionary
+│   ├── whisper-pipeline.ts     # In-browser Whisper
+│   ├── use-whisper-mic.ts      # WebGPU mic hook
+│   ├── use-continuous-mic.ts   # SpeechRecognition fallback
+│   ├── navigation.ts           # Route config
+│   ├── curriculum/             # Generator engine
+│   └── supabase/               # Supabase client
+├── scripts/                 # Python/JS utilities
+│   ├── local-kokoro-server.py # TTS server (:8767)
+│   ├── local-piper-server.py  # TTS fallback (:8768)
+│   ├── local-whisper-server.py# ASR fallback (:8766)
+│   ├── tts_stream_play.py     # Kokoro MPS player
+│   ├── classify-local.py      # Keyword classifier
+│   ├── deepseek-enrich.mjs    # AI enrichment
+│   ├── extract-vision.mjs     # Vision pipeline
+│   └── ...
+├── scratch/lipsync_test/Wav2Lip/  # Wav2Lip server (:8765)
+├── tests/
+└── __tests__/
 ```
 
-## 💻 Local Development
+## Local Development
 
-### Setup Local Qbank
-All study tools, quizzes, and curriculum generation run directly off the local files under `data/`. Ensure that `medicospira-enriched.jsonl` and `classified-questions.jsonl` are present in your workspace directory before running the frontend.
+Ensure `data/classified-questions.jsonl` and `data/medicospira-enriched.jsonl` exist before running.
 
-### Install & Run
 ```bash
-# Install dependencies
 npm install
-
-# Start Next.js development server (runs local jsonl fallbacks)
 npm run dev
 ```
 
-### Running Tests
+For voice/avatar features, start local servers (separate terminals):
 ```bash
-# Run unit & logic tests
-npm run test
-
-# Run Playwright E2E tests
-npx playwright test
+cd scratch/lipsync_test/Wav2Lip && ./venv/bin/python3 server.py --face inputs/clea_480p.mp4  # :8765
+python3 scripts/local-kokoro-server.py   # :8767
+python3 scripts/local-piper-server.py    # :8768
+python3 scripts/local-whisper-server.py  # :8766
 ```
 
-## 🛠️ Tech Stack
+To use avatar from Vercel prod, tunnel Wav2Lip via cloudflared:
+```bash
+cloudflared tunnel --url http://localhost:8765
+# Set NEXT_PUBLIC_WAV2LIP_WS_URL + WAV2LIP_HTTP_URL in Vercel env
+```
 
-- **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS v4 + TypeScript + Recharts
-- **Local Data**: JSONL files indexed and read dynamically via Node.js
+### Tests
+```bash
+npm run test       # Vitest
+npx playwright test  # E2E
+```
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
+- **Styling**: Tailwind CSS v4 + Recharts
 - **Auth**: Supabase Auth (`@supabase/ssr`)
-- **Payments**: Stripe
-- **AI & Vision Pipeline**: Local `qwen2.5vl:3b` model (Ollama) + DeepSeek V3/R1 APIs
-- **TTS Engine**: Kokoro TTS (via PyTorch MPS) / MeloTTS FR
+- **Data**: Local JSONL (Convex kept as migration ref, not live)
+- **AI Chat**: DeepSeek / OpenAI via Vercel AI SDK
+- **ASR**: OpenAI Whisper -> local whisper.cpp -> in-browser Whisper
+- **TTS**: Kokoro (primary) / Piper (fallback) — local Python servers
+- **Avatar**: Wav2Lip (PyTorch MPS/CUDA) — env-var-ified, tunnel to prod
 - **Testing**: Jest + Vitest + Playwright
 
 ---
-
-**Status**: 🚀 Local Qbank Fallback Mode Active
-**Version**: 0.2.0
-**Last Updated**: June 2026
