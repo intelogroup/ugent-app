@@ -147,7 +147,7 @@ npx playwright test
 
 - **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS v4 + TypeScript + Recharts
 - **Local Data**: JSONL files indexed and read dynamically via Node.js
-- **Auth**: WorkOS AuthKit (`@workos-inc/authkit-nextjs`)
+- **Auth**: Supabase Auth (`@supabase/ssr`)
 - **Payments**: Stripe
 - **AI & Vision Pipeline**: Local `qwen2.5vl:3b` model (Ollama) + DeepSeek V3/R1 APIs
 - **TTS Engine**: Kokoro TTS (via PyTorch MPS) / MeloTTS FR

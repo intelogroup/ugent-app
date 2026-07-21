@@ -1,12 +1,12 @@
 # Ugent — USMLE Study Platform
 
 ## Overview
-Next.js 16 (App Router), Convex backend (disabled), WorkOS AuthKit.
+Next.js 16 (App Router), Convex backend (disabled), Supabase Auth (@supabase/ssr).
 
 ## Stack
 - Frontend: Next.js 16 (React 19), Tailwind v4, Recharts, Heroicons
 - Backend: Convex disabled (free plan limit) — local JSONL in `data/` is real source
-- Auth: WorkOS AuthKit
+- Auth: Supabase Auth (@supabase/ssr)
 - Testing: Jest + Vitest + Playwright
 
 ## Key Directories

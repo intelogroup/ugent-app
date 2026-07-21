@@ -215,4 +215,3 @@ Manually verify in browser:
 1. **Convex `"use node"` files**: `// @ts-nocheck` MUST be line 1, `"use node"` line 2. Already fixed in `convex/ai.ts`.
 2. **Convex `triggerBatchIfReady`**: passes only `ingestionId` to scheduler (not full `rawText`) to stay within Convex arg size limits.
 3. **`zodToJsonSchema` broken on Zod 4.x**: using inline JSON schema in `convex/ai.ts`. Don't reintroduce `zodToJsonSchema`.
-4. **`WORKOS_REDIRECT_URI`**: not written by `vercel env pull` — must be appended manually after pull if needed.
