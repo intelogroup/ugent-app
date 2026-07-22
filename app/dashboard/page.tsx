@@ -7,9 +7,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { getQuizAttempts, getCompletedCurriculumBlocks, QuizAttempt } from '@/lib/quizAttempts';
 import Avatar from '@/components/Avatar';
 import {
-  MagnifyingGlassIcon,
   ChevronDownIcon,
-  SparklesIcon,
   ChartPieIcon,
   DocumentTextIcon,
   Squares2X2Icon,
@@ -72,16 +70,6 @@ export default function Home() {
           </div>
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="pill-glass flex items-center gap-2 rounded-full pl-3 pr-4 py-2">
-              <SparklesIcon className="w-4 h-4 text-primary-600 shrink-0" />
-              <input
-                type="text"
-                placeholder="Aegis Search..."
-                className="bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none w-36"
-              />
-              <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 shrink-0" />
-            </div>
-
             <div className="relative">
               <button
                 onClick={() => setIsCleaMenuOpen((open) => !open)}
