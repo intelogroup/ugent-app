@@ -5,6 +5,16 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getQuizAttempts, getCompletedCurriculumBlocks, QuizAttempt } from '@/lib/quizAttempts';
+import Avatar from '@/components/Avatar';
+import {
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+  SparklesIcon,
+  ChartPieIcon,
+  DocumentTextIcon,
+  Squares2X2Icon,
+  FaceSmileIcon,
+} from '@heroicons/react/24/outline';
 
 const CHART_COLORS = ['var(--color-primary-600)', 'var(--color-neutral-700)', 'var(--color-neutral-500)', 'var(--color-neutral-300)'];
 
@@ -36,6 +46,7 @@ export default function Home() {
 
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [blocksCompleted, setBlocksCompleted] = useState(0);
+  const [isCleaMenuOpen, setIsCleaMenuOpen] = useState(false);
 
   useEffect(() => {
     getQuizAttempts().then(setAttempts);
@@ -52,28 +63,71 @@ export default function Home() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-neutral-900">Good morning, {userName}</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-neutral-900">Good morning, {userName}</h1>
+            <p className="text-sm text-neutral-500 mt-0.5">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-white/50 rounded-full pl-3 pr-4 py-2 shadow-sm">
+              <SparklesIcon className="w-4 h-4 text-primary-600 shrink-0" />
+              <input
+                type="text"
+                placeholder="Aegis Search..."
+                className="bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none w-36"
+              />
+              <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 shrink-0" />
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setIsCleaMenuOpen((open) => !open)}
+                className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-white/50 rounded-full pl-1.5 pr-3 py-1.5 shadow-sm hover:bg-white/80 transition-colors"
+              >
+                <Avatar size="sm" />
+                <span className="text-sm font-medium text-neutral-900">Clea</span>
+                <ChevronDownIcon className={`w-4 h-4 text-neutral-400 transition-transform ${isCleaMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCleaMenuOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white/90 backdrop-blur-md border border-white/50 rounded-lg shadow-lg overflow-hidden z-10">
+                  <Link href="/settings" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100">Settings</Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6">
-          <div className="stat-card">
+          <div className="stat-card-glass relative">
+            <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
+              <ChartPieIcon className="w-5 h-5 text-primary-600" />
+            </div>
             <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Avg Score</p>
             <p className="text-2xl font-bold text-neutral-900">{avgScore}%</p>
           </div>
-          <div className="stat-card">
+          <div className="stat-card-glass relative">
+            <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
+              <DocumentTextIcon className="w-5 h-5 text-primary-600" />
+            </div>
             <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Tests Done</p>
             <p className="text-2xl font-bold text-neutral-900">{attempts.length}</p>
           </div>
-          <div className="stat-card">
+          <div className="stat-card-glass relative">
+            <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
+              <Squares2X2Icon className="w-5 h-5 text-primary-600" />
+            </div>
             <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Curriculum Blocks</p>
             <p className="text-2xl font-bold text-neutral-900">{blocksCompleted}</p>
           </div>
-          <div className="stat-card">
+          <div className="stat-card-glass relative">
+            <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
+              <FaceSmileIcon className="w-5 h-5 text-primary-600" />
+            </div>
             <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Questions</p>
             <p className="text-2xl font-bold text-neutral-900">{totalQuestions}</p>
           </div>
@@ -86,7 +140,7 @@ export default function Home() {
         </div>
 
         {/* Recent Activity — mobile only */}
-        <div className="md:hidden card">
+        <div className="md:hidden card-glass">
           <h3 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide mb-3">Recent</h3>
           {performanceData.length === 0 ? (
             <div className="text-center py-6">
@@ -108,7 +162,7 @@ export default function Home() {
         {/* Charts — desktop only */}
         <div className="hidden md:grid grid-cols-2 gap-6">
           {/* Performance Trend */}
-          <div className="card">
+          <div className="card-glass">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-neutral-900">Performance Trend</h3>
@@ -153,7 +207,7 @@ export default function Home() {
           </div>
 
           {/* Subject Performance */}
-          <div className="card">
+          <div className="card-glass">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-neutral-900">Subject Breakdown</h3>

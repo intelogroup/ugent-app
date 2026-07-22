@@ -9,7 +9,7 @@ test.describe('Create Test Flow', () => {
 
   test.beforeEach(async ({ page }) => {
     // Go to the login page
-    await page.goto('/login');
+    await page.goto('/auth/login');
 
     // Fill in login form
     await page.fill('input[type="email"]', TEST_USER.email);

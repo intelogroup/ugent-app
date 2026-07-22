@@ -24,8 +24,8 @@ const SPEECH_ONSET_MS = 150;
 // barge-in latency for not self-interrupting on TTS bleed.
 // ponytail: untuned guess — lower this (toward SILENCE_RMS_THRESHOLD) if
 // barge-in isn't firing on real speech, raise it if TTS bleed triggers it.
-const BARGE_RMS_THRESHOLD = 0.025;
-const BARGE_ONSET_MS = 200;
+const BARGE_RMS_THRESHOLD = 0.045;
+const BARGE_ONSET_MS = 400;
 
 /** Continuously listens to the mic while `active`, using an in-browser Whisper
  *  pipeline gated by energy-based VAD. Recording never stops while a previous

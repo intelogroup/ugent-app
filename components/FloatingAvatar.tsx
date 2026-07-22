@@ -112,6 +112,8 @@ export default function FloatingAvatar() {
       let fps = 25;
       let videoStarted = false;
       let audioStarted = false;
+      let videoStartedAt: number | null = null;
+      let audioStartedAt: number | null = null;
       let chunkCount = 0;
       const chunks: Uint8Array[] = [];
 
@@ -123,6 +125,12 @@ export default function FloatingAvatar() {
         setIsSpeaking(true);
         setLatencyMs(ms);
         audio.play().catch((err) => console.error('audio.play() failed', err));
+        audioStartedAt = ms;
+        logSyncGap();
+      };
+      const logSyncGap = () => {
+        if (audioStartedAt == null || videoStartedAt == null) return;
+        console.log(`[tts] SYNC GAP audio->video: ${(videoStartedAt - audioStartedAt).toFixed(0)}ms`);
       };
 
       // Detect audio format from response — local TTS returns WAV,
@@ -212,7 +220,11 @@ export default function FloatingAvatar() {
                 sourceBuffer!.addEventListener('error', () => reject(new Error('sourceBuffer append failed')), { once: true });
                 sourceBuffer!.appendBuffer(value as BufferSource);
               });
-              if (isFirst) startAudioPlayback();
+              // MP3+lipsync path: video lags behind (full-buffer decode + cloud
+              // inference round trip), so starting audio on first chunk makes
+              // the avatar fall behind its own voice. Hold audio until video's
+              // first frames are ready (see ws.onmessage) so they start together.
+              if (isFirst && (isWav || !ws)) startAudioPlayback();
             }
           }
           if (mediaSource && mediaSource.readyState === 'open') mediaSource.endOfStream();
@@ -226,18 +238,38 @@ export default function FloatingAvatar() {
             audio.src = URL.createObjectURL(new Blob([merged], { type: audioType }));
             startAudioPlayback();
           }
-          // For MP3 (ElevenLabs): send merged buffer after full download
+          // For MP3 (ElevenLabs): /lipsync-stream wants raw int16 PCM, not
+          // compressed audio — decode via Web Audio first. Shipping the raw
+          // MP3 bytes as if they were PCM fed the mel pipeline near-silent
+          // noise, so the mouth never moved even though frames still streamed.
           if (!isWav && chunkCount > 0 && ws) {
+            console.log(`[tts] MP3 decode starting at +${(performance.now() - t0).toFixed(0)}ms`);
             const total = chunks.reduce((sum, c) => sum + c.length, 0);
             const merged = new Uint8Array(total);
             let offset = 0;
             for (const c of chunks) { merged.set(c, offset); offset += c.length; }
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(merged);
-            } else {
-              pcmBuffer.push(merged);
+
+            const audioCtx = new AudioContext();
+            const decoded = await audioCtx.decodeAudioData(merged.buffer.slice(0));
+            const channel = decoded.getChannelData(0);
+            const pcm16 = new Int16Array(channel.length);
+            for (let i = 0; i < channel.length; i++) {
+              const s = Math.max(-1, Math.min(1, channel[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
             }
-            console.log(`[tts] sent/queued merged MP3 buffer (${total} bytes) for Wav2Lip`);
+            const pcmBytes = new Uint8Array(pcm16.buffer);
+            audioCtx.close();
+
+            const send = () => {
+              ws.send(JSON.stringify({ sampleRate: decoded.sampleRate }));
+              ws.send(pcmBytes);
+            };
+            if (ws.readyState === WebSocket.OPEN) {
+              send();
+            } else {
+              ws.addEventListener('open', send, { once: true });
+            }
+            console.log(`[tts] decoded MP3 -> PCM (${pcmBytes.byteLength} bytes @ ${decoded.sampleRate}Hz) for Wav2Lip`);
           }
         } catch (err) {
           console.error('[tts] read error', err);
@@ -283,7 +315,10 @@ export default function FloatingAvatar() {
 
           if (!videoStarted && frames.size >= PREBUFFER_FRAMES) {
             videoStarted = true;
-            console.log(`[tts] VIDEO STARTED (${PREBUFFER_FRAMES} frames prebuffered) at +${(performance.now() - t0).toFixed(0)}ms`);
+            videoStartedAt = performance.now() - t0;
+            console.log(`[tts] VIDEO STARTED (${PREBUFFER_FRAMES} frames prebuffered) at +${videoStartedAt.toFixed(0)}ms`);
+            if (!isWav) startAudioPlayback(); // MP3 path: sync audio start to video readiness
+            logSyncGap();
             setStreaming(true);
 
             let lastDrawnIdx = -1;

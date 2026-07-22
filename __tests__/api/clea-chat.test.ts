@@ -14,12 +14,30 @@ jest.mock('next/server', () => ({
   },
 }));
 
-import { rmSync } from 'fs';
-import path from 'path';
+const chatStore = new Map<string, any[]>();
+
+jest.mock('@/lib/clea-chat-store', () => ({
+  loadChat: async (id: string) => chatStore.get(id) ?? [],
+  saveChat: async ({ chatId, messages }: { chatId: string; messages: any[] }) => {
+    chatStore.set(chatId, messages);
+  },
+  loadSummary: async () => null,
+  saveSummary: async () => {},
+  deleteChat: async (id: string) => {
+    chatStore.delete(id);
+  },
+}));
+
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({
+    from: () => ({
+      select: () => ({ order: async () => ({ data: [] }) }),
+    }),
+  }),
+}));
+
 import { GET, POST } from '@/app/api/clea-chat/route';
 import { saveChat } from '@/lib/clea-chat-store';
-
-const STORE_DIR = path.join(process.cwd(), 'data', '.clea-chats');
 
 function fakeGetRequest(url: string) {
   const [, query = ''] = url.split('?');
@@ -35,8 +53,8 @@ function fakePostRequest(body: unknown) {
 }
 
 describe('GET /api/clea-chat', () => {
-  afterEach(() => {
-    rmSync(STORE_DIR, { recursive: true, force: true });
+  beforeEach(() => {
+    chatStore.clear();
   });
 
   it('returns [] for a chat id with no saved history', async () => {
@@ -63,15 +81,21 @@ describe('POST /api/clea-chat', () => {
 
   beforeEach(() => {
     process.env.DEEPSEEK_API_KEY = 'test-key';
+    chatStore.clear();
   });
 
   afterEach(() => {
     process.env.DEEPSEEK_API_KEY = originalKey;
-    rmSync(STORE_DIR, { recursive: true, force: true });
   });
 
   it('returns 400 when message is missing', async () => {
     const res = await POST(fakePostRequest({ id: 'chat-x', activity: null }));
     expect(res.status).toBe(400);
+  });
+
+  it('returns 500 when DEEPSEEK_API_KEY is not configured', async () => {
+    delete process.env.DEEPSEEK_API_KEY;
+    const res = await POST(fakePostRequest({ id: 'chat-x', message: { id: 'm1', role: 'user', parts: [] }, activity: null }));
+    expect(res.status).toBe(500);
   });
 });

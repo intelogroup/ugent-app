@@ -1,9 +1,42 @@
-import { existsSync, rmSync } from 'fs';
-import path from 'path';
 import type { UIMessage } from 'ai';
-import { loadChat, saveChat } from '@/lib/clea-chat-store';
 
-const STORE_DIR = path.join(process.cwd(), 'data', '.clea-chats');
+const store = new Map<string, any>();
+let currentUser: { id: string } | null = { id: 'user-1' };
+
+function makeQuery(table: string) {
+  const q: any = {
+    _filters: {} as Record<string, unknown>,
+    select() {
+      return q;
+    },
+    eq(col: string, val: unknown) {
+      q._filters[col] = val;
+      return q;
+    },
+    maybeSingle: async () => ({ data: store.get(q._filters.id) ?? null }),
+    upsert: async (payload: any) => {
+      const existing = store.get(payload.id) ?? {};
+      store.set(payload.id, { ...existing, ...payload });
+      return { data: null, error: null };
+    },
+    delete: () => ({
+      eq: async (_col: string, id: string) => {
+        store.delete(id);
+        return { data: null, error: null };
+      },
+    }),
+  };
+  return q;
+}
+
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({
+    from: (table: string) => makeQuery(table),
+    auth: { getUser: async () => ({ data: { user: currentUser } }) },
+  }),
+}));
+
+import { loadChat, saveChat } from '@/lib/clea-chat-store';
 
 function sampleMessages(): UIMessage[] {
   return [
@@ -12,11 +45,12 @@ function sampleMessages(): UIMessage[] {
 }
 
 describe('clea-chat-store', () => {
-  afterEach(() => {
-    rmSync(STORE_DIR, { recursive: true, force: true });
+  beforeEach(() => {
+    store.clear();
+    currentUser = { id: 'user-1' };
   });
 
-  it('loadChat returns [] when no file exists yet', async () => {
+  it('loadChat returns [] when no row exists yet', async () => {
     const messages = await loadChat('brand-new-chat-id');
     expect(messages).toEqual([]);
   });
@@ -26,20 +60,11 @@ describe('clea-chat-store', () => {
     await saveChat({ chatId, messages: sampleMessages() });
     const loaded = await loadChat(chatId);
     expect(loaded).toEqual(sampleMessages());
-    expect(existsSync(path.join(STORE_DIR, `${chatId}.json`))).toBe(true);
   });
 
-  it('rejects ids with path-separator characters', async () => {
-    await expect(loadChat('../../etc/passwd')).rejects.toThrow('Invalid chat id');
-    await expect(saveChat({ chatId: '../evil', messages: [] })).rejects.toThrow('Invalid chat id');
-  });
-
-  it('rejects ids with disallowed characters', async () => {
-    await expect(loadChat('has spaces')).rejects.toThrow('Invalid chat id');
-    await expect(loadChat('semi;colon')).rejects.toThrow('Invalid chat id');
-  });
-
-  it('accepts alphanumeric, dash, and underscore ids', async () => {
-    await expect(loadChat('abc-123_XYZ')).resolves.toEqual([]);
+  it('saveChat is a no-op when there is no authenticated user', async () => {
+    currentUser = null;
+    await saveChat({ chatId: 'anon-chat', messages: sampleMessages() });
+    expect(await loadChat('anon-chat')).toEqual([]);
   });
 });

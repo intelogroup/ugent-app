@@ -1,40 +1,35 @@
 import { NextResponse } from "next/server";
-import { readDataFile } from "@/lib/data-source";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const lines = (await readDataFile("medicospira-enriched.jsonl")).trim().split("\n");
-    const feed: any[] = [];
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("enriched_questions")
+      .select("id, disease_name, topic_type, mechanism, key_symptoms, clinical_context, question_text")
+      .not("disease_name", "is", null)
+      .not("mechanism", "is", null)
+      .neq("mechanism", "Pending further analysis")
+      .limit(200);
 
-    for (const line of lines) {
-      if (!line) continue;
-      try {
-        const raw = JSON.parse(line);
-        const e = raw.enriched;
-        if (!e || !e.diseaseName) continue;
+    if (error) throw error;
 
-        // Skip cards with no key symptoms or pending mechanism
-        if (!e.keySymptoms || e.keySymptoms.length === 0) continue;
-        if (!e.mechanism || e.mechanism === "Pending further analysis") continue;
+    const feed = (data ?? [])
+      .filter((row) => Array.isArray(row.key_symptoms) && row.key_symptoms.length > 0)
+      .slice(0, 50)
+      .map((row) => ({
+        _id: row.id,
+        diseaseName: row.disease_name,
+        topicType: row.topic_type || "DISEASE",
+        mechanism: row.mechanism,
+        keySymptoms: row.key_symptoms,
+        clinicalContext: row.clinical_context || "",
+        questionText: row.question_text || "",
+      }));
 
-        feed.push({
-          _id: raw.textHash || `clue-${feed.length}`,
-          diseaseName: e.diseaseName,
-          topicType: e.topicType || "DISEASE",
-          mechanism: e.mechanism,
-          keySymptoms: e.keySymptoms,
-          clinicalContext: e.clinicalContext || "",
-          questionText: e.questionText || raw.text || "",
-        });
-      } catch (err) {
-        // Skip malformed
-      }
-    }
-
-    // Limit to 50 items for the training session
-    return NextResponse.json({ feed: feed.slice(0, 50) });
+    return NextResponse.json({ feed });
   } catch (error) {
     console.error("Failed to fetch clue training feed:", error);
     return NextResponse.json(

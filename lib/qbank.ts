@@ -49,12 +49,27 @@ export async function queryQuestions(opts: {
   const { subject, system, difficulty, limit = 20 } = opts;
   const supabase = await createClient();
 
-  let query = supabase.from('questions').select('*', { count: 'exact' });
+  // PostgREST enforces a server-side db.max_rows cap (1000 here) on every
+  // request, so pulling the whole matched set to shuffle it in memory
+  // silently truncates once matches exceed that cap. We only need `limit`
+  // (<=20) rows anyway, so fetch a single page at a random offset instead —
+  // gives a random-position sample without ever exceeding the cap.
+  let headQuery = supabase.from('questions').select('*', { count: 'exact', head: true });
+  if (subject) headQuery = headQuery.eq('subject', subject);
+  if (system) headQuery = headQuery.eq('system', system);
+  if (difficulty) headQuery = headQuery.eq('difficulty', difficulty);
+  const { count: headCount, error: headError } = await headQuery;
+  if (headError) throw headError;
+
+  const count = headCount ?? 0;
+  const maxOffset = Math.max(0, count - limit);
+  const offset = Math.floor(Math.random() * (maxOffset + 1));
+
+  let query = supabase.from('questions').select('*');
   if (subject) query = query.eq('subject', subject);
   if (system) query = query.eq('system', system);
   if (difficulty) query = query.eq('difficulty', difficulty);
-
-  const { data, count, error } = await query;
+  const { data, error } = await query.range(offset, offset + limit - 1);
   if (error) throw error;
 
   const matched = data ?? [];

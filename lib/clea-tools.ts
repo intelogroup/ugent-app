@@ -1,47 +1,17 @@
 import { z } from 'zod';
 import { tool, embed } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { queryQuestions } from '@/lib/qbank';
 import { analyzeQuestions, getSystemDiseaseMap } from '@/lib/curriculum/analyzer';
+import { createClient } from '@/lib/supabase/server';
 import type { QuizAttempt } from '@/lib/quizAttempts';
 
 
 type TextPage = { page: number; text: string };
-type EmbeddedPage = { page: number; text: string; embedding: number[] };
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
-
-// ponytail: loaded once per server process and kept in module scope — these
-// are read-only reference books, not live data, so no staleness risk from
-// caching (unlike the qbank/curriculum jsonl files, which do get re-read
-// per call because they change during a session).
-const embeddingCache = new Map<string, EmbeddedPage[] | null>();
-
-function loadEmbeddings(embeddingFile: string): EmbeddedPage[] | null {
-  if (embeddingCache.has(embeddingFile)) return embeddingCache.get(embeddingFile)!;
-  const file = path.join(process.cwd(), 'data', '.embeddings', embeddingFile);
-  if (!existsSync(file)) {
-    embeddingCache.set(embeddingFile, null);
-    return null;
-  }
-  const { entries } = JSON.parse(readFileSync(file, 'utf8')) as { entries: EmbeddedPage[] };
-  embeddingCache.set(embeddingFile, entries);
-  return entries;
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
 
 function buildExcerpt(query: string, text: string): string {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -85,32 +55,40 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
     .map(({ page, text }) => ({ page, excerpt: buildExcerpt(query, text) }));
 }
 
-// Semantic search: embed the query, cosine-match against precomputed page
-// embeddings. Fixes the word-overlap scorer's blind spot — a page whose
-// content answers the question but doesn't share literal keywords with a
-// verbose model-generated query (e.g. Legionella's hyponatremia link buried
-// in a bug-list page that never says "SIADH").
-async function searchByEmbedding(embeddingFile: string, query: string, limit: number) {
+// Semantic search: embed the query, cosine-match via Postgres pgvector
+// (`book_pages` table + `match_book_pages` RPC, migrated from the local
+// data/.embeddings/*.json files). Fixes the word-overlap scorer's blind spot
+// — a page whose content answers the question but doesn't share literal
+// keywords with a verbose model-generated query (e.g. Legionella's
+// hyponatremia link buried in a bug-list page that never says "SIADH").
+async function searchByEmbedding(book: 'pathoma' | 'firstaid', query: string, limit: number) {
   if (!process.env.OPENAI_API_KEY) return null;
-  const pages = loadEmbeddings(embeddingFile);
-  if (!pages) return null;
 
   const { embedding } = await embed({ model: openai.textEmbeddingModel(EMBEDDING_MODEL), value: query });
 
-  return pages
-    .map((p) => ({ page: p.page, text: p.text, score: cosineSimilarity(embedding, p.embedding) }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ page, text }) => ({ page, excerpt: buildExcerpt(query, text) }));
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('match_book_pages', {
+    p_book: book,
+    query_embedding: embedding,
+    match_count: limit,
+  });
+  if (error) throw error;
+  if (!data || data.length === 0) return null;
+
+  return data.map(({ page, text }: { page: number; text: string }) => ({
+    page,
+    excerpt: buildExcerpt(query, text),
+  }));
 }
 
-async function searchTextFile(file: string, embeddingFile: string, query: string, limit: number) {
+async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query: string, limit: number) {
   try {
-    const semanticHits = await searchByEmbedding(embeddingFile, query, limit);
+    const semanticHits = await searchByEmbedding(book, query, limit);
     if (semanticHits) return semanticHits;
   } catch (error) {
-    // OpenAI outage/bad key/rate limit shouldn't take down the whole tool
-    // call — degrade to word-overlap rather than surfacing an error to Clea.
+    // Supabase/OpenAI outage, bad key, or rate limit shouldn't take down the
+    // whole tool call — degrade to local word-overlap rather than surfacing
+    // an error to Clea.
     console.error('searchByEmbedding failed, falling back to word overlap', error);
   }
   return searchByWordOverlap(file, query, limit);
@@ -121,10 +99,10 @@ export const searchPathoma = tool({
     'Full-text search Pathoma (scanned textbook pages) for a topic or keyword, to explain USMLE Step 1 pathology concepts.',
   inputSchema: z.object({
     query: z.string().describe('Keyword or phrase to search for, e.g. "hyperplasia"'),
-    limit: z.number().int().min(1).max(5).default(3),
+    limit: z.number().int().min(1).max(10).default(5),
   }),
   execute: async ({ query, limit }) => ({
-    hits: await searchTextFile('pathoma_text.jsonl', 'pathoma.json', query, limit),
+    hits: await searchTextFile('pathoma_text.jsonl', 'pathoma', query, limit),
   }),
 });
 
@@ -133,10 +111,10 @@ export const searchFirstAid = tool({
     'Full-text search First Aid for USMLE Step 1 (scanned textbook pages) for a topic or keyword.',
   inputSchema: z.object({
     query: z.string().describe('Keyword or phrase to search for, e.g. "Turner syndrome"'),
-    limit: z.number().int().min(1).max(5).default(3),
+    limit: z.number().int().min(1).max(10).default(5),
   }),
   execute: async ({ query, limit }) => ({
-    hits: await searchTextFile('firstaid_text.jsonl', 'firstaid.json', query, limit),
+    hits: await searchTextFile('firstaid_text.jsonl', 'firstaid', query, limit),
   }),
 });
 

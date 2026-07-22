@@ -56,6 +56,37 @@ Wav2Lip URL configured via env vars (no longer hardcoded `localhost:8765`):
 - `WAV2LIP_HTTP_URL` — HTTP URL (server-side API routes, default `http://localhost:8765`)
 Set both to cloudflared tunnel URL (`wss:///https://`) to use from Vercel prod. Server binds `0.0.0.0` with CORS wildcard. Tunnel: `cloudflared tunnel --url http://localhost:8765`.
 
+## Lip-sync / Avatar Pipeline (RunPod Production)
+
+Wav2Lip blocked for prod (non-commercial license). Current local Mac launchd server (`com.ugent.wav2lip-cloud`, port 8770, tunneled via Cloudflare → `lipsync.clixen.app`) is a stopgap. Two candidates for production RunPod deployment:
+
+### Candidate A: MuseTalk (start here)
+- Repo: `TMElyralab/MuseTalk` — MIT code + permissive model weights, commercial OK
+- Face detection: DWPose (Apache 2.0) + face-parsing (MIT) — no InsightFace non-commercial trap
+- Function: mouth-only lip sync via latent inpainting (256x256 face region)
+- Perf: 30+ FPS on V100, faster on RTX 4090. Single GPU.
+- Plumbing: `scripts/realtime_inference.py` has threaded queue + batch inference — wrap in FastAPI WS handler (~150 lines). Same WS protocol as current Wav2Lip (PCM in, JPEG frames out).
+- Docker: `nvidia/cuda:12.1` base, Python 3.10, single `requirements.txt`
+- RunPod: RTX 4090 ($0.50/hr) sufficient. No multi-GPU needed.
+- ETA: ~2 days to working deployment. Zero frontend changes (swap WS URL).
+- Limitation: mouth-only, no expression/gaze/head pose, known jitter, 256x256 only.
+
+### Candidate B: Ditto (upgrade path if expression matters)
+- Repo: `antgroup/ditto-talkinghead` — Apache 2.0 code, but InsightFace detector checkpoint (`insightface_det.onnx`) is non-commercial-research-only
+- Fix: swap InsightFace for BlazeFace (Apache 2.0, already bundled in Ditto checkpoints as `blaze_face.onnx`) + 106-landmark regressor. Replace `InsightFaceDet` import in `core/atomic_components/source2info.py`.
+- Function: full expression + gaze + head pose + emotion control (8-class, setup-time)
+- Perf: RTF 0.895 on A100 (62ms DiT + 15ms render). Minimum 24GB VRAM GPU.
+- Plumbing: `stream_pipeline_online.py` has 6-thread queue pipeline but no WS output. Must build bounded 2-4 frame queue → WS/WebRTC bridge.
+- TensorRT: prebuilt Ampere+ engines; re-compile from ONNX for other GPU archs via `cvt_onnx_to_trt.py`.
+- RunPod: RTX 4090 ($0.50/hr) or L40S ($1.50/hr). Benchmark first — no consumer-GPU perf numbers published.
+- ETA: ~1-2 weeks (detector swap + WS bridge + multi-session process isolation).
+
+### Decision flow
+1. Start with MuseTalk on RunPod (2 days). Install deps from `requirements.txt`, wrap `Avatar` class in FastAPI WS handler, containerize, deploy.
+2. If engagement data shows expression/emotion matters, upgrade to Ditto later.
+3. Neither candidate has a RunPod template — both need a custom Docker build.
+4. To cut over from current Wav2Lip: update `NEXT_PUBLIC_WAV2LIP_WS_URL` and `WAV2LIP_HTTP_URL` env vars to point at new RunPod endpoint. Retire `com.ugent.wav2lip-cloud` launchd service + Cloudflare tunnel.
+
 ## Quiz Architecture (planned Supabase)
 Server-authoritative. Vercel serverless for `/api/quiz/start` (seed RNG, select questions), `/api/quiz/submit` (validate answer server-side, `correctAnswer` never in client bundle), `/api/quiz/complete` (INSERT attempt via RLS). Supabase holds questions + attempts; RLS `SELECT only` on questions, `INSERT own` on attempts. Client-thin renderer: UI, timer, progress. Rate-limit via Vercel Edge middleware. No separate Render server — Vercel handles quiz volume.
 
