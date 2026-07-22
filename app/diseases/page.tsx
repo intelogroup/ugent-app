@@ -59,7 +59,7 @@ export default function DiseaseReferencePage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-2 border-[#0E7490] border-t-transparent rounded-full" />
           <span className="ml-3 text-neutral-500">Loading disease reference...</span>
         </div>
       </DashboardLayout>
@@ -93,7 +93,7 @@ export default function DiseaseReferencePage() {
             placeholder="Search disease, symptom, or mechanism..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-lg border border-neutral-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-[#0E7490] focus:border-transparent"
           />
         </div>
 

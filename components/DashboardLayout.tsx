@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <CleaChat />
           <FloatingAvatar />
           {/* Main content: offset by sidebar on md+, no offset on mobile */}
-          <main className="md:ml-64 px-4 py-6 md:p-10">
+          <main className="px-4 py-6 md:ml-[292px] md:p-10">
             {children}
           </main>
         </div>

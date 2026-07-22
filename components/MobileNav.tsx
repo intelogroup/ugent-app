@@ -25,7 +25,7 @@ export default function MobileNav() {
               aria-current={isActive ? 'page' : undefined}
               className={`flex-shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 isActive
-                  ? 'border-primary-600 text-primary-600'
+                  ? 'border-[#0E7490] text-[#0E7490] font-semibold'
                   : 'border-transparent text-neutral-500 hover:text-neutral-700'
               }`}
             >

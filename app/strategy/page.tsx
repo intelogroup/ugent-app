@@ -77,18 +77,18 @@ export default function StrategyHub() {
           <div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Strategy Hub</h1>
             <p className="text-neutral-600">
-              Explore relationships in your question bank and reinforce them with flashcards.
+              Explore relationships in your question bank and reinforce them with drill cards.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-neutral-100 rounded-lg p-1 gap-1">
+            <div className="flex items-center bg-neutral-100/80 rounded-xl p-1 gap-1 border border-neutral-200">
               <button
                 onClick={() => setView("graph")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   view === "graph"
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-700"
+                    ? "bg-white text-[#0E7490] shadow-xs font-semibold"
+                    : "text-neutral-500 hover:text-neutral-800"
                 }`}
               >
                 <CircleStackIcon className="w-3.5 h-3.5" />
@@ -96,20 +96,20 @@ export default function StrategyHub() {
               </button>
               <button
                 onClick={() => setView("flashcards")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   view === "flashcards"
-                    ? "bg-white text-neutral-900 shadow-sm"
-                    : "text-neutral-500 hover:text-neutral-700"
+                    ? "bg-white text-[#0E7490] shadow-xs font-semibold"
+                    : "text-neutral-500 hover:text-neutral-800"
                 }`}
               >
                 <AcademicCapIcon className="w-3.5 h-3.5" />
-                Flashcards
+                Drill Cards
               </button>
             </div>
 
             <Link
               href="/strategy/clue-training"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#155E75] text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
             >
               <BeakerIcon className="w-4 h-4" />
               Clue Training

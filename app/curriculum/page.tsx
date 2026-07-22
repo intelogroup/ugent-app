@@ -5,18 +5,18 @@ import DashboardLayout from '@/components/DashboardLayout';
 import type { Curriculum, StudyWeek, StudyBlock } from '@/lib/curriculum/types';
 
 const PHASE_CONFIG: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  FOUNDATIONS: { color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', label: 'Foundations' },
+  FOUNDATIONS: { color: 'text-[#0E7490]', bg: 'bg-[#ECFEFF]', border: 'border-[#0E7490]/30', label: 'Foundations' },
   ORGAN_SYSTEMS: { color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Organ Systems' },
   INTEGRATION: { color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', label: 'Integration' },
   FINAL_REVIEW: { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Final Review' },
 };
 
 const BLOCK_ICONS: Record<StudyBlock['type'], string> = {
-  READING: '📖',
-  VIDEO: '🎬',
-  QUESTIONS: '✏️',
-  REVIEW: '🔄',
-  PHARMACOLOGY: '💊',
+  READING: 'FA',
+  VIDEO: 'VID',
+  QUESTIONS: 'Q',
+  REVIEW: 'REV',
+  PHARMACOLOGY: 'RX',
 };
 
 function formatTime(totalMinutes: number): string {

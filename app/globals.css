@@ -2,18 +2,31 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary — one blue accent */
-  --color-primary-600: #2563EB;
-  --color-primary-500: #3B82F6;
-  --color-primary-50:  #EFF6FF;
+  /* Primary — Teal Blue Accent */
+  --color-primary-700: #155E75;
+  --color-primary-600: #0E7490;
+  --color-primary-500: #06B6D4;
+  --color-primary-100: #CFFAFE;
+  --color-primary-50:  #ECFEFF;
 
-  /* Neutral — cool slate */
+  /* Accent status colors */
+  --color-emerald-500: #10B981;
+  --color-emerald-50:  #ECFDF5;
+  --color-rose-500:    #EF4444;
+  --color-rose-50:     #FFF1F2;
+  --color-amber-500:   #F59E0B;
+  --color-amber-50:    #FFFBEB;
+
+  /* Neutral — Slate Palette */
   --color-neutral-900: #0F172A;
+  --color-neutral-800: #1E293B;
   --color-neutral-700: #334155;
-  --color-neutral-500: #596475;  /* darkened from #64748B for WCAG AA contrast (4.6:1 on white) */
+  --color-neutral-500: #64748B;
+  --color-neutral-400: #94A3B8;
   --color-neutral-300: #CBD5E1;
   --color-neutral-200: #E2E8F0;
-  --color-neutral-100: #F1F5F9;
+  --color-neutral-100: #F8FAFC;
+  --color-neutral-50:  #FFFFFF;
 
   /* Backgrounds */
   --color-background-primary:   #FFFFFF;
@@ -31,55 +44,68 @@
   /* Radii */
   --radius-sm:  6px;
   --radius-md:  10px;
-  --radius-lg:  14px;
-  --radius-xl:  20px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 20px;
   --radius-pill:9999px;
 }
 
 body {
   background-color: var(--color-background-secondary);
   color: var(--color-neutral-900);
-  /* Font is applied via inter.className in layout.tsx — do not override here */
+  /* Font is applied via inter.className in layout.tsx */
 }
 
-/* Global heading defaults — Tailwind component classes take precedence if specified */
-h1 { font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-neutral-900); }
+/* Global heading defaults */
+h1 { font-size: var(--font-size-3xl); font-weight: 700; color: var(--color-neutral-900); tracking: -0.02em; }
 h2 { font-size: var(--font-size-2xl); font-weight: 600; color: var(--color-neutral-900); }
-h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutral-700); }
+h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutral-800); }
 
 .btn-primary {
   background-color: var(--color-primary-600);
   color: white;
-  padding: 12px 24px;
-  border-radius: var(--radius-lg);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
   font-weight: 500;
-  transition: background-color 0.2s;
+  font-size: var(--font-size-sm);
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 2px 4px rgba(14, 116, 144, 0.2);
 }
-.btn-primary:hover { background-color: #1d4ed8; }
+.btn-primary:hover {
+  background-color: var(--color-primary-700);
+  box-shadow: 0 4px 8px rgba(14, 116, 144, 0.28);
+}
 
 .btn-secondary {
   background-color: white;
-  color: var(--color-neutral-900);
-  padding: 12px 24px;
-  border-radius: var(--radius-lg);
+  color: var(--color-neutral-800);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
   font-weight: 500;
+  font-size: var(--font-size-sm);
   border: 1px solid var(--color-neutral-200);
-  transition: border-color 0.2s;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
-.btn-secondary:hover { border-color: var(--color-neutral-300); }
+.btn-secondary:hover {
+  background-color: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
 
 .card {
   background-color: white;
   border-radius: var(--radius-xl);
   padding: 24px;
   border: 1px solid var(--color-neutral-200);
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
 }
 
 .stat-card {
   background-color: white;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 20px;
   border: 1px solid var(--color-neutral-200);
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03);
 }
 
 /* Glassmorphism variants — translucent + blur, used on dashboard */
@@ -412,5 +438,3 @@ h3 { font-size: var(--font-size-xl);  font-weight: 600; color: var(--color-neutr
   0%, 100% { opacity: 0.82; }
   50%       { opacity: 1;    }
 }
-
-

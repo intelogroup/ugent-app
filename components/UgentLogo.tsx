@@ -1,5 +1,5 @@
 export default function UgentLogo({ className = "w-10 h-10" }: { className?: string }) {
-  const primaryBlue = '#2563EB'; // Darker blue from AI recommendation card (primary-600)
+  const primaryTeal = '#0E7490';
 
   return (
     <svg
@@ -14,7 +14,7 @@ export default function UgentLogo({ className = "w-10 h-10" }: { className?: str
         width="70"
         height="70"
         rx="16"
-        fill={primaryBlue}
+        fill={primaryTeal}
       />
 
       {/* Minimalist U shape cutout */}

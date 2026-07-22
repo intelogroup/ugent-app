@@ -43,7 +43,7 @@ export default function Tests() {
           </div>
           <div className="card">
             <p className="text-sm text-neutral-600 mb-1">Avg Score</p>
-            <p className="text-3xl font-bold text-primary-600">{avgScore}%</p>
+            <p className="text-3xl font-bold text-[#0E7490]">{avgScore}%</p>
           </div>
         </div>
 
