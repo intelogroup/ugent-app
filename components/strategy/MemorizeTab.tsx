@@ -65,6 +65,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const [cardIndex, setCardIndex] = useState(0);
   const [dragX, setDragX] = useState(0);
   const dragStartX = useRef<number | null>(null);
+  const wasDrag = useRef(false);
 
   useEffect(() => {
     setCardIndex(0);
@@ -198,6 +199,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
 
   const handlePointerUp = () => {
     const SWIPE_THRESHOLD = 80;
+    wasDrag.current = Math.abs(dragX) > 5;
     if (dragX > SWIPE_THRESHOLD) {
       goPrev();
     } else if (dragX < -SWIPE_THRESHOLD) {
@@ -205,6 +207,14 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     }
     dragStartX.current = null;
     setDragX(0);
+  };
+
+  const handleCardClick = (id: string) => {
+    if (wasDrag.current) {
+      wasDrag.current = false;
+      return;
+    }
+    toggleReveal(id);
   };
 
   return (
@@ -365,8 +375,8 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
-                    onClick={() => toggleReveal(card.id)}
-                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)` }}
+                    onClick={() => handleCardClick(card.id)}
+                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)`, transition: dragStartX.current === null ? undefined : 'none' }}
                     className={`card flex flex-col justify-between cursor-grab active:cursor-grabbing select-none flex-1 min-h-[260px] border transition-transform duration-150 ${
                       isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
                     }`}
@@ -535,8 +545,8 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
-                    onClick={() => toggleReveal(pair.id)}
-                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)` }}
+                    onClick={() => handleCardClick(pair.id)}
+                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)`, transition: dragStartX.current === null ? undefined : 'none' }}
                     className={`card border cursor-grab active:cursor-grabbing select-none flex-1 transition-transform duration-150 ${
                       isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
                     }`}
