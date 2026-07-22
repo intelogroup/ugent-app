@@ -3,7 +3,7 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircleIcon, CheckIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/solid';
 
 interface Filters {
   subjects: string[];
@@ -48,10 +48,10 @@ export default function CreateTest() {
   if (!filters) {
     return (
       <DashboardLayout>
-        <div className="max-w-6xl mx-auto flex items-center justify-center min-h-screen">
+        <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0E7490] mx-auto mb-4"></div>
-            <p className="text-neutral-600">Loading question bank...</p>
+            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-[#0E7490]/25 border-t-[#0E7490]" />
+            <p className="text-sm text-neutral-500">Loading question bank</p>
           </div>
         </div>
       </DashboardLayout>
@@ -60,23 +60,29 @@ export default function CreateTest() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
-        <form onSubmit={handleCreateTest} className="space-y-8">
+      <form onSubmit={handleCreateTest} className="workspace-page">
+        <header className="workspace-header">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">Create New Test</h1>
-            <p className="text-base text-neutral-600">{filters.total} questions in the bank — filter by subject or system, or leave blank for a mixed quiz</p>
+            <p className="workspace-eyebrow">Question bank</p>
+            <h1 className="workspace-title">Build a test</h1>
+            <p className="workspace-subtitle">Choose one subject and system, or leave both open for a mixed set from {filters.total.toLocaleString()} questions.</p>
           </div>
+          <p className="rounded-full border border-white/80 bg-white/55 px-3 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm backdrop-blur-md">
+            {selectedSubjects.length + selectedSystems.length} filters selected
+          </p>
+        </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-neutral-900">Subject</h2>
-                  <button type="button" onClick={() => setSelectedSubjects([])} className="text-xs text-[#0E7490] hover:text-[#155E75] font-semibold hover:bg-[#ECFEFF] px-3 py-1 rounded-lg transition-colors">
-                    Clear
-                  </button>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="glass-panel overflow-hidden rounded-[22px]">
+            <section className="p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight text-neutral-900">Subject</h2>
+                  <p className="mt-0.5 text-xs text-neutral-500">Discipline or foundational science</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedSubjects.length > 0 && <button type="button" onClick={() => setSelectedSubjects([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#0E7490] hover:bg-white/70">Clear</button>}
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {filters.subjects.map((subject) => {
                     const isSelected = selectedSubjects.includes(subject);
                     return (
@@ -84,30 +90,29 @@ export default function CreateTest() {
                         key={subject}
                         type="button"
                         onClick={() => toggleSubject(subject)}
-                        className={`relative p-3.5 rounded-xl border text-left transition-all group ${
-                          isSelected ? 'border-[#0E7490] bg-[#ECFEFF]' : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                        className={`pressable group flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold ${
+                          isSelected ? 'border-[#0E7490]/40 bg-cyan-50/80 text-[#155E75] shadow-[0_5px_18px_rgba(14,116,144,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-[#0E7490] border-[#0E7490]' : 'border-neutral-300 group-hover:border-neutral-400'}`}>
+                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#0E7490] bg-[#0E7490]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
                             {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
-                          </div>
-                          <p className="font-semibold text-xs text-neutral-900">{subject}</p>
-                        </div>
+                          </span>
+                          <span>{subject}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
+            </section>
 
-              <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-neutral-900">System</h2>
-                  <button type="button" onClick={() => setSelectedSystems([])} className="text-xs text-[#0E7490] hover:text-[#155E75] font-semibold hover:bg-[#ECFEFF] px-3 py-1 rounded-lg transition-colors">
-                    Clear
-                  </button>
+            <section className="border-t border-white/80 p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight text-neutral-900">Organ system</h2>
+                  <p className="mt-0.5 text-xs text-neutral-500">Clinical system focus</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedSystems.length > 0 && <button type="button" onClick={() => setSelectedSystems([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#0E7490] hover:bg-white/70">Clear</button>}
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {filters.systems.map((system) => {
                     const isSelected = selectedSystems.includes(system);
                     return (
@@ -115,76 +120,63 @@ export default function CreateTest() {
                         key={system}
                         type="button"
                         onClick={() => toggleSystem(system)}
-                        className={`relative p-3.5 rounded-xl border text-left transition-all group ${
-                          isSelected ? 'border-[#0E7490] bg-[#ECFEFF]' : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                        className={`pressable group flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold ${
+                          isSelected ? 'border-[#0E7490]/40 bg-cyan-50/80 text-[#155E75] shadow-[0_5px_18px_rgba(14,116,144,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-[#0E7490] border-[#0E7490]' : 'border-neutral-300 group-hover:border-neutral-400'}`}>
+                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#0E7490] bg-[#0E7490]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
                             {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
-                          </div>
-                          <p className="font-semibold text-xs text-neutral-900">{system}</p>
-                        </div>
+                          </span>
+                          <span>{system}</span>
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            </div>
+            </section>
+          </div>
 
-            <div className="space-y-6">
-              <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-                <h3 className="text-base font-bold text-neutral-900 mb-4">Test Settings</h3>
-                <div className="mb-5">
-                  <label className="block text-xs font-medium text-neutral-700 mb-2">Number of Questions</label>
+          <aside className="lg:sticky lg:top-0 lg:self-start">
+            <div className="glass-panel rounded-[22px] p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Test setup</p>
+              <div className="mt-5">
+                <label htmlFor="question-count" className="mb-2 block text-xs font-semibold text-neutral-600">Questions</label>
+                <div className="flex h-11 items-center rounded-xl border border-white/80 bg-white/55 p-1 shadow-sm">
+                  <button type="button" aria-label="Remove one question" onClick={() => setQuestionCount((count) => Math.max(1, count - 1))} className="pressable grid h-9 w-9 place-items-center rounded-lg text-neutral-500 hover:bg-white">
+                    <MinusIcon className="h-3.5 w-3.5" />
+                  </button>
                   <input
+                    id="question-count"
                     type="number"
                     value={questionCount}
                     onChange={(e) => setQuestionCount(Number(e.target.value))}
                     min={1}
                     max={100}
-                    className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-[#0E7490] transition-colors"
+                    className="min-w-0 flex-1 bg-transparent text-center text-sm font-bold text-neutral-900 outline-none"
                   />
+                  <button type="button" aria-label="Add one question" onClick={() => setQuestionCount((count) => Math.min(100, count + 1))} className="pressable grid h-9 w-9 place-items-center rounded-lg text-neutral-500 hover:bg-white">
+                    <PlusIcon className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
-
-              <div className="bg-[#ECFEFF] rounded-2xl border border-[#0E7490]/20 p-6">
-                <h3 className="text-base font-bold text-neutral-900 mb-3">Test Summary</h3>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">Subject:</span>
-                    <span className="font-semibold text-neutral-900">{selectedSubjects.length === 1 ? selectedSubjects[0] : selectedSubjects.length > 1 ? 'Multiple (pick one)' : 'Mixed'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">System:</span>
-                    <span className="font-semibold text-neutral-900">{selectedSystems.length === 1 ? selectedSystems[0] : selectedSystems.length > 1 ? 'Multiple (pick one)' : 'Mixed'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-neutral-600">Questions:</span>
-                    <span className="font-semibold text-neutral-900">{questionCount}</span>
-                  </div>
-                </div>
-              </div>
-
+              <dl className="my-5 space-y-3 border-y border-white/80 py-4 text-xs">
+                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">Subject</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSubjects.length === 1 ? selectedSubjects[0] : selectedSubjects.length > 1 ? 'Choose one' : 'Mixed'}</dd></div>
+                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">System</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSystems.length === 1 ? selectedSystems[0] : selectedSystems.length > 1 ? 'Choose one' : 'Mixed'}</dd></div>
+                <div className="flex items-center justify-between"><dt className="text-neutral-500">Estimated time</dt><dd className="font-semibold text-neutral-800">{Math.max(1, Math.round(questionCount * 1.5))} min</dd></div>
+              </dl>
               <button
                 type="submit"
                 disabled={selectedSubjects.length > 1 || selectedSystems.length > 1}
-                className={`w-full py-3 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 text-base transition-all ${
-                  selectedSubjects.length > 1 || selectedSystems.length > 1 ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed' : 'btn-primary hover:shadow-lg active:scale-95'
-                }`}
+                className="btn-primary flex w-full items-center justify-center py-3 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:shadow-none"
               >
-                <PlusCircleIcon className="w-5 h-5" />
-                Create Test & Start
+                Start {questionCount}-question test
               </button>
               {(selectedSubjects.length > 1 || selectedSystems.length > 1) && (
-                <p className="text-sm text-neutral-600 text-center bg-neutral-50 rounded-lg p-3">
-                  Pick a single subject and/or system to filter by
-                </p>
+                <p className="mt-3 text-center text-xs leading-5 text-amber-700">Choose a single subject and system before starting.</p>
               )}
             </div>
-          </div>
-        </form>
-      </div>
+          </aside>
+        </div>
+      </form>
     </DashboardLayout>
   );
 }

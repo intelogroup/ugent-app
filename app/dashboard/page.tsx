@@ -2,41 +2,49 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getQuizAttempts, getCompletedCurriculumBlocks, QuizAttempt } from '@/lib/quizAttempts';
-import Avatar from '@/components/Avatar';
 import {
-  ChevronDownIcon,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
   ChartPieIcon,
   DocumentTextIcon,
   Squares2X2Icon,
-  FaceSmileIcon,
-  PlusCircleIcon,
 } from '@heroicons/react/24/outline';
+import DashboardLayout from '@/components/DashboardLayout';
+import {
+  getCompletedCurriculumBlocks,
+  getQuizAttempts,
+  QuizAttempt,
+} from '@/lib/quizAttempts';
 
-const CHART_COLORS = ['var(--color-primary-600)', 'var(--color-neutral-700)', 'var(--color-neutral-500)', 'var(--color-neutral-300)'];
+const systemFocus = [
+  {
+    name: 'Renal & Urinary Systems',
+    detail: 'Nephritic vs nephrotic syndrome discriminators',
+    progress: 82,
+  },
+  {
+    name: 'Cardiovascular System',
+    detail: 'Valvular lesions and murmur mechanics',
+    progress: 64,
+  },
+  {
+    name: 'Endocrine Physiology',
+    detail: 'Thyroid axis, MEN syndromes and adrenal pathology',
+    progress: 45,
+  },
+];
 
 function buildPerformanceData(attempts: QuizAttempt[]) {
-  return attempts.slice(-7).map((a) => ({
-    date: new Date(a.timestamp).toLocaleDateString('en-US', { weekday: 'short' }),
-    score: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0,
-  }));
-}
-
-function buildSubjectBreakdown(attempts: QuizAttempt[]) {
-  const bySubject = new Map<string, { correct: number; total: number }>();
-  for (const a of attempts) {
-    const key = a.subject || a.system || 'Mixed';
-    const entry = bySubject.get(key) || { correct: 0, total: 0 };
-    entry.correct += a.correct;
-    entry.total += a.total;
-    bySubject.set(key, entry);
-  }
-  return Array.from(bySubject.entries()).map(([name, { correct, total }], i) => ({
-    name,
-    value: total > 0 ? Math.round((correct / total) * 100) : 0,
-    color: CHART_COLORS[i % CHART_COLORS.length],
+  return attempts.slice(-7).map((attempt) => ({
+    date: new Date(attempt.timestamp).toLocaleDateString('en-US', { weekday: 'short' }),
+    score: attempt.total > 0 ? Math.round((attempt.correct / attempt.total) * 100) : 0,
   }));
 }
 
@@ -45,267 +53,184 @@ export default function Home() {
   const [blocksCompleted, setBlocksCompleted] = useState(0);
 
   useEffect(() => {
-    getQuizAttempts().then(setAttempts);
-    setBlocksCompleted(getCompletedCurriculumBlocks().length);
+    let active = true;
+    const frame = requestAnimationFrame(() => {
+      if (active) setBlocksCompleted(getCompletedCurriculumBlocks().length);
+    });
+
+    getQuizAttempts().then((nextAttempts) => {
+      if (active) setAttempts(nextAttempts);
+    });
+
+    return () => {
+      active = false;
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
-  const totalQuestions = attempts.reduce((sum, a) => sum + a.total, 0);
-  const totalCorrect = attempts.reduce((sum, a) => sum + a.correct, 0);
+  const totalQuestions = attempts.reduce((sum, attempt) => sum + attempt.total, 0);
+  const totalCorrect = attempts.reduce((sum, attempt) => sum + attempt.correct, 0);
   const avgScore = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const performanceData = buildPerformanceData(attempts);
-  const subjectPerformance = buildSubjectBreakdown(attempts);
+  const curriculumProgress = Math.min(Math.round((blocksCompleted / 57) * 100), 100);
+
+  const metrics = [
+    { label: 'Average accuracy', value: `${avgScore}%`, detail: 'Across all completed tests' },
+    { label: 'Tests completed', value: attempts.length.toString(), detail: 'Practice sessions' },
+    { label: 'Questions solved', value: totalQuestions.toLocaleString(), detail: 'Total question volume' },
+  ];
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Good morning!</h1>
-            <p className="text-sm text-neutral-500 mt-1">A brief presentation of essential study metrics and progress</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/analytics" className="btn-secondary flex items-center gap-2">
-              <ChartPieIcon className="w-4 h-4 text-neutral-500" />
-              <span>Full Analytics</span>
-            </Link>
-            <Link href="/create-test" className="btn-primary flex items-center gap-2">
-              <PlusCircleIcon className="w-4 h-4 text-white" />
-              <span>Start Test</span>
-            </Link>
-          </div>
-        </div>
+      <div className="mx-auto max-w-[1280px] space-y-6">
+        <header>
+          <h1 className="text-2xl! font-bold text-neutral-900">Good morning</h1>
+          <p className="mt-1 text-sm text-neutral-500">Here is your study progress at a glance.</p>
+        </header>
 
-        {/* Quick Action Banner Cards (Survey Overview Style) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section aria-label="Study actions" className="grid gap-3 md:grid-cols-[1.35fr_1fr_1fr]">
           <Link
             href="/create-test"
-            className="card p-5 hover:border-[#0E7490]/40 transition-all flex items-center justify-between group bg-white"
+            className="group flex min-h-20 items-center gap-4 rounded-xl bg-[#0E7490] px-5 py-4 text-white transition-colors hover:bg-[#155E75]"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#0E7490] text-white flex items-center justify-center shadow-md shadow-[#0E7490]/20">
-                <Squares2X2Icon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-[#0E7490] transition-colors">
-                  Start new test
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Explore question bank</p>
-              </div>
-            </div>
-            <span className="text-neutral-400 group-hover:text-[#0E7490] transition-colors text-sm font-semibold">→</span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/14">
+              <Squares2X2Icon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Start new test</span>
+              <span className="mt-0.5 block text-xs text-cyan-50/80">Build a focused practice block</span>
+            </span>
           </Link>
 
           <Link
             href="/strategy"
-            className="card p-5 hover:border-amber-400/50 transition-all flex items-center justify-between group bg-white"
+            className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
-                <DocumentTextIcon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-amber-600 transition-colors">
-                  Start with AI Clues
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Discriminator drill mode</p>
-              </div>
-            </div>
-            <span className="text-neutral-400 group-hover:text-amber-600 transition-colors text-sm font-semibold">→</span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#0E7490]">
+              <DocumentTextIcon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-neutral-900">AI Clues</span>
+              <span className="mt-0.5 block text-xs text-neutral-400">Discriminator drills</span>
+            </span>
           </Link>
 
           <Link
             href="/curriculum"
-            className="card p-5 hover:border-emerald-400/50 transition-all flex items-center justify-between group bg-white"
+            className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
-                <ChartPieIcon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors">
-                  Curriculum Plan
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Data-driven schedule</p>
-              </div>
-            </div>
-            <span className="text-neutral-400 group-hover:text-emerald-600 transition-colors text-sm font-semibold">→</span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#0E7490]">
+              <ChartPieIcon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-neutral-900">Curriculum</span>
+              <span className="mt-0.5 block text-xs text-neutral-400">View your schedule</span>
+            </span>
           </Link>
-        </div>
+        </section>
 
-        {/* Statistics Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900">Statistics</h2>
-              <p className="text-xs text-neutral-400">Track, analyze, and publish your study metrics</p>
-            </div>
-            <Link href="/analytics" className="text-xs font-semibold text-[#0E7490] hover:underline">
-              View analytics →
-            </Link>
+        <section aria-labelledby="progress-heading">
+          <div className="mb-3">
+            <h2 id="progress-heading" className="text-base! font-semibold text-neutral-900">Your progress</h2>
+            <p className="mt-0.5 text-xs text-neutral-400">Lifetime activity across tests and curriculum</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Stat Card 1 */}
-            <div className="stat-card space-y-3">
-              <div className="flex items-center justify-between text-neutral-400">
-                <span className="text-xs font-medium text-neutral-500">Average Accuracy</span>
-                <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  +2.5%
-                </span>
+          <div className="grid overflow-hidden rounded-xl border border-neutral-200 bg-neutral-200 gap-px sm:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="bg-white px-5 py-4">
+                <p className="text-xs font-medium text-neutral-500">{metric.label}</p>
+                <p className="mt-2 text-2xl font-bold text-neutral-900">{metric.value}</p>
+                <p className="mt-1 text-[11px] text-neutral-400">{metric.detail}</p>
               </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold text-neutral-900">{avgScore}%</span>
-                <svg className="w-16 h-7 text-emerald-500" viewBox="0 0 60 25" fill="none">
-                  <path d="M2 20 Q 15 18, 30 10 T 58 4" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-              </div>
-            </div>
+            ))}
 
-            {/* Stat Card 2 */}
-            <div className="stat-card space-y-3">
-              <div className="flex items-center justify-between text-neutral-400">
-                <span className="text-xs font-medium text-neutral-500">Tests Completed</span>
-                <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                  -23.1%
-                </span>
+            <div className="bg-white px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-medium text-neutral-500">Curriculum blocks</p>
+                <span className="text-[11px] font-medium text-neutral-400">{curriculumProgress}%</span>
               </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold text-neutral-900">{attempts.length}</span>
-                <svg className="w-16 h-7 text-rose-500" viewBox="0 0 60 25" fill="none">
-                  <path d="M2 5 Q 15 8, 30 18 T 58 22" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Stat Card 3 */}
-            <div className="stat-card space-y-3">
-              <div className="flex items-center justify-between text-neutral-400">
-                <span className="text-xs font-medium text-neutral-500">Questions Solved</span>
-                <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  +16.2%
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold text-neutral-900">{totalQuestions}</span>
-                <svg className="w-16 h-7 text-emerald-500" viewBox="0 0 60 25" fill="none">
-                  <path d="M2 18 Q 20 16, 35 12 T 58 5" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Stat Card 4 */}
-            <div className="stat-card space-y-3">
-              <div className="flex items-center justify-between text-neutral-400">
-                <span className="text-xs font-medium text-neutral-500">Curriculum Blocks</span>
-                <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                  Active
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold text-neutral-900">{blocksCompleted}</span>
-                <span className="text-xs text-neutral-400">of 57 blocks</span>
+              <p className="mt-2 text-2xl font-bold text-neutral-900">{blocksCompleted}<span className="ml-1 text-sm font-medium text-neutral-400">/ 57</span></p>
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${curriculumProgress}%` }} />
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Charts & Active Learning */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Trend Chart */}
-          <div className="lg:col-span-2 card space-y-4">
-            <div className="flex items-center justify-between">
+        <section aria-label="Study insights" className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+          <div className="rounded-xl border border-neutral-200 bg-white p-5">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-neutral-900">Recent Performance Trend</h3>
-                <p className="text-xs text-neutral-400">Score per completed test session</p>
+                <h2 className="text-base! font-semibold text-neutral-900">Performance trend</h2>
+                <p className="mt-0.5 text-xs text-neutral-400">Accuracy across your seven most recent tests</p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-neutral-500">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#0E7490]"></span> Accuracy %
-              </div>
+              {performanceData.length > 0 && (
+                <div className="flex shrink-0 items-center gap-2 text-xs text-neutral-500">
+                  <span className="h-2 w-2 rounded-full bg-[#0E7490]" />
+                  Accuracy
+                </div>
+              )}
             </div>
 
             {performanceData.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/50">
-                <p className="text-sm font-medium text-neutral-600">No test data available yet</p>
-                <p className="text-xs text-neutral-400 mt-1 mb-4">Complete your first practice block to generate trend analysis.</p>
-                <Link href="/create-test" className="btn-primary">Take Practice Quiz</Link>
+              <div className="flex h-[220px] flex-col items-center justify-center text-center">
+                <p className="text-sm font-medium text-neutral-700">Your performance trend will appear here</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-neutral-400">Complete a practice block to establish your first accuracy benchmark.</p>
+                <Link href="/create-test" className="mt-4 rounded-lg bg-[#0E7490] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#155E75]">
+                  Create practice block
+                </Link>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0E7490" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#0E7490" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="date" stroke="#94A3B8" style={{ fontSize: '11px' }} tickLine={false} />
-                  <YAxis stroke="#94A3B8" style={{ fontSize: '11px' }} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="score"
-                    stroke="#0E7490"
-                    strokeWidth={2.5}
-                    fill="url(#scoreGradient)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="mt-4 h-[230px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={performanceData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0E7490" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#0E7490" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#EEF2F6" vertical={false} />
+                    <XAxis dataKey="date" stroke="#94A3B8" style={{ fontSize: '11px' }} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94A3B8" style={{ fontSize: '11px' }} tickLine={false} axisLine={false} domain={[0, 100]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                      }}
+                    />
+                    <Area type="monotone" dataKey="score" stroke="#0E7490" strokeWidth={2.25} fill="url(#scoreGradient)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             )}
           </div>
 
-          {/* Recent Study Workspaces Card */}
-          <div className="card space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-neutral-900">Recent System Focus</h3>
-              <span className="text-xs font-medium text-neutral-400">USMLE Step 1</span>
+          <div className="rounded-xl border border-neutral-200 bg-white p-5">
+            <div>
+              <h2 className="text-base! font-semibold text-neutral-900">Current focus</h2>
+              <p className="mt-0.5 text-xs text-neutral-400">USMLE Step 1 systems</p>
             </div>
 
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/70 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
-                  <span>Renal & Urinary Systems</span>
-                  <span className="text-[11px] font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">High Yield</span>
+            <div className="mt-3 divide-y divide-neutral-100">
+              {systemFocus.map((system) => (
+                <div key={system.name} className="py-3.5 first:pt-2 last:pb-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="truncate text-sm font-medium text-neutral-800">{system.name}</p>
+                    <span className="shrink-0 text-xs font-medium text-neutral-400">{system.progress}%</span>
+                  </div>
+                  <p className="mt-1 truncate text-[11px] text-neutral-400">{system.detail}</p>
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100">
+                    <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${system.progress}%` }} />
+                  </div>
                 </div>
-                <p className="text-[11px] text-neutral-400">Nephritic vs Nephrotic syndrome discriminators</p>
-                <div className="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-[#0E7490] h-full w-[82%] rounded-full"></div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/70 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
-                  <span>Cardiovascular System</span>
-                  <span className="text-[11px] font-normal text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">Organ Systems</span>
-                </div>
-                <p className="text-[11px] text-neutral-400">Valvular heart lesions & murmur mechanics</p>
-                <div className="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-[#0E7490] h-full w-[64%] rounded-full"></div>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/70 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
-                  <span>Endocrine Physiology</span>
-                  <span className="text-[11px] font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">In Progress</span>
-                </div>
-                <p className="text-[11px] text-neutral-400">Thyroid axis, MEN syndromes & adrenal pathology</p>
-                <div className="w-full bg-neutral-200 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-amber-500 h-full w-[45%] rounded-full"></div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </DashboardLayout>
   );

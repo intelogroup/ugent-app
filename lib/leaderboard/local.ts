@@ -1,11 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import {
-  getAvatarDisplayName,
-  loadAvatarPreference,
-  resolveAvatar,
-  type AvatarPreference,
-  type AvatarUser,
-} from '@/lib/avatar';
+import { getAvatarDisplayName, resolveAvatar, type AvatarUser } from '@/lib/avatar';
 import { getQuizAttempts, type QuizAttempt } from '@/lib/quizAttempts';
 import {
   LEADERBOARD_CHANGE_EVENT,
@@ -39,11 +33,10 @@ function toAvatarUser(id: string, name: string, profilePictureUrl?: string | nul
 function resolveRowAvatar(
   id: string,
   name: string,
-  preference: AvatarPreference | null,
   profilePictureUrl?: string | null,
 ): Pick<LeaderboardRow, 'avatarSrc' | 'avatarAlt'> {
   const user = toAvatarUser(id, name, profilePictureUrl);
-  const resolved = resolveAvatar(user, preference);
+  const resolved = resolveAvatar(user);
   return { avatarSrc: resolved.src, avatarAlt: resolved.alt || name };
 }
 
@@ -71,14 +64,12 @@ export async function saveStudyCohort(cohort: StudyBuddy[]): Promise<void> {
 
 export async function addStudyBuddy(input: {
   name: string;
-  avatarPreference: AvatarPreference;
   averageScore?: number;
   testsCompleted?: number;
 }): Promise<StudyBuddy> {
   const buddy: StudyBuddy = {
     id: `buddy-${Date.now()}`,
     name: input.name.trim(),
-    avatarPreference: input.avatarPreference,
     averageScore: input.averageScore ?? 0,
     testsCompleted: input.testsCompleted ?? 0,
     totalCorrect: 0,
@@ -114,11 +105,10 @@ export async function buildLocalLeaderboard(user: AvatarUser | null | undefined)
 
   if (user?.id) {
     const name = getAvatarDisplayName(user);
-    const preference = loadAvatarPreference(user.id);
     rows.push({
       id: user.id,
       name,
-      ...resolveRowAvatar(user.id, name, preference, user.profilePictureUrl),
+      ...resolveRowAvatar(user.id, name, user.profilePictureUrl),
       averageScore: stats.averageScore,
       testsCompleted: stats.testsCompleted,
       totalCorrect: stats.totalCorrect,
@@ -130,7 +120,7 @@ export async function buildLocalLeaderboard(user: AvatarUser | null | undefined)
     rows.push({
       id: buddy.id,
       name: buddy.name,
-      ...resolveRowAvatar(buddy.id, buddy.name, buddy.avatarPreference),
+      ...resolveRowAvatar(buddy.id, buddy.name),
       averageScore: buddy.averageScore,
       testsCompleted: buddy.testsCompleted,
       totalCorrect: buddy.totalCorrect,

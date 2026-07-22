@@ -1,8 +1,24 @@
 import { NextResponse } from "next/server";
 import { analyzeQuestions, FIRST_AID_MAP, PATHOMA_MAP, PSYCH_DRUG_KEYWORDS } from "@/lib/curriculum/analyzer";
 import { readDataFile } from "@/lib/data-source";
+import type { TopicType } from "@/lib/curriculum/types";
+import type { KnowledgeGraph, KnowledgeGraphEdge } from "@/lib/strategy/knowledge-graph";
+import { systemNodeId } from "@/lib/strategy/knowledge-graph";
 
 export const dynamic = "force-dynamic";
+
+const TOPIC_TYPES = new Set<TopicType>([
+  "DISEASE",
+  "PRINCIPLE",
+  "DRUG",
+  "PATHOGEN",
+  "SYNDROME",
+  "CONCEPT",
+]);
+
+function normalizeTopicType(type: string): TopicType {
+  return TOPIC_TYPES.has(type as TopicType) ? type as TopicType : "CONCEPT";
+}
 
 function mapSystem(rawSystem: string, rawSubject?: string): string {
   const s = rawSystem.toLowerCase();
@@ -81,9 +97,10 @@ export async function GET() {
     type SystemData = { system: string; total: number; topicTypes: TypeData[] };
 
     const systemMap = new Map<string, Map<string, LeafData[]>>();
+    const nodeSystems = new Map<string, Set<string>>();
 
     for (const node of allNodes) {
-      if (node.type === "PRINCIPLE" || !node.name) continue;
+      if (!node.name) continue;
 
       const rawEntries = node.entries && node.entries.length > 0
         ? node.entries
@@ -178,6 +195,11 @@ export async function GET() {
           }
         }
 
+        if (!nodeSystems.has(node.id)) nodeSystems.set(node.id, new Set());
+        nodeSystems.get(node.id)!.add(system);
+
+        if (node.type === "PRINCIPLE") continue;
+
         if (!systemMap.has(system)) {
           systemMap.set(system, new Map());
         }
@@ -223,6 +245,112 @@ export async function GET() {
     // Sort systems by total count
     graphData.sort((a, b) => b.total - a.total);
 
+    const prerequisiteTargets = new Map<string, Set<string>>();
+    for (const edge of analysis.graph.edges) {
+      if (!prerequisiteTargets.has(edge.from)) prerequisiteTargets.set(edge.from, new Set());
+      prerequisiteTargets.get(edge.from)!.add(edge.to);
+    }
+
+    const retainedTopics = allNodes.filter(
+      (node) => node.type !== "PRINCIPLE" || (prerequisiteTargets.get(node.id)?.size ?? 0) >= 2,
+    );
+    const retainedTopicIds = new Set(retainedTopics.map((node) => node.id));
+    const systemTotals = new Map(graphData.map((system) => [system.system, system.total]));
+    const systemNames = new Set(graphData.map((system) => system.system));
+    for (const node of retainedTopics) {
+      for (const system of nodeSystems.get(node.id) ?? []) systemNames.add(system);
+    }
+
+    const knowledgeNodes: KnowledgeGraph["nodes"] = [
+      ...[...systemNames].map((system) => ({
+        id: systemNodeId(system),
+        label: system,
+        type: "SYSTEM" as const,
+        questionCount: systemTotals.get(system) ?? 0,
+        systems: [system],
+        clues: [],
+        discriminators: [],
+      })),
+      ...retainedTopics.map((node) => ({
+        id: node.id,
+        label: node.name,
+        type: normalizeTopicType(node.type),
+        questionCount: node.questionCount,
+        systems: [...(nodeSystems.get(node.id) ?? [])],
+        clues: node.highLeverageClues.slice(0, 6),
+        discriminators: node.discriminators.slice(0, 6),
+      })),
+    ];
+
+    const edgeMap = new Map<string, KnowledgeGraphEdge>();
+    const addEdge = (edge: KnowledgeGraphEdge) => {
+      const existing = edgeMap.get(edge.id);
+      if (existing) {
+        existing.weight += edge.weight;
+      } else {
+        edgeMap.set(edge.id, edge);
+      }
+    };
+
+    for (const node of retainedTopics) {
+      for (const system of nodeSystems.get(node.id) ?? []) {
+        addEdge({
+          id: `belongs:${node.id}:${systemNodeId(system)}`,
+          source: node.id,
+          target: systemNodeId(system),
+          type: "BELONGS_TO",
+          weight: Math.max(node.questionCount, 1),
+          directed: false,
+        });
+      }
+    }
+
+    for (const edge of analysis.graph.edges) {
+      if (!retainedTopicIds.has(edge.from) || !retainedTopicIds.has(edge.to)) continue;
+      addEdge({
+        id: `prerequisite:${edge.from}:${edge.to}`,
+        source: edge.from,
+        target: edge.to,
+        type: "PREREQUISITE_FOR",
+        weight: 1,
+        directed: true,
+      });
+    }
+
+    const sharedSystemWeights = new Map<string, { source: string; target: string; weight: number }>();
+    for (const node of retainedTopics) {
+      if (node.type === "PRINCIPLE") continue;
+      const systems = nodeSystems.get(node.id) ?? new Set<string>();
+      const ids = [...systems].map(systemNodeId).sort();
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const id = `shared:${ids[i]}:${ids[j]}`;
+          const current = sharedSystemWeights.get(id);
+          sharedSystemWeights.set(id, {
+            source: ids[i],
+            target: ids[j],
+            weight: (current?.weight ?? 0) + 1,
+          });
+        }
+      }
+    }
+
+    for (const [id, edge] of sharedSystemWeights) {
+      addEdge({
+        id,
+        source: edge.source,
+        target: edge.target,
+        type: "SHARES_CONCEPT",
+        weight: edge.weight,
+        directed: false,
+      });
+    }
+
+    const knowledgeGraph: KnowledgeGraph = {
+      nodes: knowledgeNodes,
+      edges: [...edgeMap.values()],
+    };
+
     // Build geneticsPairs from JSON
     let geneticsPairs: any[] = [];
     try {
@@ -246,6 +374,7 @@ export async function GET() {
 
     return NextResponse.json({
       graphData,
+      knowledgeGraph,
       geneticsPairs,
       questionBankClues,
       firstAidMap: FIRST_AID_MAP,

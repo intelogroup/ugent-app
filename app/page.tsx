@@ -1,215 +1,222 @@
-'use client'
-
+import Image from 'next/image'
 import Link from 'next/link'
+import { Newsreader, Plus_Jakarta_Sans } from 'next/font/google'
 import {
-  SparklesIcon,
-  ChartBarIcon,
-  BoltIcon,
-  LightBulbIcon,
-  CheckCircleIcon,
-  ArrowRightIcon
-} from '@heroicons/react/24/solid'
+  ArrowRight,
+  CalendarCheck2,
+  Check,
+  Mic2,
+} from 'lucide-react'
+import UgentLogo from '@/components/UgentLogo'
+import styles from './landing.module.css'
 
-export default function LandingPage() {
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  display: 'swap',
+})
+
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  variable: '--font-newsreader',
+  display: 'swap',
+})
+
+const platformFeatures = [
+  {
+    title: 'Question-bank driven',
+    text: 'Topic frequency and dependencies shape your 19-week curriculum.',
+  },
+  {
+    title: 'Three focused blocks',
+    text: 'Each block has one task, one resource, and 50 minutes.',
+  },
+  {
+    title: 'Progress at a glance',
+    text: 'Track completed blocks and practice accuracy.',
+  },
+]
+
+export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      <nav className="border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-                <SparklesIcon className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-neutral-900">Ugent</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/auth/login"
-                className="text-neutral-600 hover:text-neutral-900 font-medium transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="bg-primary-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
+    <main className={`${styles.page} ${jakarta.variable} ${newsreader.variable} ${jakarta.className}`}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.brand} aria-label="Ugent home">
+          <UgentLogo className={styles.logo} />
+          <span>Ugent</span>
+        </Link>
+
+        <nav className={styles.nav} aria-label="Landing page navigation">
+          <a href="#platform">Platform</a>
+          <a href="#clea">Clea AI</a>
+        </nav>
+
+        <div className={styles.headerActions}>
+          <Link href="/auth/login" className={styles.signIn}>Sign in</Link>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-primary-50 to-white">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full mb-8">
-            <SparklesIcon className="w-4 h-4" />
-            <span className="text-sm font-semibold">Usmle Study Agent</span>
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-bold text-neutral-900 mb-6 leading-tight">
-            Master Your Studies with
-            <br />
-            <span className="text-primary-600">AI-Driven Analytics</span>
+      <section className={styles.hero}>
+        <div className={styles.heroGlow} />
+        <div className={styles.heroCopy}>
+          <h1>
+            <span className={styles.heroTitleLead}>Prepare your USMLE</span>
+            <span className={styles.heroTitleSecond}>
+              with a <span className={styles.heroTitleAccent}>clear route forward.</span>
+            </span>
           </h1>
-
-          <p className="text-xl text-neutral-600 mb-12 max-w-3xl mx-auto">
-            Ugent combines intelligent question banks with powerful analytics to help you
-            ace your exams. Track progress, identify weaknesses, and study smarter with
-            personalized AI insights.
+          <p className={styles.heroLead}>
+            Ugent turns the question bank into a focused 19-week plan, with clear study blocks, contextual tutoring, and progress you can see.
           </p>
+          <div className={styles.heroSocialProof}>
+            <div className={styles.userStack} aria-hidden="true">
+              <Image src="/clea2-avatar-photo.png" alt="" width={40} height={40} />
+              <Image src="/clea-avatar-photo.png" alt="" width={40} height={40} />
+              <Image src="/images/landing/hero-med-student.webp" alt="" width={40} height={40} />
+            </div>
+            <div>
+              <strong>4K+</strong>
+              <span>Trusted by thousands</span>
+            </div>
+          </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/auth/signup"
-              className="bg-primary-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
-            >
-              Start Learning Free
-              <ArrowRightIcon className="w-5 h-5" />
-            </Link>
-            <Link
-              href="/auth/login"
-              className="bg-white text-neutral-900 px-8 py-4 rounded-xl font-semibold text-lg border-2 border-neutral-200 hover:border-primary-500 hover:bg-primary-50 transition-all"
-            >
-              View Demo
-            </Link>
+        <div className={styles.heroVisual} aria-label="Medical student using the Ugent study platform">
+          <div className={styles.portraitFrame}>
+            <Image
+              src="/images/landing/hero-med-student.webp"
+              alt="Medical student holding a tablet and study notebook"
+              width={1024}
+              height={1536}
+              className={styles.heroPortrait}
+              priority
+              sizes="(max-width: 1000px) 80vw, 45vw"
+            />
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 mt-20 max-w-3xl mx-auto">
-            <div>
-              <div className="text-4xl font-bold text-neutral-900">10K+</div>
-              <div className="text-sm text-neutral-600 mt-1">Questions</div>
+          <div className={`${styles.heroFloatCard} ${styles.planFloat}`}>
+            <span className={styles.floatIcon}><CalendarCheck2 size={19} /></span>
+            <div><small>YOUR ROUTE</small><strong>19-week plan</strong></div>
+            <span className={styles.floatStatus}><Check size={13} /> Ready</span>
+          </div>
+
+          <div className={`${styles.heroFloatCard} ${styles.cleaFloat}`}>
+            <Image src="/clea2-avatar-photo.png" alt="" width={44} height={44} />
+            <div><small>ASK CLEA</small><strong>Answers in context</strong></div>
+            <Mic2 size={17} />
+          </div>
+
+        </div>
+      </section>
+
+      <section className={styles.platform} id="platform">
+        <div className={styles.platformShowcase}>
+          <div className={styles.sectionIntro}>
+            <h2>Know what to study next.</h2>
+          </div>
+
+          <div className={styles.curriculumPreview} aria-label="Example of a Ugent daily study plan">
+            <div className={styles.previewHeader}>
+              <strong>Week 8 of 19</strong>
+              <span>Step 1 curriculum</span>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-neutral-900">95%</div>
-              <div className="text-sm text-neutral-600 mt-1">Pass Rate</div>
+            <div className={styles.previewProgress}><i /></div>
+            <div className={styles.previewDay}>
+              <strong>Today’s plan</strong>
+              <span>3 blocks · 150 min</span>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-neutral-900">50K+</div>
-              <div className="text-sm text-neutral-600 mt-1">Students</div>
+            <div className={styles.previewBlocks}>
+              <div>
+                <small>Reading</small>
+                <strong>Review assigned resources</strong>
+                <span>50 min</span>
+              </div>
+              <div>
+                <small>Questions</small>
+                <strong>Practice topic questions</strong>
+                <span>50 min</span>
+              </div>
+              <div>
+                <small>Review</small>
+                <strong>Review missed concepts</strong>
+                <span>50 min</span>
+              </div>
             </div>
+          </div>
+
+          <div className={styles.platformFeatureList}>
+            {platformFeatures.map(({ title, text }) => (
+              <article key={title}>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-neutral-900 mb-4">
-              Everything You Need to Succeed
-            </h2>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Powerful features designed to help you study efficiently and track your progress in real-time
-            </p>
+      <section className={styles.cleaSection} id="clea">
+        <div className={styles.cleaVisual}>
+          <div className={styles.cleaHalo} />
+          <div className={styles.cleaPortrait}>
+            <Image src="/clea2-avatar-photo.png" alt="Clea AI study companion" width={270} height={270} priority={false} />
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mb-6">
-                <SparklesIcon className="w-7 h-7 text-primary-600" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">AI-Powered Insights</h3>
-              <p className="text-neutral-600">
-                Get personalized study recommendations based on your performance patterns and weak areas
-              </p>
+          <div className={styles.waveCard}>
+            <Mic2 size={18} />
+            <div className={styles.waveform} aria-hidden="true">
+              {[10, 18, 28, 16, 34, 24, 13, 30, 20, 11, 25, 15].map((height, index) => (
+                <i key={index} style={{ height }} />
+              ))}
             </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-primary-50 rounded-xl flex items-center justify-center mb-6">
-                <ChartBarIcon className="w-7 h-7 text-primary-600" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">Advanced Analytics</h3>
-              <p className="text-neutral-600">
-                Track your progress with detailed charts and metrics across all subjects and topics
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-6">
-                <BoltIcon className="w-7 h-7 text-neutral-900" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">Adaptive Testing</h3>
-              <p className="text-neutral-600">
-                Practice with questions that adapt to your skill level for maximum learning efficiency
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center mb-6">
-                <LightBulbIcon className="w-7 h-7 text-neutral-700" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">Smart Study Plans</h3>
-              <p className="text-neutral-600">
-                AI-generated study schedules tailored to your goals and learning pace
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-neutral-50 rounded-xl flex items-center justify-center mb-6">
-                <CheckCircleIcon className="w-7 h-7 text-neutral-500" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">Progress Tracking</h3>
-              <p className="text-neutral-600">
-                Monitor your improvement over time with comprehensive performance metrics
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="bg-white p-8 rounded-2xl border-2 border-neutral-200 hover:border-primary-500 hover:shadow-lg transition-all">
-              <div className="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mb-6">
-                <SparklesIcon className="w-7 h-7 text-primary-600" />
-              </div>
-              <h3 className="text-xl font-bold text-neutral-900 mb-3">Question Bank</h3>
-              <p className="text-neutral-600">
-                Access thousands of high-quality questions across all major subjects and topics
-              </p>
-            </div>
+            <span>Voice mode</span>
           </div>
+        </div>
+        <div className={styles.cleaCopy}>
+          <h2>Talk through the concept until it clicks.</h2>
+          <p>
+            Ask a follow-up, request a simpler explanation, or turn the topic into a quick recall drill out loud and routed in textbook knowledge.
+          </p>
+          <Link href="/auth/signup" className={styles.darkCta}>Try Clea <ArrowRight size={17} /></Link>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Transform Your Study Habits?
-          </h2>
-          <p className="text-xl text-primary-100 mb-10">
-            Join thousands of students who are already studying smarter with Ugent
-          </p>
-          <Link
-            href="/auth/signup"
-            className="inline-flex items-center gap-2 bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-neutral-50 transition-colors"
-          >
-            Get Started for Free
-            <ArrowRightIcon className="w-5 h-5" />
-          </Link>
+      <section className={styles.finalCta}>
+        <div className={styles.finalGlow} />
+        <h2>Give every study hour a purpose.</h2>
+        <p>Start with a clear plan for what to study next.</p>
+        <div>
+          <Link href="/auth/signup" className={styles.lightCta}>Start studying free <ArrowRight size={18} /></Link>
+          <Link href="/auth/login" className={styles.ghostCta}>Sign in</Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-neutral-900 text-neutral-400 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <SparklesIcon className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">Ugent</span>
+      <footer className={styles.footer}>
+        <div className={styles.footerMain}>
+          <div className={styles.footerBrand}>
+            <Link href="/" className={styles.brand}><UgentLogo className={styles.logo} /><span>Ugent</span></Link>
+            <p>A focused curriculum, contextual tutoring, and clear progress for USMLE Step 1.</p>
           </div>
-          <p className="text-sm">
-            &copy; 2025 Ugent. All rights reserved. Study smarter, not harder.
-          </p>
+
+          <nav className={styles.footerNav} aria-label="Footer navigation">
+            <div>
+              <strong>Product</strong>
+              <a href="#platform">Platform</a>
+              <a href="#clea">Clea AI</a>
+              <Link href="/curriculum">Curriculum</Link>
+            </div>
+            <div>
+              <strong>Account</strong>
+              <Link href="/auth/signup">Create account</Link>
+              <Link href="/auth/login">Sign in</Link>
+            </div>
+          </nav>
+        </div>
+
+        <div className={styles.footerBottom}>
+          <span>© {new Date().getFullYear()} Ugent. All rights reserved.</span>
+          <span>Built for focused USMLE Step 1 preparation.</span>
         </div>
       </footer>
-    </div>
+    </main>
   )
 }

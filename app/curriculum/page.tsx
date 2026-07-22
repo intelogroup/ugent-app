@@ -2,21 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import type { Curriculum, StudyWeek, StudyBlock } from '@/lib/curriculum/types';
+import type { Curriculum, StudyWeek } from '@/lib/curriculum/types';
 
 const PHASE_CONFIG: Record<string, { color: string; bg: string; border: string; label: string }> = {
   FOUNDATIONS: { color: 'text-[#0E7490]', bg: 'bg-[#ECFEFF]', border: 'border-[#0E7490]/30', label: 'Foundations' },
   ORGAN_SYSTEMS: { color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Organ Systems' },
   INTEGRATION: { color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', label: 'Integration' },
   FINAL_REVIEW: { color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', label: 'Final Review' },
-};
-
-const BLOCK_ICONS: Record<StudyBlock['type'], string> = {
-  READING: 'FA',
-  VIDEO: 'VID',
-  QUESTIONS: 'Q',
-  REVIEW: 'REV',
-  PHARMACOLOGY: 'RX',
 };
 
 function formatTime(totalMinutes: number): string {
@@ -33,21 +25,18 @@ export default function CurriculumPage() {
   const [loading, setLoading] = useState(true);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<number>>(new Set());
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
-  const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('curriculum-completed-blocks');
-        if (saved) return new Set(JSON.parse(saved));
-      } catch {}
-    }
-    return new Set();
-  });
+  const [completedBlocks, setCompletedBlocks] = useState<Set<string>>(new Set());
   const [activePhase, setActivePhase] = useState<string>('FOUNDATIONS');
   const [sortAlpha, setSortAlpha] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('curriculum-completed-blocks', JSON.stringify([...completedBlocks]));
-  }, [completedBlocks]);
+    fetch('/api/curriculum-progress')
+      .then(r => r.json())
+      .then(json => {
+        if (Array.isArray(json.blockIds)) setCompletedBlocks(new Set(json.blockIds));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('/api/curriculum')
@@ -82,12 +71,18 @@ export default function CurriculumPage() {
   };
 
   const toggleBlock = (blockId: string) => {
+    const nowCompleting = !completedBlocks.has(blockId);
     setCompletedBlocks(prev => {
       const next = new Set(prev);
       if (next.has(blockId)) next.delete(blockId);
       else next.add(blockId);
       return next;
     });
+    fetch('/api/curriculum-progress', {
+      method: nowCompleting ? 'POST' : 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockId }),
+    }).catch(() => {});
   };
 
   const toggleAllDaysInWeek = (week: StudyWeek) => {
@@ -140,8 +135,8 @@ export default function CurriculumPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
-          <span className="ml-3 text-neutral-500">Generating your study curriculum...</span>
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary-600/25 border-t-primary-600" />
+          <span className="ml-3 text-sm text-neutral-500">Building your curriculum</span>
         </div>
       </DashboardLayout>
     );
@@ -163,54 +158,46 @@ export default function CurriculumPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto">
-        {/* === HEADER === */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-neutral-900">Study Curriculum</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Step 1 prep plan: {data.startDate} → {data.examDate} ({data.totalDays} days, {data.totalHours}h total)
-          </p>
-        </div>
-
-        {/* === PROGRESS BAR === */}
-        <div className="card p-6 mb-8">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-neutral-700">Overall Progress</span>
-            <span className="text-sm font-bold text-neutral-900">{overallProgress}%</span>
+      <div className="workspace-page max-w-[1040px]">
+        <header className="workspace-header">
+          <div>
+            <p className="workspace-eyebrow">Study plan</p>
+            <h1 className="workspace-title">Curriculum</h1>
+            <p className="workspace-subtitle">{data.startDate} to {data.examDate} · {data.totalDays} days · {data.totalHours} planned hours</p>
           </div>
-          <div className="w-full bg-neutral-200 rounded-full h-3">
+          <p className="rounded-full border border-white/80 bg-white/55 px-3 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm backdrop-blur-md">6 study days / week</p>
+        </header>
+
+        <section className="glass-panel mb-5 overflow-hidden rounded-[22px]">
+          <div className="p-5">
+            <div className="mb-2.5 flex items-baseline justify-between">
+              <span className="text-sm font-semibold text-neutral-800">Overall progress</span>
+              <span className="text-2xl font-bold tracking-tight text-neutral-900">{overallProgress}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200/70">
             <div
-              className="bg-primary-600 h-3 rounded-full transition-all duration-500"
+              className="h-full rounded-full bg-primary-600 transition-[width] duration-200"
               style={{ width: `${overallProgress}%` }}
             />
+            </div>
+            <p className="mt-2 text-xs text-neutral-500">Exam date: {data.examDate}</p>
           </div>
-          <p className="text-xs text-neutral-500 mt-2">
-            {data.examDate} exam date | {formatTime(data.totalHours * 60)} planned
-          </p>
-        </div>
+          <dl className="grid grid-cols-2 border-t border-white/80 sm:grid-cols-4">
+            {[
+              ['Questions', data.overview.totalQuestions],
+              ['Topics', data.overview.totalTopics],
+              ['Weeks', data.weeks.length],
+              ['Prerequisite layers', data.overview.dependencyDepth],
+            ].map(([label, value], index) => (
+              <div key={label} className={`px-5 py-3.5 ${index % 2 ? 'border-l border-white/80' : ''} ${index > 1 ? 'border-t border-white/80 sm:border-t-0' : ''} ${index > 0 ? 'sm:border-l sm:border-white/80' : ''}`}>
+                <dt className="text-[10px] font-bold uppercase tracking-[0.1em] text-neutral-400">{label}</dt>
+                <dd className="mt-0.5 text-lg font-bold tracking-tight text-neutral-900">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
-        {/* === OVERVIEW STATS === */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          <div className="stat-card">
-            <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Questions</p>
-            <p className="text-2xl font-bold text-neutral-900">{data.overview.totalQuestions}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Topics</p>
-            <p className="text-2xl font-bold text-neutral-900">{data.overview.totalTopics}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Weeks</p>
-            <p className="text-2xl font-bold text-neutral-900">{data.weeks.length}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-xs text-neutral-400 uppercase tracking-wide mb-1">Prereq Depth</p>
-            <p className="text-2xl font-bold text-neutral-900">{data.overview.dependencyDepth} layers</p>
-          </div>
-        </div>
-
-        {/* === PHASE NAVIGATION === */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+        <nav aria-label="Curriculum phases" className="glass-panel mb-5 flex gap-1 overflow-x-auto rounded-2xl p-1.5 no-scrollbar">
           {phases.map(phase => {
             const cfg = PHASE_CONFIG[phase];
             const phaseWeeks = data.weeks.filter(w => w.phase === phase);
@@ -226,36 +213,34 @@ export default function CurriculumPage() {
               <button
                 key={phase}
                 onClick={() => scrollToPhase(phase)}
-                className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                className={`pressable flex-shrink-0 rounded-xl border px-3.5 py-2 text-left text-xs font-semibold ${
                   activePhase === phase
-                    ? `${cfg.bg} ${cfg.color} ${cfg.border}`
-                    : 'bg-white border-neutral-200 text-neutral-500 hover:border-neutral-300'
+                    ? `${cfg.bg} ${cfg.color} border-white/80 shadow-sm`
+                    : 'border-transparent text-neutral-500 hover:bg-white/55 hover:text-neutral-800'
                 }`}
               >
-                <span className="block">{cfg.label}</span>
-                <span className="block text-xs opacity-70">{phasePct}% done</span>
+                <span>{cfg.label}</span>
+                <span className="ml-2 opacity-60">{phasePct}%</span>
               </button>
             );
           })}
-        </div>
+        </nav>
 
-        {/* === TOP DISEASES REFERENCE === */}
-        <details className="card p-4 mb-8">
-          <summary className="text-sm font-semibold text-neutral-700 cursor-pointer">Top Tested Diseases in Your Databank</summary>
-          <div className="mt-3 flex items-center gap-2 mb-2">
+        <details className="glass-panel group mb-6 rounded-2xl px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold text-neutral-700 marker:text-neutral-400">High-yield conditions <span className="ml-1 text-xs font-normal text-neutral-400">({data.overview.topDiseases.length})</span></summary>
+          <div className="mb-2 mt-3 flex items-center gap-2">
             <button
               onClick={() => setSortAlpha(d => !d)}
-              className="text-xs text-primary-600 hover:text-primary-500 font-medium border border-primary-200 rounded px-2 py-0.5"
+              className="pressable rounded-lg border border-white/80 bg-white/55 px-2.5 py-1 text-xs font-semibold text-primary-600 hover:bg-white"
             >
               Sort: {sortAlpha ? 'A-Z' : 'Frequency'}
             </button>
-            <span className="text-xs text-neutral-400">{data.overview.topDiseases.length} conditions</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {[...data.overview.topDiseases]
               .sort((a, b) => sortAlpha ? a.name.localeCompare(b.name) : b.count - a.count)
               .map(d => (
-              <span key={d.name} className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded">
+              <span key={d.name} className="rounded-lg border border-white/70 bg-white/45 px-2 py-1 text-xs text-neutral-600">
                 {d.name} ({d.count}x)
               </span>
             ))}
@@ -269,10 +254,11 @@ export default function CurriculumPage() {
           const cfg = PHASE_CONFIG[phase];
 
           return (
-            <div key={phase} id={`phase-${phase}`} className="mb-10">
-              <h2 className={`text-lg font-bold mb-4 ${cfg.color}`}>
-                {cfg.label} ({phaseWeeks.length} weeks)
-              </h2>
+            <section key={phase} id={`phase-${phase}`} className="mb-7 scroll-mt-4">
+              <div className="mb-3 flex items-baseline justify-between px-1">
+                <h2 className={`text-sm font-bold ${cfg.color}`}>{cfg.label}</h2>
+                <span className="text-xs text-neutral-400">{phaseWeeks.length} {phaseWeeks.length === 1 ? 'week' : 'weeks'}</span>
+              </div>
 
               {phaseWeeks.map(week => {
                 const isExpanded = expandedWeeks.has(week.weekNumber);
@@ -280,30 +266,30 @@ export default function CurriculumPage() {
                 const allDaysExpanded = week.days.every(d => expandedDays.has(`${d.date}-${week.weekNumber}`));
 
                 return (
-                  <div key={week.weekNumber} className={`card mb-3 overflow-hidden border-l-4 ${cfg.border}`}>
+                  <article key={week.weekNumber} className={`glass-panel mb-2 overflow-hidden rounded-2xl border-l-2 ${cfg.border}`}>
                     {/* Week header */}
                     <button
                       onClick={() => toggleWeek(week.weekNumber)}
-                      className="w-full p-4 text-left hover:bg-neutral-50 transition-colors"
+                      className="pressable w-full px-4 py-3 text-left hover:bg-white/45"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className={`text-lg ${isExpanded ? 'rotate-90' : ''} transition-transform text-neutral-400`}>
-                            ▶
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span aria-hidden="true" className={`text-lg leading-none text-neutral-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                            ›
                           </span>
                           <div className="min-w-0">
-                            <p className="text-base font-semibold text-neutral-900 truncate">
+                            <p className="truncate text-sm font-semibold text-neutral-900">
                               Week {week.weekNumber}: {week.phaseLabel}
                             </p>
-                            <p className="text-xs text-neutral-500">
-                              {week.startDate} → {week.endDate} | {formatTime(week.totalMinutes)} | {week.days.length} study days
+                            <p className="mt-0.5 text-[11px] text-neutral-500">
+                              {week.startDate} – {week.endDate} · {formatTime(week.totalMinutes)} · {week.days.length} days
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className="text-sm font-medium text-neutral-500">{progress.pct}%</span>
-                          <div className="w-16 bg-neutral-200 rounded-full h-1.5">
-                            <div className="bg-primary-600 h-1.5 rounded-full" style={{ width: `${progress.pct}%` }} />
+                        <div className="ml-3 flex flex-shrink-0 items-center gap-2.5">
+                          <span className="text-xs font-semibold text-neutral-500">{progress.pct}%</span>
+                          <div className="h-1.5 w-14 overflow-hidden rounded-full bg-neutral-200/70">
+                            <div className="h-full rounded-full bg-primary-600" style={{ width: `${progress.pct}%` }} />
                           </div>
                         </div>
                       </div>
@@ -311,11 +297,11 @@ export default function CurriculumPage() {
 
                     {/* Expanded week content */}
                     {isExpanded && (
-                      <div className="border-t border-neutral-100 px-4 py-3">
-                        <div className="flex justify-end mb-2">
+                      <div className="border-t border-white/80 px-3 py-2.5 sm:px-4">
+                        <div className="mb-1 flex justify-end">
                           <button
                             onClick={(e) => { e.stopPropagation(); toggleAllDaysInWeek(week); }}
-                            className="text-xs text-primary-600 hover:text-primary-500 font-medium"
+                            className="pressable rounded-md px-2 py-1 text-[11px] font-semibold text-primary-600 hover:bg-white/60"
                           >
                             {allDaysExpanded ? 'Collapse all days' : 'Expand all days'}
                           </button>
@@ -327,80 +313,80 @@ export default function CurriculumPage() {
                           const dayDone = day.blocks.filter(b => completedBlocks.has(b.id)).length;
 
                           return (
-                            <div key={dayKey} className="mb-2 last:mb-0">
+                            <div key={dayKey} className="last:mb-0">
                               {/* Day header */}
                               <button
                                 onClick={() => toggleDay(dayKey)}
-                                className="w-full flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-neutral-50 text-left"
+                                className="pressable flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-white/45"
                               >
-                                <span className={`text-xs ${isDayExpanded ? 'rotate-90' : ''} transition-transform text-neutral-400`}>▶</span>
+                                <span aria-hidden="true" className={`text-base leading-none text-neutral-400 transition-transform duration-200 ${isDayExpanded ? 'rotate-90' : ''}`}>›</span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-neutral-700">
+                                  <p className="text-xs font-semibold text-neutral-700">
                                     {day.dayOfWeek}, {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                   </p>
-                                  <p className="text-xs text-neutral-400">{day.subject} | {day.system}</p>
+                                  <p className="mt-0.5 truncate text-[11px] text-neutral-400">{day.subject} · {day.system}</p>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className="text-xs text-neutral-400">{dayDone}/{day.blocks.length}</span>
-                                  <span className="text-xs text-neutral-400">{formatTime(day.totalMinutes)}</span>
+                                <div className="flex flex-shrink-0 items-center gap-2 text-[11px] text-neutral-400">
+                                  <span>{dayDone}/{day.blocks.length}</span>
+                                  <span>{formatTime(day.totalMinutes)}</span>
                                 </div>
                               </button>
 
                               {/* Day blocks */}
                               {isDayExpanded && (
-                                <div className="ml-8 mt-1 space-y-1">
+                                <div className="ml-6 mt-0.5 space-y-1 sm:ml-8">
                                   {day.blocks.map(block => {
                                     const isDone = completedBlocks.has(block.id);
                                     return (
                                       <div
                                         key={block.id}
-                                        className={`flex items-start gap-3 py-2 px-3 rounded-lg border transition-colors ${
-                                          isDone ? 'bg-neutral-100 border-neutral-200 opacity-70' : 'bg-white border-neutral-100 hover:border-neutral-200'
+                                        className={`flex items-start gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
+                                          isDone ? 'border-white/70 bg-neutral-100/60 opacity-65' : 'border-white/75 bg-white/40 hover:bg-white/70'
                                         }`}
                                       >
                                         <button
                                           onClick={() => toggleBlock(block.id)}
-                                          className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                          aria-label={isDone ? `Mark ${block.title} incomplete` : `Mark ${block.title} complete`}
+                                          className={`pressable mt-0.5 flex h-4.5 w-4.5 flex-shrink-0 items-center justify-center rounded-[6px] border ${
                                             isDone
                                               ? 'bg-primary-600 border-primary-600 text-white'
                                               : 'border-neutral-300 hover:border-primary-600'
                                           }`}
                                         >
                                           {isDone && (
-                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                             </svg>
                                           )}
                                         </button>
 
                                         <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm">{BLOCK_ICONS[block.type]}</span>
-                                            <span className={`text-xs font-medium uppercase px-1.5 py-0.5 rounded ${
+                                          <div className="flex flex-wrap items-center gap-1.5">
+                                            <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
                                               block.type === 'READING' ? 'bg-blue-50 text-blue-600' :
                                               block.type === 'VIDEO' ? 'bg-emerald-50 text-emerald-600' :
                                               block.type === 'QUESTIONS' ? 'bg-amber-50 text-amber-600' :
                                               'bg-purple-50 text-purple-600'
                                             }`}>{block.type}</span>
-                                            <span className="text-sm font-medium text-neutral-700 truncate">{block.title}</span>
+                                            <span className="truncate text-xs font-semibold text-neutral-700">{block.title}</span>
                                           </div>
-                                          <p className="text-xs text-neutral-500 mt-0.5 ml-7">{block.description}</p>
+                                          <p className="mt-0.5 text-[11px] leading-4 text-neutral-500">{block.description}</p>
                                           {block.topic && (
-                                            <p className="text-xs text-neutral-400 ml-7 mt-0.5 italic">Topics: {block.topic}</p>
+                                            <p className="mt-0.5 text-[11px] text-neutral-400">Topics: {block.topic}</p>
                                           )}
                                           {block.resources.firstAid && (
-                                            <p className="text-xs text-primary-600 ml-7 mt-0.5">
+                                            <p className="mt-0.5 text-[11px] text-primary-600">
                                               FA: {block.resources.firstAid}
                                             </p>
                                           )}
                                           {block.resources.pathoma && (
-                                            <p className="text-xs text-primary-600 ml-7 mt-0.5">
+                                            <p className="mt-0.5 text-[11px] text-primary-600">
                                               Pathoma: {block.resources.pathoma}
                                             </p>
                                           )}
                                         </div>
 
-                                        <span className="text-xs text-neutral-400 flex-shrink-0">{block.durationMinutes}min</span>
+                                        <span className="flex-shrink-0 text-[11px] text-neutral-400">{block.durationMinutes}m</span>
                                       </div>
                                     );
                                   })}
@@ -411,10 +397,10 @@ export default function CurriculumPage() {
                         })}
                       </div>
                     )}
-                  </div>
+                  </article>
                 );
               })}
-            </div>
+            </section>
           );
         })}
       </div>

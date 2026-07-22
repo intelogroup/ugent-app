@@ -1,38 +1,24 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Bars3Icon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { navigation } from '@/lib/navigation';
 
 
-export default function MobileNav() {
+export default function MobileNav({ onMenuOpen = () => {}, onSearchOpen = () => {} }: { onMenuOpen?: () => void; onSearchOpen?: () => void }) {
   const pathname = usePathname();
+  const currentPage = navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
   return (
-    <div className="md:hidden sticky top-0 z-10 bg-white border-b border-neutral-200" role="navigation" aria-label="Main navigation">
-      {/* App header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-        <span className="text-base font-bold text-neutral-900">ugent</span>
-      </div>
-      {/* Scrollable tabs — scrollbar hidden via .no-scrollbar class in globals.css */}
-      <div className="flex overflow-x-auto no-scrollbar">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive ? 'page' : undefined}
-              className={`flex-shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                isActive
-                  ? 'border-[#0E7490] text-[#0E7490] font-semibold'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              {item.shortName}
-            </Link>
-          );
-        })}
+    <div className="sticky top-0 z-30 border-b border-neutral-200 bg-white lg:hidden" role="navigation" aria-label="Main navigation">
+      <div className="flex h-14 items-center justify-between px-4">
+        <button type="button" onClick={onMenuOpen} aria-label="Open navigation" className="grid h-9 w-9 place-items-center rounded-lg text-neutral-600 hover:bg-neutral-100">
+          <Bars3Icon className="h-5 w-5" />
+        </button>
+        <span className="text-sm font-bold text-neutral-900">{currentPage?.shortName ?? 'Ugent'}</span>
+        <button type="button" onClick={onSearchOpen} aria-label="Search" className="grid h-9 w-9 place-items-center rounded-lg text-neutral-600 hover:bg-neutral-100">
+          <MagnifyingGlassIcon className="h-5 w-5" />
+        </button>
       </div>
     </div>
   );

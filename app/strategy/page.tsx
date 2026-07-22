@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   AcademicCapIcon,
-  BeakerIcon,
   CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import DashboardLayout from "@/components/DashboardLayout";
 import StrategyGraphExplorer from "@/components/strategy/StrategyGraphExplorer";
 import FlashcardsTab from "@/components/strategy/MemorizeTab";
 import type { SubChapterNode } from "@/lib/curriculum/types";
+import type { KnowledgeGraph } from "@/lib/strategy/knowledge-graph";
 
 type StrategyView = "graph" | "flashcards";
 
 type StrategyData = {
+  knowledgeGraph: KnowledgeGraph;
   graphData: {
     system: string;
     total: number;
@@ -72,7 +72,7 @@ export default function StrategyHub() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="flex max-w-7xl mx-auto flex-col gap-6 lg:h-full">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Strategy Hub</h1>
@@ -106,14 +106,6 @@ export default function StrategyHub() {
                 Drill Cards
               </button>
             </div>
-
-            <Link
-              href="/strategy/clue-training"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E7490] hover:bg-[#155E75] text-white text-xs font-semibold rounded-xl transition-all shadow-xs"
-            >
-              <BeakerIcon className="w-4 h-4" />
-              Clue Training
-            </Link>
           </div>
         </div>
 
@@ -123,11 +115,10 @@ export default function StrategyHub() {
           ) : error ? (
             <div className="card p-8 text-center text-sm text-rose-500">Error loading data: {error}</div>
           ) : (
-            <div className="card p-6">
+            <div className="flex flex-1 flex-col lg:min-h-0">
               <StrategyGraphExplorer
-                data={strategyData?.graphData || []}
-                firstAidMap={strategyData?.firstAidMap}
-                pathomaMap={strategyData?.pathomaMap}
+                graphData={strategyData?.knowledgeGraph || { nodes: [], edges: [] }}
+                questionBankClues={strategyData?.questionBankClues || []}
               />
             </div>
           )

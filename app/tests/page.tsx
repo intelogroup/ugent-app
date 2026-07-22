@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
-import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
 import { getQuizAttempts, QuizAttempt } from '@/lib/quizAttempts';
 
 function formatDuration(seconds: number) {
@@ -25,77 +24,79 @@ export default function Tests() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex justify-between items-start">
+      <div className="workspace-page">
+        <header className="workspace-header">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900 mb-2">My Tests</h1>
-            <p className="text-neutral-600">Your quiz history</p>
+            <p className="workspace-eyebrow">Performance</p>
+            <h1 className="workspace-title">My tests</h1>
+            <p className="workspace-subtitle">A clean record of completed question sets and scores.</p>
           </div>
-          <Link href="/create-test" className="btn-primary">
-            Create New Test
+          <Link href="/create-test" className="btn-primary whitespace-nowrap">
+            New test
           </Link>
-        </div>
+        </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="card">
-            <p className="text-sm text-neutral-600 mb-1">Total Tests</p>
-            <p className="text-3xl font-bold text-neutral-900">{attempts.length}</p>
+        <section className="glass-panel mb-5 grid grid-cols-3 overflow-hidden rounded-[22px]">
+          <div className="px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Completed</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">{attempts.length}</p>
           </div>
-          <div className="card">
-            <p className="text-sm text-neutral-600 mb-1">Avg Score</p>
-            <p className="text-3xl font-bold text-[#0E7490]">{avgScore}%</p>
+          <div className="border-l border-white/80 px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Average</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-[#0E7490]">{avgScore}%</p>
           </div>
-        </div>
+          <div className="border-l border-white/80 px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Questions answered</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">{attempts.reduce((sum, attempt) => sum + attempt.total, 0)}</p>
+          </div>
+        </section>
 
-        <div className="card">
-          <h3 className="text-lg font-semibold text-neutral-900 mb-4">Recent Tests</h3>
+        <section className="glass-panel overflow-hidden rounded-[22px]">
+          <div className="flex items-center justify-between border-b border-white/80 px-5 py-4">
+            <div>
+              <h2 className="text-base font-semibold tracking-tight text-neutral-900">Recent tests</h2>
+              <p className="mt-0.5 text-xs text-neutral-500">Newest attempts first</p>
+            </div>
+            {attempts.length > 0 && <span className="text-xs font-semibold text-neutral-400">{attempts.length} total</span>}
+          </div>
           {attempts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-neutral-500 mb-4">No tests yet</p>
-              <Link href="/create-test" className="btn-primary">Start your first test →</Link>
+            <div className="px-5 py-16 text-center">
+              <p className="text-sm font-semibold text-neutral-800">No completed tests yet</p>
+              <p className="mx-auto mb-5 mt-1 max-w-sm text-xs leading-5 text-neutral-500">Your score history will appear here after your first question set.</p>
+              <Link href="/create-test" className="btn-primary inline-flex">Build your first test</Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="divide-y divide-white/80">
               {attempts.map((test) => {
                 const score = test.total > 0 ? Math.round((test.correct / test.total) * 100) : 0;
                 return (
                   <div
                     key={test.timestamp}
-                    className="p-4 rounded-lg border-2 border-neutral-200 hover:border-primary-300 hover:bg-neutral-50 transition-all"
+                    className="group grid gap-3 px-5 py-4 transition-colors hover:bg-white/45 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-neutral-900">{test.subject || test.system || 'Mixed'} Quiz</h4>
-                          <span className="bg-neutral-100 text-neutral-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                            <CheckCircleIcon className="w-3 h-3" />
-                            Completed
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-neutral-600">
-                          <span>{new Date(test.timestamp).toLocaleDateString()}</span>
-                          <span>•</span>
-                          <span>{test.total} questions</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <ClockIcon className="w-4 h-4" />
-                            {formatDuration(test.timeSpentSeconds)}
-                          </span>
-                        </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="truncate text-sm font-semibold text-neutral-900">{test.subject || test.system || 'Mixed'} test</h3>
+                        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-500">Complete</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-neutral-600 mb-1">Score</p>
-                        <p className={`text-3xl font-bold ${score >= 80 ? 'text-neutral-900' : score >= 60 ? 'text-neutral-700' : 'text-neutral-500'}`}>
-                          {score}%
-                        </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {new Date(test.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <span className="mx-2 text-neutral-300">/</span>{test.total} questions
+                        <span className="mx-2 text-neutral-300">/</span>{formatDuration(test.timeSpentSeconds)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 sm:justify-end">
+                      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-neutral-200/70">
+                        <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${score}%` }} />
                       </div>
+                      <p className="w-12 text-right text-xl font-bold tracking-tight text-neutral-900">{score}%</p>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </DashboardLayout>
   );

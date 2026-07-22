@@ -5,6 +5,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { queryQuestions } from '@/lib/qbank';
 import { analyzeQuestions, getSystemDiseaseMap } from '@/lib/curriculum/analyzer';
+import { generateCurriculum } from '@/lib/curriculum/generator';
 import { createClient } from '@/lib/supabase/server';
 import type { QuizAttempt } from '@/lib/quizAttempts';
 
@@ -184,6 +185,51 @@ export function makeQueryMyAttempts(attempts: QuizAttempt[]) {
         overallAccuracy: overallPct,
         last5Sessions: last5,
         subjectBreakdown,
+      };
+    },
+  });
+}
+
+export function makeQueryCurriculumProgress(completedBlockIds: string[]) {
+  const completed = new Set(completedBlockIds);
+  return tool({
+    description:
+      "Returns the student's personal curriculum progress: percent of study blocks completed, current phase/week, and the next few uncompleted blocks to study. Use this to answer questions like 'what's my progress' or 'what should I study next'.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const { graph, frequencyStats, systemDiseaseMap } = await analyzeQuestions();
+      const curriculum = generateCurriculum(graph, frequencyStats, systemDiseaseMap);
+
+      const allBlocks = curriculum.weeks.flatMap((w) =>
+        w.days.flatMap((d) => d.blocks.map((b) => ({ block: b, week: w, day: d }))),
+      );
+      const totalBlocks = allBlocks.length;
+      const completedCount = allBlocks.filter(({ block }) => completed.has(block.id)).length;
+      const percentComplete = totalBlocks > 0 ? Math.round((completedCount / totalBlocks) * 100) : 0;
+
+      const nextUncompleted = allBlocks
+        .filter(({ block }) => !completed.has(block.id))
+        .slice(0, 5)
+        .map(({ block, week, day }) => ({
+          title: block.title,
+          type: block.type,
+          topic: block.topic,
+          week: week.weekNumber,
+          phase: week.phaseLabel,
+          date: day.date,
+        }));
+
+      const currentWeek = curriculum.weeks.find((w) =>
+        w.days.some((d) => d.blocks.some((b) => !completed.has(b.id))),
+      ) ?? curriculum.weeks[0];
+
+      return {
+        totalBlocks,
+        completedBlocks: completedCount,
+        percentComplete,
+        currentPhase: currentWeek?.phaseLabel ?? null,
+        currentWeek: currentWeek?.weekNumber ?? null,
+        nextUncompleted,
       };
     },
   });

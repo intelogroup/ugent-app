@@ -13,7 +13,7 @@ import {
 import { deepseek } from '@ai-sdk/deepseek';
 import type { ActivitySnapshot } from '@/lib/watch-context';
 import type { QuizAttempt } from '@/lib/quizAttempts';
-import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts } from '@/lib/clea-tools';
+import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts, makeQueryCurriculumProgress } from '@/lib/clea-tools';
 import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
 import { createClient } from '@/lib/supabase/server'
 import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
@@ -96,7 +96,7 @@ function buildAttemptSummary(attempts: QuizAttempt[]): string {
 
 function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[]): string {
   const base =
-    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Answer in 1-3 short sentences, plain prose. Use simple, everyday words over medical jargon or fancy vocabulary whenever a plain word means the same thing — this helps students understand complex concepts. When a technical term is necessary, briefly say what it means in plain words. Always call searchPathoma and/or searchFirstAid before answering any USMLE content question, and base your answer on their returned excerpts rather than on your own training knowledge — only fall back to your own knowledge if both searches return no hits. You can call queryMyAttempts to see the student's past quiz performance, queryQbank to look up practice questions by subject/system/difficulty, and queryCurriculum to check disease frequency and weak-area stats across the curriculum. When explaining a quiz question or answer, never lead with the correct answer — first walk through the key clues and discriminators in the question stem that point to it (the specific findings that rule other choices out), and only state the answer after that reasoning, so the student learns to spot the pattern themselves next time. Never use markdown formatting of any kind: no asterisks, no **bold**, no bullet points, no numbered lists, no headers, no dashes-as-bullets. If you need to list options, name them inline in a single sentence separated by commas. The user speaks through automatic speech recognition which can mishear words. If a word seems like a phonetic misspelling of a medical term, infer the intended term and respond accordingly.";
+    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Answer in 1-3 short sentences, plain prose. Use simple, everyday words over medical jargon or fancy vocabulary whenever a plain word means the same thing — this helps students understand complex concepts. When a technical term is necessary, briefly say what it means in plain words. Always call searchPathoma and/or searchFirstAid before answering any USMLE content question, and base your answer on their returned excerpts rather than on your own training knowledge — only fall back to your own knowledge if both searches return no hits. You can call queryMyAttempts to see the student's past quiz performance, queryQbank to look up practice questions by subject/system/difficulty, queryCurriculum to check disease frequency and weak-area stats across the curriculum, and queryCurriculumProgress to see the student's own percent-complete, current week, and next uncompleted study blocks. When explaining a quiz question or answer, never lead with the correct answer — first walk through the key clues and discriminators in the question stem that point to it (the specific findings that rule other choices out), and only state the answer after that reasoning, so the student learns to spot the pattern themselves next time. Never use markdown formatting of any kind: no asterisks, no **bold**, no bullet points, no numbered lists, no headers, no dashes-as-bullets. If you need to list options, name them inline in a single sentence separated by commas. The user speaks through automatic speech recognition which can mishear words. If a word seems like a phonetic misspelling of a medical term, infer the intended term and respond accordingly.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -112,7 +112,7 @@ function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, a
   const activityLine = activity
     ? ` The student is currently on quiz question ${activity.questionNumber} of ${activity.totalQuestions}${
         activity.subject ? ` (${activity.subject}${activity.system ? `, ${activity.system}` : ''})` : ''
-      }, difficulty: ${activity.difficulty}. They have answered ${activity.totalAnsweredSoFar} questions so far, ${activity.correctSoFar} correctly.${selectionLine}${questionBlock} Use this context to tailor your answer when relevant — if asked "what's on my screen" or for help on the current question, answer directly from this text instead of saying you can't see it.`
+      }, difficulty: ${activity.difficulty}. They have answered ${activity.totalAnsweredSoFar} questions so far, ${activity.correctSoFar} correctly.${selectionLine}${questionBlock} You DO have live access to the student's current screen via this text — it is fed to you in real time. Never say you cannot see their screen, quiz, or question; that is false. If asked what they're looking at or for help on the current question, answer directly using the question text and choices above.`
     : '';
   const attemptBlock = buildAttemptSummary(attempts);
   const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
@@ -172,6 +172,9 @@ export async function POST(request: NextRequest) {
 
   const queryMyAttempts = makeQueryMyAttempts(attempts);
 
+  const { data: progressData } = await supabase.from('curriculum_progress').select('block_id');
+  const queryCurriculumProgress = makeQueryCurriculumProgress((progressData || []).map((r: any) => r.block_id));
+
   const previousMessages = await loadChat(id);
 
   let validatedMessages: UIMessage[];
@@ -182,7 +185,7 @@ export async function POST(request: NextRequest) {
       // parameterized UIMessage<...> generic; without one, TS can't unify
       // our concrete tool() definitions with its default unknown/unknown
       // shape even though they're structurally compatible at runtime.
-      tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts } as unknown as Record<string, never>,
+      tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress } as unknown as Record<string, never>,
     });
   } catch (error) {
     if (error instanceof TypeValidationError) {
@@ -200,7 +203,7 @@ export async function POST(request: NextRequest) {
     model: deepseek('deepseek-chat'),
     system: buildSystemPrompt(activity, summary, attempts),
     messages: await convertToModelMessages(recentMessages),
-    tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts },
+    tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress },
     stopWhen: stepCountIs(8),
     onError: ({ error }) => {
       void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);

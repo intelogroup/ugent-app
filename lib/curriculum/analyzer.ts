@@ -475,8 +475,12 @@ export async function analyzeQuestions(): Promise<{
       const existing = topicMap.get(node.id)!;
       existing.questionCount += node.questionCount;
       existing.questionIds.push(...node.questionIds);
-      existing.highLeverageClues.push(...node.highLeverageClues);
-      existing.discriminators.push(...node.discriminators);
+      for (const clue of node.highLeverageClues) {
+        if (!existing.highLeverageClues.includes(clue)) existing.highLeverageClues.push(clue);
+      }
+      for (const discriminator of node.discriminators) {
+        if (!existing.discriminators.includes(discriminator)) existing.discriminators.push(discriminator);
+      }
       if (!existing.systems) {
         existing.systems = existing.system ? [existing.system] : [];
       }

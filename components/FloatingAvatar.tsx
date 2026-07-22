@@ -5,7 +5,7 @@ import { XMarkIcon, PlayIcon, MicrophoneIcon } from '@heroicons/react/24/outline
 import { useCleaAgent } from '@/lib/clea-agent-context';
 import { stripMarkdown } from '@/lib/strip-markdown';
 
-const SIZE = 140;
+const SIZE = 200;
 
 const STREAM_WS_URL = process.env.NEXT_PUBLIC_WAV2LIP_WS_URL || 'ws://localhost:8765/lipsync-stream';
 const PREBUFFER_FRAMES = 2;
@@ -17,7 +17,12 @@ export default function FloatingAvatar() {
     x: typeof window === 'undefined' ? 300 : window.innerWidth - SIZE - 24,
     y: 24,
   }));
-  const videoSrc = '/clea_avatar.mp4';
+  const THUMB_SIZE = 64;
+  const [thumbPos, setThumbPos] = useState(() => ({
+    x: typeof window === 'undefined' ? 300 : window.innerWidth - THUMB_SIZE - 48,
+    y: 48,
+  }));
+  const videoSrc = '/clea_avatar_loop.mp4';
   // Prefetch /api/tts-audio while LLM streams. On each text tick, abort
   // old request and restart with accumulated text. When LLM finishes, the
   // last prefetched response (if resolved) is handed directly to Wav2Lip —
@@ -515,11 +520,20 @@ export default function FloatingAvatar() {
     y: Math.min(Math.max(y, 0), window.innerHeight - SIZE),
   });
 
+  // Thumbnail is itself a <button>, so `closest('button')` would always match
+  // and block dragging — track movement distance instead and let onClick
+  // check draggedRef to tell a real drag from a plain click.
+  const draggedRef = useRef(false);
+
   const handleDragStart = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
+    draggedRef.current = false;
     dragRef.current = { startX: e.clientX, startY: e.clientY, posX: pos.x, posY: pos.y };
     const onMove = (ev: MouseEvent) => {
       if (!dragRef.current) return;
+      if (Math.abs(ev.clientX - dragRef.current.startX) > 3 || Math.abs(ev.clientY - dragRef.current.startY) > 3) {
+        draggedRef.current = true;
+      }
       // bottom-anchored: mouse moving down should shrink `bottom`, not grow it
       setPos(
         clampPos(
@@ -540,13 +554,71 @@ export default function FloatingAvatar() {
   const handleTouchStart = (e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     const t = e.touches[0];
+    draggedRef.current = false;
     dragRef.current = { startX: t.clientX, startY: t.clientY, posX: pos.x, posY: pos.y };
     const onMove = (ev: TouchEvent) => {
       if (!dragRef.current) return;
+      if (Math.abs(ev.touches[0].clientX - dragRef.current.startX) > 3 || Math.abs(ev.touches[0].clientY - dragRef.current.startY) > 3) {
+        draggedRef.current = true;
+      }
       setPos(
         clampPos(
           dragRef.current.posX + ev.touches[0].clientX - dragRef.current.startX,
           dragRef.current.posY - (ev.touches[0].clientY - dragRef.current.startY),
+        ),
+      );
+    };
+    const onEnd = () => {
+      dragRef.current = null;
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove);
+    document.addEventListener('touchend', onEnd);
+  };
+
+  const clampThumbPos = (x: number, y: number) => ({
+    x: Math.min(Math.max(x, 0), window.innerWidth - THUMB_SIZE),
+    y: Math.min(Math.max(y, 0), window.innerHeight - THUMB_SIZE),
+  });
+
+  const handleThumbDragStart = (e: React.MouseEvent) => {
+    draggedRef.current = false;
+    dragRef.current = { startX: e.clientX, startY: e.clientY, posX: thumbPos.x, posY: thumbPos.y };
+    const onMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      if (Math.abs(ev.clientX - dragRef.current.startX) > 3 || Math.abs(ev.clientY - dragRef.current.startY) > 3) {
+        draggedRef.current = true;
+      }
+      setThumbPos(
+        clampThumbPos(
+          dragRef.current.posX + ev.clientX - dragRef.current.startX,
+          dragRef.current.posY + (ev.clientY - dragRef.current.startY),
+        ),
+      );
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const handleThumbTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    draggedRef.current = false;
+    dragRef.current = { startX: t.clientX, startY: t.clientY, posX: thumbPos.x, posY: thumbPos.y };
+    const onMove = (ev: TouchEvent) => {
+      if (!dragRef.current) return;
+      if (Math.abs(ev.touches[0].clientX - dragRef.current.startX) > 3 || Math.abs(ev.touches[0].clientY - dragRef.current.startY) > 3) {
+        draggedRef.current = true;
+      }
+      setThumbPos(
+        clampThumbPos(
+          dragRef.current.posX + ev.touches[0].clientX - dragRef.current.startX,
+          dragRef.current.posY + (ev.touches[0].clientY - dragRef.current.startY),
         ),
       );
     };
@@ -564,13 +636,17 @@ export default function FloatingAvatar() {
       <button
         type="button"
         onClick={() => {
+          if (draggedRef.current) return;
           setExpanded(true);
           setVoiceSurface('avatar');
         }}
+        onMouseDown={handleThumbDragStart}
+        onTouchStart={handleThumbTouchStart}
         aria-label="Open Clea avatar"
-        className="fixed right-[104px] top-20 z-50 h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 md:right-[124px] md:top-6"
+        style={{ left: thumbPos.x, top: thumbPos.y }}
+        className="fixed z-50 hidden h-16 w-16 cursor-grab touch-none select-none overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 active:cursor-grabbing lg:block"
       >
-        <img src="/clea2-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" />
+        <img src="/clea2-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" draggable={false} />
       </button>
     );
   }

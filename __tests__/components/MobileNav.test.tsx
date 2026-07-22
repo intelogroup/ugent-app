@@ -2,26 +2,30 @@
 import { render, screen } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
 import MobileNav from '@/components/MobileNav';
-import { navigation } from '@/lib/navigation';
 
 jest.mock('next/navigation', () => ({ usePathname: jest.fn() }));
 
 describe('MobileNav', () => {
-  it('renders all navigation items', () => {
+  it('renders the current page title', () => {
     (usePathname as jest.Mock).mockReturnValue('/dashboard');
     render(<MobileNav />);
-    navigation.forEach(item => {
-      expect(screen.getByText(item.shortName)).toBeInTheDocument();
-    });
+    expect(screen.getByText('Home')).toBeInTheDocument();
   });
 
-  it('sets aria-current="page" on active tab only', () => {
-    (usePathname as jest.Mock).mockReturnValue('/tests');
-    render(<MobileNav />);
-    const activeLink = screen.getByText('Tests').closest('a');
-    expect(activeLink).toHaveAttribute('aria-current', 'page');
-    const inactiveLink = screen.getByText('Home').closest('a');
-    expect(inactiveLink).not.toHaveAttribute('aria-current');
+  it('opens navigation from the menu button', () => {
+    const onMenuOpen = jest.fn();
+    (usePathname as jest.Mock).mockReturnValue('/dashboard');
+    render(<MobileNav onMenuOpen={onMenuOpen} />);
+    screen.getByRole('button', { name: 'Open navigation' }).click();
+    expect(onMenuOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens search from the search button', () => {
+    const onSearchOpen = jest.fn();
+    (usePathname as jest.Mock).mockReturnValue('/dashboard');
+    render(<MobileNav onSearchOpen={onSearchOpen} />);
+    screen.getByRole('button', { name: 'Search' }).click();
+    expect(onSearchOpen).toHaveBeenCalledTimes(1);
   });
 
   it('has role=navigation and aria-label', () => {

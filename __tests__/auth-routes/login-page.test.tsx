@@ -42,7 +42,7 @@ describe('LoginPage', () => {
         password: 'secret123',
       })
     })
-    expect(push).toHaveBeenCalledWith('/dashboard')
+    expect(push).toHaveBeenCalledWith('/curriculum')
     expect(refresh).toHaveBeenCalled()
   })
 

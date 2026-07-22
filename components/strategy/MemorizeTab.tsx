@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   CheckCircleIcon,
   SparklesIcon,
@@ -8,10 +8,9 @@ import {
   MagnifyingGlassIcon,
   EyeIcon,
   BookOpenIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon } from '@heroicons/react/24/solid';
+import CardCarousel from './CardCarousel';
 
 type QuestionBankClue = {
   id: string;
@@ -60,16 +59,6 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const [masteredIds, setMasteredIds] = useState<string[]>([]);
   // Keep track of which cards are currently flipped/revealed in local state
   const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
-
-  // Carousel state
-  const [cardIndex, setCardIndex] = useState(0);
-  const [dragX, setDragX] = useState(0);
-  const dragStartX = useRef<number | null>(null);
-  const wasDrag = useRef(false);
-
-  useEffect(() => {
-    setCardIndex(0);
-  }, [subTab, selectedSystem, searchQuery, showMastered]);
 
   useEffect(() => {
     const saved = localStorage.getItem(FLASHCARD_STORAGE_KEY)
@@ -178,44 +167,6 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const percentComplete = activeTotal > 0 ? Math.round((activeMastered / activeTotal) * 100) : 0;
 
   const activeList = subTab === 'qbank' ? filteredQBank : filteredConcepts;
-  const currentCard = activeList[cardIndex];
-
-  const goNext = () => {
-    setCardIndex((i) => Math.min(i + 1, activeList.length - 1));
-  };
-
-  const goPrev = () => {
-    setCardIndex((i) => Math.max(i - 1, 0));
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    dragStartX.current = e.clientX;
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (dragStartX.current === null) return;
-    setDragX(e.clientX - dragStartX.current);
-  };
-
-  const handlePointerUp = () => {
-    const SWIPE_THRESHOLD = 80;
-    wasDrag.current = Math.abs(dragX) > 5;
-    if (dragX > SWIPE_THRESHOLD) {
-      goPrev();
-    } else if (dragX < -SWIPE_THRESHOLD) {
-      goNext();
-    }
-    dragStartX.current = null;
-    setDragX(0);
-  };
-
-  const handleCardClick = (id: string) => {
-    if (wasDrag.current) {
-      wasDrag.current = false;
-      return;
-    }
-    toggleReveal(id);
-  };
 
   return (
     <div className="space-y-6">
@@ -347,390 +298,331 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       </div>
 
       {/* Main Drill Card Carousel */}
-      {subTab === 'qbank' ? (
-        activeList.length === 0 ? (
-          <div className="card p-12 text-center text-sm text-neutral-400 border border-neutral-200">
-            No matching question bank clues found. Try clearing your filters or search query.
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-4 w-full max-w-xl">
-              <button
-                onClick={goPrev}
-                disabled={cardIndex === 0}
-                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Previous card"
+      {activeList.length === 0 ? (
+        <div className="card p-12 text-center text-sm text-neutral-400 border border-neutral-200">
+          {subTab === 'qbank'
+            ? 'No matching question bank clues found. Try clearing your filters or search query.'
+            : 'No matching concept pairs found. Try clearing your filters or search query.'}
+        </div>
+      ) : subTab === 'qbank' ? (
+        <CardCarousel
+          items={filteredQBank}
+          keyFn={(card) => card.id}
+          maxWidthClassName="max-w-xl"
+          resetKey={`qbank-${selectedSystem}-${searchQuery}-${showMastered}`}
+          onCardClick={(card) => toggleReveal(card.id)}
+          renderCard={(card) => {
+            const isRevealed = !!revealedIds[card.id];
+            const isMastered = masteredIds.includes(card.id);
+
+            return (
+              <div
+                className={`card flex flex-col justify-between min-h-[260px] border ${
+                  isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
+                }`}
               >
-                <ChevronLeftIcon className="w-5 h-5" />
-              </button>
+                <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-100 text-neutral-600">
+                      {card.system}
+                    </span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-50 text-blue-700">
+                      {card.topicType}
+                    </span>
+                  </div>
 
-              {currentCard && (() => {
-                const card = currentCard as QuestionBankClue;
-                const isRevealed = !!revealedIds[card.id];
-                const isMastered = masteredIds.includes(card.id);
-
-                return (
-                  <div
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerUp}
-                    onClick={() => handleCardClick(card.id)}
-                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)`, transition: dragStartX.current === null ? undefined : 'none' }}
-                    className={`card flex flex-col justify-between cursor-grab active:cursor-grabbing select-none flex-1 min-h-[260px] border transition-transform duration-150 ${
-                      isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
-                    }`}
+                  <button
+                    onClick={(e) => toggleMastered(card.id, e)}
+                    className="text-neutral-300 hover:text-emerald-600 transition-colors"
+                    title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
                   >
-                    <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-100 text-neutral-600">
-                          {card.system}
+                    {isMastered ? (
+                      <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <CheckCircleIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="p-5 flex-1 flex flex-col justify-between">
+                  {!isRevealed ? (
+                    cardMode === 'clues-first' ? (
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                          Clinical Presentation
                         </span>
-                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-50 text-blue-700">
-                          {card.topicType}
+                        <ul className="space-y-1.5">
+                          {card.clues.slice(0, 3).map((clue, idx) => (
+                            <li key={idx} className="text-xs text-neutral-700 flex items-start gap-1.5 leading-relaxed">
+                              <span className="text-primary-500 mt-0.5">•</span>
+                              <span>{clue}</span>
+                            </li>
+                          ))}
+                          {card.clues.length > 3 && (
+                            <li className="text-[10px] text-neutral-400 italic">
+                              + {card.clues.length - 3} more clues...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-center items-center h-full text-center space-y-2 py-6">
+                        <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                          USMLE Target Topic
                         </span>
+                        <h3 className="text-lg font-bold text-neutral-900">{card.diseaseName}</h3>
+                        <span className="text-xs text-neutral-400 italic">Click to reveal high-yield facts</span>
+                      </div>
+                    )
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
+                          Diagnosis
+                        </span>
+                        <h3 className="text-base font-bold text-neutral-900">{card.diseaseName}</h3>
                       </div>
 
-                      <button
-                        onClick={(e) => toggleMastered(card.id, e)}
-                        className="text-neutral-300 hover:text-emerald-600 transition-colors"
-                        title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
-                      >
-                        {isMastered ? (
-                          <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <CheckCircleIcon className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col justify-between">
-                      {!isRevealed ? (
-                        cardMode === 'clues-first' ? (
-                          <div className="space-y-3">
-                            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
-                              Clinical Presentation
+                      {cardMode === 'clues-first' ? (
+                        card.discriminators.length > 0 && (
+                          <div className="border-t border-neutral-100 pt-2">
+                            <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block mb-1">
+                              High-Yield Discriminators & Traps
                             </span>
-                            <ul className="space-y-1.5">
-                              {card.clues.slice(0, 3).map((clue, idx) => (
-                                <li key={idx} className="text-xs text-neutral-700 flex items-start gap-1.5 leading-relaxed">
-                                  <span className="text-primary-500 mt-0.5">•</span>
-                                  <span>{clue}</span>
+                            <ul className="space-y-1">
+                              {card.discriminators.slice(0, 2).map((trap, idx) => (
+                                <li key={idx} className="text-[11px] text-rose-800 bg-rose-50 px-2 py-1 rounded border border-rose-100/50">
+                                  {trap}
                                 </li>
                               ))}
-                              {card.clues.length > 3 && (
-                                <li className="text-[10px] text-neutral-400 italic">
-                                  + {card.clues.length - 3} more clues...
-                                </li>
-                              )}
                             </ul>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col justify-center items-center h-full text-center space-y-2 py-6">
-                            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
-                              USMLE Target Topic
-                            </span>
-                            <h3 className="text-lg font-bold text-neutral-900">{card.diseaseName}</h3>
-                            <span className="text-xs text-neutral-400 italic">Click to reveal high-yield facts</span>
                           </div>
                         )
                       ) : (
-                        <div className="space-y-3">
+                        <div className="border-t border-neutral-100 pt-2 space-y-2">
                           <div>
                             <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
-                              Diagnosis
+                              Presentation Clues
                             </span>
-                            <h3 className="text-base font-bold text-neutral-900">{card.diseaseName}</h3>
+                            <ul className="space-y-0.5 text-xs text-neutral-700">
+                              {card.clues.slice(0, 2).map((c, i) => (
+                                <li key={i} className="truncate">• {c}</li>
+                              ))}
+                            </ul>
                           </div>
-
-                          {cardMode === 'clues-first' ? (
-                            card.discriminators.length > 0 && (
-                              <div className="border-t border-neutral-100 pt-2">
-                                <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block mb-1">
-                                  High-Yield Discriminators & Traps
-                                </span>
-                                <ul className="space-y-1">
-                                  {card.discriminators.slice(0, 2).map((trap, idx) => (
-                                    <li key={idx} className="text-[11px] text-rose-800 bg-rose-50 px-2 py-1 rounded border border-rose-100/50">
-                                      {trap}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )
-                          ) : (
-                            <div className="border-t border-neutral-100 pt-2 space-y-2">
-                              <div>
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
-                                  Presentation Clues
-                                </span>
-                                <ul className="space-y-0.5 text-xs text-neutral-700">
-                                  {card.clues.slice(0, 2).map((c, i) => (
-                                    <li key={i} className="truncate">• {c}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                              {card.discriminators.length > 0 && (
-                                <div>
-                                  <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block">
-                                    Traps
-                                  </span>
-                                  <p className="text-[11px] text-rose-800 italic truncate">
-                                    {card.discriminators[0]}
-                                  </p>
-                                </div>
-                              )}
+                          {card.discriminators.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block">
+                                Traps
+                              </span>
+                              <p className="text-[11px] text-rose-800 italic truncate">
+                                {card.discriminators[0]}
+                              </p>
                             </div>
                           )}
                         </div>
                       )}
-
-                      <div className="mt-4 pt-3 border-t border-neutral-50 flex items-center justify-between text-xs text-neutral-400">
-                        <span className="flex items-center gap-1">
-                          <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
-                          {isRevealed ? 'Hide details' : 'Click to flip'}
-                        </span>
-                        {isMastered && (
-                          <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
-                            <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
-                          </span>
-                        )}
-                      </div>
                     </div>
+                  )}
+
+                  <div className="mt-4 pt-3 border-t border-neutral-50 flex items-center justify-between text-xs text-neutral-400">
+                    <span className="flex items-center gap-1">
+                      <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
+                      {isRevealed ? 'Hide details' : 'Click to flip'}
+                    </span>
+                    {isMastered && (
+                      <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
+                        <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
+                      </span>
+                    )}
                   </div>
-                );
-              })()}
-
-              <button
-                onClick={goNext}
-                disabled={cardIndex === activeList.length - 1}
-                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Next card"
-              >
-                <ChevronRightIcon className="w-5 h-5" />
-              </button>
-            </div>
-
-            <span className="text-xs font-semibold text-neutral-400">
-              {cardIndex + 1} / {activeList.length}
-            </span>
-          </div>
-        )
+                </div>
+              </div>
+            );
+          }}
+        />
       ) : (
-        /* Curated Genetics & Concept Pairs tab */
-        activeList.length === 0 ? (
-          <div className="card p-12 text-center text-sm text-neutral-400 border border-neutral-200">
-            No matching concept pairs found. Try clearing your filters or search query.
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-4 w-full max-w-2xl">
-              <button
-                onClick={goPrev}
-                disabled={cardIndex === 0}
-                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Previous card"
+        <CardCarousel
+          items={filteredConcepts}
+          keyFn={(pair) => pair.id}
+          maxWidthClassName="max-w-2xl"
+          resetKey={`concepts-${selectedSystem}-${searchQuery}-${showMastered}`}
+          onCardClick={(pair) => toggleReveal(pair.id)}
+          renderCard={(pair) => {
+            const isMastered = masteredIds.includes(pair.id);
+            const isRevealed = !!revealedIds[pair.id];
+
+            return (
+              <div
+                className={`card flex flex-col justify-between min-h-[260px] border ${
+                  isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
+                }`}
               >
-                <ChevronLeftIcon className="w-5 h-5" />
-              </button>
-
-              {currentCard && (() => {
-                const pair = currentCard as Pair & { id: string; category: string };
-                const isMastered = masteredIds.includes(pair.id);
-                const isRevealed = !!revealedIds[pair.id];
-
-                return (
-                  <div
-                    onPointerDown={handlePointerDown}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerUp}
-                    onClick={() => handleCardClick(pair.id)}
-                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)`, transition: dragStartX.current === null ? undefined : 'none' }}
-                    className={`card border cursor-grab active:cursor-grabbing select-none flex-1 transition-transform duration-150 ${
-                      isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
-                    }`}
-                  >
-                    <div className="p-4 bg-neutral-50/50 border-b border-neutral-100 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-200 text-neutral-700">
-                          {pair.category}
-                        </span>
-                        <span className="text-xs text-neutral-400">
-                          Discriminator Study
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={(e) => toggleMastered(pair.id, e)}
-                        className="text-neutral-300 hover:text-emerald-600 transition-colors"
-                        title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
-                      >
-                        {isMastered ? (
-                          <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <CheckCircleIcon className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="p-5 space-y-4">
-                      <div className="flex items-center justify-center gap-4 flex-wrap">
-                        <div className="px-4 py-2 bg-blue-50 text-blue-800 rounded-lg font-bold border border-blue-100 text-sm">
-                          {pair.a}
-                        </div>
-                        <span className="text-neutral-400 font-bold text-xs">vs</span>
-                        <div className="px-4 py-2 bg-indigo-50 text-indigo-800 rounded-lg font-bold border border-indigo-100 text-sm">
-                          {pair.b}
-                        </div>
-                        {pair.c && (
-                          <>
-                            <span className="text-neutral-400 font-bold text-xs">vs</span>
-                            <div className="px-4 py-2 bg-purple-50 text-purple-800 rounded-lg font-bold border border-purple-100 text-sm">
-                              {pair.c}
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      {!isRevealed ? (
-                        <div className="text-center py-3 text-xs text-neutral-400 italic">
-                          Click to reveal differences and differentiating rules
-                        </div>
-                      ) : (
-                        <div className="space-y-4 pt-3 border-t border-neutral-100">
-                          <div>
-                            <h4 className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider mb-1">
-                              Diagnostic Contrast / High-Yield Test
-                            </h4>
-                            <p className="text-sm text-neutral-800 leading-relaxed bg-neutral-50 p-3 rounded-lg border border-neutral-100">
-                              {pair.test}
-                            </p>
-                          </div>
-
-                          <div>
-                            <h4 className="text-[10px] font-bold uppercase text-rose-500 tracking-wider mb-1">
-                              How to Tell Them Apart (USMLE Trap)
-                            </h4>
-                            <p className="text-sm text-rose-900 bg-rose-50/50 p-3 rounded-lg border border-rose-100">
-                              {pair.discriminator}
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {pair.exAD && pair.exAD.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">AD Examples</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {pair.exAD.map((item, i) => (
-                                    <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {pair.exAR && pair.exAR.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">AR Examples</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {pair.exAR.map((item, i) => (
-                                    <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {pair.exXLR && pair.exXLR.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">XLR Examples</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {pair.exXLR.map((item, i) => (
-                                    <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {pair.exXLD && pair.exXLD.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">XLD Examples</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {pair.exXLD.map((item, i) => (
-                                    <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {pair.examples && pair.examples.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 md:col-span-2">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">Key Examples</span>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {pair.examples.map((item, i) => (
-                                    <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded">{item}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {pair.disorders && pair.disorders.length > 0 && (
-                              <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 md:col-span-2 overflow-x-auto">
-                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-2">Hereditary Syndromes Breakdown</span>
-                                <table className="w-full text-xs text-left">
-                                  <thead>
-                                    <tr className="border-b border-neutral-200 text-neutral-400 font-semibold">
-                                      <th className="pb-1">Syndrome</th>
-                                      <th className="pb-1">Gene/Mechanism</th>
-                                      <th className="pb-1">Key Associated Cancers / Features</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {pair.disorders.map((d, i) => (
-                                      <tr key={i} className="border-b border-neutral-100/50 last:border-0">
-                                        <td className="py-1.5 font-bold text-neutral-800">{d.name}</td>
-                                        <td className="py-1.5 text-neutral-600">{d.gene || d.hit}</td>
-                                        <td className="py-1.5 text-neutral-600">{d.cancers || d.cancer}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="pt-2 flex items-center justify-between text-xs text-neutral-400">
-                        <span className="flex items-center gap-1">
-                          <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
-                          {isRevealed ? 'Hide details' : 'Click to expand details'}
-                        </span>
-                        {isMastered && (
-                          <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
-                            <CheckIcon className="w-3 h-3" /> Mastered
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                <div className="p-4 bg-neutral-50/50 border-b border-neutral-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-200 text-neutral-700">
+                      {pair.category}
+                    </span>
+                    <span className="text-xs text-neutral-400">
+                      Discriminator Study
+                    </span>
                   </div>
-                );
-              })()}
 
-              <button
-                onClick={goNext}
-                disabled={cardIndex === activeList.length - 1}
-                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Next card"
-              >
-                <ChevronRightIcon className="w-5 h-5" />
-              </button>
-            </div>
+                  <button
+                    onClick={(e) => toggleMastered(pair.id, e)}
+                    className="text-neutral-300 hover:text-emerald-600 transition-colors"
+                    title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
+                  >
+                    {isMastered ? (
+                      <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <CheckCircleIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
 
-            <span className="text-xs font-semibold text-neutral-400">
-              {cardIndex + 1} / {activeList.length}
-            </span>
-          </div>
-        )
+                <div className="p-5 space-y-4 flex-1 flex flex-col">
+                  <div className="flex items-center justify-center gap-4 flex-wrap">
+                    <div className="px-4 py-2 bg-blue-50 text-blue-800 rounded-lg font-bold border border-blue-100 text-sm">
+                      {pair.a}
+                    </div>
+                    <span className="text-neutral-400 font-bold text-xs">vs</span>
+                    <div className="px-4 py-2 bg-indigo-50 text-indigo-800 rounded-lg font-bold border border-indigo-100 text-sm">
+                      {pair.b}
+                    </div>
+                    {pair.c && (
+                      <>
+                        <span className="text-neutral-400 font-bold text-xs">vs</span>
+                        <div className="px-4 py-2 bg-purple-50 text-purple-800 rounded-lg font-bold border border-purple-100 text-sm">
+                          {pair.c}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {!isRevealed ? (
+                    <div className="text-center py-3 text-xs text-neutral-400 italic">
+                      Click to reveal differences and differentiating rules
+                    </div>
+                  ) : (
+                    <div className="space-y-4 pt-3 border-t border-neutral-100 max-h-[65vh] overflow-y-auto">
+                      <div>
+                        <h4 className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider mb-1">
+                          Diagnostic Contrast / High-Yield Test
+                        </h4>
+                        <p className="text-sm text-neutral-800 leading-relaxed bg-neutral-50 p-3 rounded-lg border border-neutral-100">
+                          {pair.test}
+                        </p>
+                      </div>
+
+                      <div>
+                        <h4 className="text-[10px] font-bold uppercase text-rose-500 tracking-wider mb-1">
+                          How to Tell Them Apart (USMLE Trap)
+                        </h4>
+                        <p className="text-sm text-rose-900 bg-rose-50/50 p-3 rounded-lg border border-rose-100">
+                          {pair.discriminator}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {pair.exAD && pair.exAD.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">AD Examples</span>
+                            <div className="flex flex-wrap gap-1">
+                              {pair.exAD.map((item, i) => (
+                                <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {pair.exAR && pair.exAR.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">AR Examples</span>
+                            <div className="flex flex-wrap gap-1">
+                              {pair.exAR.map((item, i) => (
+                                <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {pair.exXLR && pair.exXLR.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">XLR Examples</span>
+                            <div className="flex flex-wrap gap-1">
+                              {pair.exXLR.map((item, i) => (
+                                <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {pair.exXLD && pair.exXLD.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">XLD Examples</span>
+                            <div className="flex flex-wrap gap-1">
+                              {pair.exXLD.map((item, i) => (
+                                <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded">{item}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {pair.examples && pair.examples.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 md:col-span-2">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">Key Examples</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {pair.examples.map((item, i) => (
+                                <span key={i} className="text-[10px] bg-white border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded">{item}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {pair.disorders && pair.disorders.length > 0 && (
+                          <div className="bg-neutral-50/50 p-3 rounded-lg border border-neutral-100 md:col-span-2 overflow-x-auto">
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-2">Hereditary Syndromes Breakdown</span>
+                            <table className="w-full text-xs text-left">
+                              <thead>
+                                <tr className="border-b border-neutral-200 text-neutral-400 font-semibold">
+                                  <th className="pb-1">Syndrome</th>
+                                  <th className="pb-1">Gene/Mechanism</th>
+                                  <th className="pb-1">Key Associated Cancers / Features</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pair.disorders.map((d, i) => (
+                                  <tr key={i} className="border-b border-neutral-100/50 last:border-0">
+                                    <td className="py-1.5 font-bold text-neutral-800">{d.name}</td>
+                                    <td className="py-1.5 text-neutral-600">{d.gene || d.hit}</td>
+                                    <td className="py-1.5 text-neutral-600">{d.cancers || d.cancer}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2 mt-auto flex items-center justify-between text-xs text-neutral-400">
+                    <span className="flex items-center gap-1">
+                      <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
+                      {isRevealed ? 'Hide details' : 'Click to expand details'}
+                    </span>
+                    {isMastered && (
+                      <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
+                        <CheckIcon className="w-3 h-3" /> Mastered
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+        />
       )}
     </div>
   );

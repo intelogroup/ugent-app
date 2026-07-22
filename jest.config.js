@@ -22,6 +22,7 @@ const customJestConfig = {
     '<rootDir>/__tests__/lib/supabase/queries.test.ts',
     '<rootDir>/e2e/',
     '<rootDir>/tests/',
+    '<rootDir>/.claude/worktrees/',
   ],
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',

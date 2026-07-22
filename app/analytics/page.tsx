@@ -1,36 +1,37 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
-import { ChartBarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/solid';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getQuizAttempts, QuizAttempt } from '@/lib/quizAttempts';
 
 function buildTrend(attempts: QuizAttempt[]) {
-  return attempts.map((a, i) => ({
-    label: `Test ${i + 1}`,
-    score: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0,
+  return attempts.map((attempt, index) => ({
+    label: `T${index + 1}`,
+    score: attempt.total > 0 ? Math.round((attempt.correct / attempt.total) * 100) : 0,
   }));
 }
 
 function buildSubjectBreakdown(attempts: QuizAttempt[]) {
-  const bySubject = new Map<string, { correct: number; total: number; scores: number[] }>();
-  for (const a of attempts) {
-    const key = a.subject || a.system || 'Mixed';
-    const entry = bySubject.get(key) || { correct: 0, total: 0, scores: [] };
-    entry.correct += a.correct;
-    entry.total += a.total;
-    entry.scores.push(a.total > 0 ? a.correct / a.total : 0);
+  const bySubject = new Map<string, { correct: number; total: number; tests: number }>();
+  for (const attempt of attempts) {
+    const key = attempt.subject || attempt.system || 'Mixed';
+    const entry = bySubject.get(key) || { correct: 0, total: 0, tests: 0 };
+    entry.correct += attempt.correct;
+    entry.total += attempt.total;
+    entry.tests += 1;
     bySubject.set(key, entry);
   }
-  return Array.from(bySubject.entries()).map(([topic, { correct, total, scores }]) => {
-    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const half = Math.floor(scores.length / 2);
-    const firstHalfAvg = half > 0 ? scores.slice(0, half).reduce((s, v) => s + v, 0) / half : scores[0] ?? 0;
-    const secondHalfAvg = scores.length - half > 0 ? scores.slice(half).reduce((s, v) => s + v, 0) / (scores.length - half) : 0;
-    const trend = Math.round((secondHalfAvg - firstHalfAvg) * 100);
-    return { topic, correct, incorrect: total - correct, accuracy, trend };
-  });
+
+  return Array.from(bySubject.entries())
+    .map(([topic, values]) => ({
+      topic,
+      tests: values.tests,
+      total: values.total,
+      accuracy: values.total > 0 ? Math.round((values.correct / values.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 }
 
 export default function Analytics() {
@@ -40,235 +41,104 @@ export default function Analytics() {
     getQuizAttempts().then(setAttempts);
   }, []);
 
-  const totalQuestions = attempts.reduce((s, a) => s + a.total, 0);
-  const totalCorrect = attempts.reduce((s, a) => s + a.correct, 0);
-  const avgScore = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const totalQuestions = attempts.reduce((sum, attempt) => sum + attempt.total, 0);
+  const totalCorrect = attempts.reduce((sum, attempt) => sum + attempt.correct, 0);
+  const averageScore = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const totalTimeMinutes = Math.round(attempts.reduce((sum, attempt) => sum + attempt.timeSpentSeconds, 0) / 60);
+  const trend = buildTrend(attempts);
   const subjectBreakdown = buildSubjectBreakdown(attempts);
-
-  // Demographic / Subject distribution for Donut Chart (Survey App style)
-  const pieData = [
-    { name: 'Cardiology (30%)', value: 30, color: '#3B82F6', count: '2,894 q' },
-    { name: 'Renal (40%)', value: 40, color: '#1E1B4B', count: '3,859 q' },
-    { name: 'Endocrine (20%)', value: 20, color: '#A855F7', count: '1,929 q' },
-    { name: 'Pulmonary (10%)', value: 10, color: '#CBD5E1', count: '964 q' },
-  ];
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="workspace-page">
+        <header className="workspace-header">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">Analytics</h1>
-            <p className="text-xs text-neutral-500 mt-0.5">Data-driven insights inform decisions and enhance outcomes</p>
+            <p className="workspace-eyebrow">Performance</p>
+            <h1 className="workspace-title">Analytics</h1>
+            <p className="workspace-subtitle">Only the signals that help you choose what to study next.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="btn-secondary text-xs flex items-center gap-1.5 py-2 px-3">
-              Export <span>↓</span>
-            </button>
-            <button className="btn-primary text-xs flex items-center gap-1.5 py-2 px-4">
-              <span>Generate report</span> <span>↓</span>
-            </button>
-          </div>
-        </div>
+          <Link href="/create-test" className="btn-primary whitespace-nowrap">New test</Link>
+        </header>
 
-        {/* Filter Pill Strip (Survey UI exact match) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white border border-neutral-200/80 rounded-xl text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-neutral-100 text-neutral-700 font-medium rounded-lg border border-neutral-200">
-              <span>⊕ Only USMLE Step 1</span>
-              <span className="text-neutral-400 cursor-pointer hover:text-neutral-700">×</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-neutral-100 text-neutral-700 font-medium rounded-lg border border-neutral-200">
-              <span>📅 This week compare to Past week</span>
-              <span className="text-neutral-400 cursor-pointer hover:text-neutral-700">×</span>
-            </span>
-            <button className="px-3 py-1 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors font-medium">
-              + Filter
-            </button>
+        <section className="glass-panel mb-5 grid grid-cols-3 overflow-hidden rounded-[22px]">
+          <div className="px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Questions</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">{totalQuestions.toLocaleString()}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">across {attempts.length} {attempts.length === 1 ? 'test' : 'tests'}</p>
           </div>
-          <button className="px-3 py-1 text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg font-medium">
-            View ˅
-          </button>
-        </div>
-
-        {/* Top 4 KPI Cards Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* KPI 1 */}
-          <div className="stat-card space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500">Views</span>
-              <span className="text-neutral-400 text-xs">↗</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-neutral-900">12,836</span>
-              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ↗ +2.5%
-              </span>
-            </div>
-            <svg className="w-full h-8 text-emerald-500" viewBox="0 0 100 25" fill="none">
-              <path d="M0 20 Q 25 18, 50 12 T 100 4" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
+          <div className="border-l border-white/80 px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Accuracy</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-[#0E7490]">{averageScore}%</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{totalCorrect.toLocaleString()} correct</p>
           </div>
-
-          {/* KPI 2 */}
-          <div className="stat-card space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500">Surveys / Quizzes</span>
-              <span className="text-neutral-400 text-xs">↗</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-neutral-900">412</span>
-              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                ↘ -23.1%
-              </span>
-            </div>
-            <svg className="w-full h-8 text-rose-500" viewBox="0 0 100 25" fill="none">
-              <path d="M0 4 Q 25 10, 50 18 T 100 22" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
+          <div className="border-l border-white/80 px-3 py-4 sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Study time</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">{totalTimeMinutes}<span className="ml-1 text-sm font-semibold text-neutral-400">min</span></p>
+            <p className="mt-0.5 text-xs text-neutral-500">recorded in tests</p>
           </div>
+        </section>
 
-          {/* KPI 3 */}
-          <div className="stat-card space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500">Answers / Questions</span>
-              <span className="text-neutral-400 text-xs">↗</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-neutral-900">9,648</span>
-              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                ↗ +16.2%
-              </span>
-            </div>
-            <svg className="w-full h-8 text-emerald-500" viewBox="0 0 100 25" fill="none">
-              <path d="M0 22 Q 30 18, 60 10 T 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
-          </div>
-
-          {/* KPI 4 */}
-          <div className="stat-card space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-500">User Engagement</span>
-              <span className="text-neutral-400 text-xs">↗</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-neutral-900">0</span>
-              <span className="text-[11px] font-semibold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-full border border-neutral-200">
-                0.0%
-              </span>
-            </div>
-            <div className="w-full h-8 bg-neutral-100 rounded mt-1"></div>
-          </div>
-        </div>
-
-        {/* Main Charts Grid (Survey Analytics replica) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Demographic / Subject Donut Chart Card (Left - 6 cols) */}
-          <div className="lg:col-span-6 card space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+          <section className="glass-panel rounded-[22px] p-5">
+            <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-neutral-900">Demographic data of respondents</h3>
-                <p className="text-xs text-neutral-400">Distribution across organ systems</p>
+                <h2 className="text-base font-semibold tracking-tight text-neutral-900">Score trend</h2>
+                <p className="mt-0.5 text-xs text-neutral-500">Accuracy across completed tests</p>
               </div>
-              <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg text-xs font-medium">
-                <button className="px-2.5 py-1 bg-white text-neutral-900 rounded-md shadow-xs font-semibold">Age</button>
-                <button className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900">Gender</button>
-                <button className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900">Location</button>
-              </div>
+              {trend.length > 1 && (
+                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${trend[trend.length - 1].score >= trend[0].score ? 'bg-emerald-50/80 text-emerald-700' : 'bg-amber-50/80 text-amber-700'}`}>
+                  {trend[trend.length - 1].score - trend[0].score >= 0 ? '+' : ''}{trend[trend.length - 1].score - trend[0].score} pts
+                </span>
+              )}
             </div>
 
-            {/* Donut Chart with Center Text */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-4">
-              <div className="relative w-56 h-56 flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={65}
-                      outerRadius={95}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center Badge */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-2xl font-extrabold text-neutral-900 leading-none">9,648</span>
-                  <span className="text-xs text-neutral-400 mt-0.5">votes</span>
-                </div>
+            {trend.length === 0 ? (
+              <div className="glass-quiet flex h-64 flex-col items-center justify-center rounded-2xl px-5 text-center">
+                <p className="text-sm font-semibold text-neutral-800">Your trend starts with one test</p>
+                <p className="mb-5 mt-1 max-w-sm text-xs leading-5 text-neutral-500">Complete a question set to create your baseline.</p>
+                <Link href="/create-test" className="btn-secondary">Build a test</Link>
               </div>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
+                    <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid rgba(255,255,255,.8)', background: 'rgba(255,255,255,.88)', boxShadow: '0 12px 30px rgba(15,23,42,.10)', fontSize: 12 }} formatter={(value) => [`${value}%`, 'Score']} />
+                    <Line type="monotone" dataKey="score" stroke="#0E7490" strokeWidth={2.5} dot={{ r: 3, fill: '#0E7490', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#0E7490', stroke: '#fff', strokeWidth: 2 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
 
-              {/* Legend List */}
-              <div className="flex-1 space-y-2.5 text-xs">
-                {pieData.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-neutral-50">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }}></span>
-                      <span className="font-medium text-neutral-700">{item.name}</span>
+          <section className="glass-panel overflow-hidden rounded-[22px]">
+            <div className="border-b border-white/80 px-5 py-4">
+              <h2 className="text-base font-semibold tracking-tight text-neutral-900">Coverage</h2>
+              <p className="mt-0.5 text-xs text-neutral-500">Accuracy by selected focus</p>
+            </div>
+            {subjectBreakdown.length === 0 ? (
+              <div className="px-5 py-16 text-center text-xs leading-5 text-neutral-500">Subject-level results will appear after your first test.</div>
+            ) : (
+              <div className="divide-y divide-white/80">
+                {subjectBreakdown.map((item) => (
+                  <div key={item.topic} className="px-5 py-3.5">
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-neutral-800">{item.topic}</p>
+                        <p className="mt-0.5 text-[11px] text-neutral-400">{item.total} questions · {item.tests} {item.tests === 1 ? 'test' : 'tests'}</p>
+                      </div>
+                      <span className="text-sm font-bold text-neutral-900">{item.accuracy}%</span>
                     </div>
-                    <span className="font-semibold text-neutral-900">{item.count}</span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-neutral-200/70">
+                      <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${item.accuracy}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Right Column Stacked (6 cols) */}
-          <div className="lg:col-span-6 space-y-6">
-            {/* Conversion Rate Card */}
-            <div className="card space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-neutral-900">Conversion rate</h3>
-                  <p className="text-xs text-neutral-400">Response completion metrics</p>
-                </div>
-                <span className="text-neutral-400 text-xs cursor-pointer">•••</span>
-              </div>
-              <div className="h-36 flex items-center justify-center border border-neutral-100 rounded-xl bg-neutral-50/50">
-                <div className="flex items-center gap-6 text-xs text-neutral-600 font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-[#0E7490] rounded-xs"></span> Survey
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-[#38BDF8] rounded-xs"></span> Views
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-[#F97316] rounded-xs"></span> Answers
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 bg-[#A855F7] rounded-xs"></span> Feedback
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sessions Card */}
-            <div className="card space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-neutral-900">Sessions</h3>
-                  <p className="text-xs text-neutral-500 font-semibold">128 users <span className="font-normal text-neutral-400">of difference</span></p>
-                </div>
-                <span className="text-neutral-400 text-xs cursor-pointer">•••</span>
-              </div>
-              <div className="flex items-center justify-end gap-4 text-xs font-medium text-neutral-600">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#0E7490]"></span> This week</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Past week</span>
-              </div>
-              <div className="h-28 flex items-center justify-center border border-neutral-100 rounded-xl bg-neutral-50/50">
-                <svg className="w-full h-20 text-[#0E7490]" viewBox="0 0 300 60" fill="none">
-                  <path d="M0 45 L50 25 L100 35 L150 15 L200 40 L250 20 L300 30" stroke="#0E7490" strokeWidth="2.5" fill="none" />
-                  <path d="M0 35 L50 45 L100 20 L150 40 L200 15 L250 35 L300 15" stroke="#F59E0B" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-                </svg>
-              </div>
-            </div>
-          </div>
+            )}
+          </section>
         </div>
       </div>
     </DashboardLayout>

@@ -1,9 +1,6 @@
-import type { AvatarPreference } from '@/lib/avatar';
-
 export interface StudyBuddy {
   id: string;
   name: string;
-  avatarPreference: AvatarPreference | null;
   averageScore: number;
   testsCompleted: number;
   totalCorrect: number;

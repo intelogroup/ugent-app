@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   BoltIcon,
-  ChatBubbleLeftRightIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
   ClipboardIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -187,7 +187,7 @@ export default function CleaChat() {
   }
 
   return (
-    <div className="fixed right-4 top-20 z-50 md:right-6 md:top-6">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-6 md:right-6">
       {mode === 'chat' ? (
         <section
           role="dialog"
@@ -322,23 +322,29 @@ export default function CleaChat() {
           </form>
         </section>
       ) : (
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white p-1.5 shadow-lg">
-            <button
-              type="button"
-              onClick={() => setMode('chat')}
-              aria-label="Open Clea study assistant"
-              className="flex items-center gap-2 rounded-full bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-            >
-              <ChatBubbleLeftRightIcon className="h-4 w-4" />
-              Clea
-            </button>
-          </div>
+        <div className="relative flex items-end justify-end">
           {micActive && (
-            <p className="rounded-full border border-blue-100 bg-white px-3 py-1 text-xs font-medium text-primary-600 shadow-sm" aria-live="polite">
+            <p className="absolute bottom-1 right-16 whitespace-nowrap rounded-full border border-[#D5DEE7] bg-white px-3 py-1.5 text-xs font-semibold text-[#0E7490] shadow-[0_8px_24px_rgba(15,23,42,0.12)]" aria-live="polite">
               Listening...
             </p>
           )}
+          <button
+            type="button"
+            onClick={() => setMode('chat')}
+            aria-label="Open Clea study assistant"
+            className="group relative grid h-14 w-14 place-items-center rounded-full bg-[#06B6D4] text-white shadow-[0_12px_32px_rgba(14,116,144,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#0E7490] hover:shadow-[0_16px_36px_rgba(14,116,144,0.32)] focus:outline-none focus:ring-2 focus:ring-[#06B6D4] focus:ring-offset-2"
+          >
+            <ChatBubbleOvalLeftEllipsisIcon className="relative h-6 w-6 stroke-2" />
+            {micActive && (
+              <span
+                aria-hidden="true"
+                className="absolute right-0 top-0 h-3.5 w-3.5 animate-pulse rounded-full border-[3px] border-[#E8EDF2] bg-[#EF4444]"
+              />
+            )}
+            <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md bg-[#0E7490] px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+              Ask Clea
+            </span>
+          </button>
         </div>
       )}
     </div>

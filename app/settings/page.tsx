@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Avatar from '@/components/Avatar';
-import AvatarPicker from '@/components/AvatarPicker';
 import {
   UserIcon,
   BellIcon,
@@ -56,11 +55,6 @@ export default function SettingsPage() {
         <div className="space-y-6">
           {activeTab === 'account' && (
             <>
-              <div className="card">
-                <h2 className="text-xl font-semibold text-neutral-900 mb-4">Profile Avatar</h2>
-                <AvatarPicker />
-              </div>
-
               <div className="card">
                 <h2 className="text-xl font-semibold text-neutral-900 mb-4">Account Information</h2>
                 <div className="space-y-4">

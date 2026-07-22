@@ -48,6 +48,46 @@ function postQuizActivity(body: { activity?: unknown; attempt?: QuizAttempt }) {
   }).catch(() => {});
 }
 
+// Renders inside DashboardLayout so useWatch() resolves against the
+// WatchProvider DashboardLayout mounts, not a disconnected instance above it.
+function QuizActivitySync({
+  questions,
+  currentQuestion,
+  currentIndex,
+  isSubmitted,
+  selectedIndex,
+  correctCount,
+}: {
+  questions: Question[];
+  currentQuestion: Question | undefined;
+  currentIndex: number;
+  isSubmitted: boolean;
+  selectedIndex: number | null;
+  correctCount: number;
+}) {
+  const { watchEnabled, setActivity } = useWatch();
+
+  useEffect(() => {
+    if (!watchEnabled || !currentQuestion) return;
+    const snapshot = buildQuizSnapshot(
+      currentQuestion,
+      currentIndex + 1,
+      questions.length,
+      isSubmitted,
+      selectedIndex !== null,
+      isSubmitted ? (currentQuestion.options[selectedIndex!]?.isCorrect ?? null) : null,
+      correctCount,
+      currentIndex + (isSubmitted ? 1 : 0),
+      selectedIndex
+    );
+    setActivity(snapshot);
+    postQuizActivity({ activity: snapshot });
+    return () => setActivity(null);
+  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, setActivity]);
+
+  return null;
+}
+
 export function QuizContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,26 +131,6 @@ export function QuizContent() {
 
   const currentQuestion = questions?.[currentIndex];
   const isLastQuestion = questions ? currentIndex === questions.length - 1 : false;
-
-  const { watchEnabled, setActivity } = useWatch();
-
-  useEffect(() => {
-    if (!watchEnabled || !questions || !currentQuestion) return;
-    const snapshot = buildQuizSnapshot(
-      currentQuestion,
-      currentIndex + 1,
-      questions.length,
-      isSubmitted,
-      selectedIndex !== null,
-      isSubmitted ? (currentQuestion.options[selectedIndex!]?.isCorrect ?? null) : null,
-      correctCount,
-      currentIndex + (isSubmitted ? 1 : 0),
-      selectedIndex
-    );
-    setActivity(snapshot);
-    postQuizActivity({ activity: snapshot });
-    return () => setActivity(null);
-  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, setActivity]);
 
   const handleSubmit = () => {
     if (selectedIndex === null || !currentQuestion) return;
@@ -193,6 +213,14 @@ export function QuizContent() {
 
   return (
     <DashboardLayout>
+      <QuizActivitySync
+        questions={questions}
+        currentQuestion={currentQuestion}
+        currentIndex={currentIndex}
+        isSubmitted={isSubmitted}
+        selectedIndex={selectedIndex}
+        correctCount={correctCount}
+      />
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="card">
           <div className="flex items-center justify-between mb-4">

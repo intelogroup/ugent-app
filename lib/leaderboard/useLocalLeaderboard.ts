@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AVATAR_CHANGE_EVENT } from '@/lib/avatar';
 import { buildLocalLeaderboard } from './local';
 import { LEADERBOARD_CHANGE_EVENT, type LocalLeaderboard } from './types';
 import { createClient } from '@/lib/supabase/client';
@@ -30,11 +29,9 @@ export function useLocalLeaderboard() {
   useEffect(() => {
     const sync = () => refresh();
     window.addEventListener(LEADERBOARD_CHANGE_EVENT, sync);
-    window.addEventListener(AVATAR_CHANGE_EVENT, sync);
     window.addEventListener('storage', sync);
     return () => {
       window.removeEventListener(LEADERBOARD_CHANGE_EVENT, sync);
-      window.removeEventListener(AVATAR_CHANGE_EVENT, sync);
       window.removeEventListener('storage', sync);
     };
   }, [refresh]);

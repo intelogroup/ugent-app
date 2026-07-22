@@ -1,537 +1,780 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { SubChapterNode } from "@/lib/curriculum/types";
+import Graph from "graphology";
+import forceAtlas2 from "graphology-layout-forceatlas2";
+import {
+  ArrowPathIcon,
+  ArrowLeftIcon,
+  ArrowsPointingOutIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+  MinusIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
+import type {
+  KnowledgeGraph,
+  KnowledgeGraphEdgeType,
+  KnowledgeGraphNode,
+  KnowledgeGraphNodeType,
+} from "@/lib/strategy/knowledge-graph";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type SigmaInstance = import("sigma").default;
+type RelationFilter = KnowledgeGraphEdgeType | "ALL";
+type NodeFilter = Exclude<KnowledgeGraphNodeType, "SYSTEM"> | "ALL";
 
-type LeafNode = {
-  diseaseName: string;
-  count: number;
-  successRate: number | null;
-};
-
-type TopicTypeNode = {
-  topicType: string;
-  count: number;
-  diseases: LeafNode[];
-};
-
-type SystemNode = {
-  system: string;
-  total: number;
-  topicTypes: TopicTypeNode[];
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const TOPIC_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; dot: string; shadow: string }> = {
-  DISEASE:   { bg: "bg-blue-50",    border: "border-blue-200",   text: "text-blue-700",   dot: "bg-blue-400",   shadow: "shadow-blue-100" },
-  PATHOGEN:  { bg: "bg-orange-50",  border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-400", shadow: "shadow-orange-100" },
-  SYNDROME:  { bg: "bg-pink-50",    border: "border-pink-200",   text: "text-pink-700",   dot: "bg-pink-400",   shadow: "shadow-pink-100" },
-  PRINCIPLE: { bg: "bg-purple-50",  border: "border-purple-200", text: "text-purple-700", dot: "bg-purple-400", shadow: "shadow-purple-100" },
-  DRUG:      { bg: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700",   dot: "bg-teal-400",   shadow: "shadow-teal-100" },
-  CONCEPT:   { bg: "bg-neutral-50", border: "border-neutral-200",text: "text-neutral-600",dot: "bg-neutral-400", shadow: "shadow-neutral-100" },
+const NODE_STYLES: Record<KnowledgeGraphNodeType, { color: string; label: string }> = {
+  SYSTEM: { color: "#0E7490", label: "System" },
+  DISEASE: { color: "#2563EB", label: "Disease" },
+  PRINCIPLE: { color: "#7C3AED", label: "Principle" },
+  DRUG: { color: "#D97706", label: "Drug" },
+  PATHOGEN: { color: "#DC2626", label: "Pathogen" },
+  SYNDROME: { color: "#DB2777", label: "Syndrome" },
+  CONCEPT: { color: "#64748B", label: "Concept" },
 };
 
 const SYSTEM_COLORS = [
-  "bg-indigo-50 text-indigo-800 border-indigo-100 hover:bg-indigo-100",
-  "bg-sky-50 text-sky-800 border-sky-100 hover:bg-sky-100",
-  "bg-emerald-50 text-emerald-800 border-emerald-100 hover:bg-emerald-100",
-  "bg-violet-50 text-violet-800 border-violet-100 hover:bg-violet-100",
-  "bg-rose-50 text-rose-800 border-rose-100 hover:bg-rose-100",
-  "bg-amber-50 text-amber-800 border-amber-100 hover:bg-amber-100",
-  "bg-cyan-50 text-cyan-800 border-cyan-100 hover:bg-cyan-100",
-  "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-100 hover:bg-fuchsia-100",
-  "bg-lime-50 text-lime-800 border-lime-100 hover:bg-lime-100",
-  "bg-orange-50 text-orange-800 border-orange-100 hover:bg-orange-100",
-  "bg-pink-50 text-pink-800 border-pink-100 hover:bg-pink-100",
-  "bg-teal-50 text-teal-800 border-teal-100 hover:bg-teal-100",
-  "bg-blue-50 text-blue-800 border-blue-100 hover:bg-blue-100",
-  "bg-red-50 text-red-800 border-red-100 hover:bg-red-100",
-  "bg-purple-50 text-purple-800 border-purple-100 hover:bg-purple-100",
-  "bg-green-50 text-green-800 border-green-100 hover:bg-green-100",
-  "bg-yellow-50 text-yellow-800 border-yellow-100 hover:bg-yellow-100",
-  "bg-stone-50 text-stone-800 border-stone-100 hover:bg-stone-100",
-  "bg-gray-50 text-gray-800 border-gray-100 hover:bg-gray-100",
+  "#0E7490", "#2563EB", "#7C3AED", "#C026D3", "#DB2777", "#E11D48",
+  "#EA580C", "#D97706", "#65A30D", "#059669", "#0891B2", "#4F46E5",
+  "#9333EA", "#BE185D", "#B91C1C", "#C2410C", "#A16207", "#15803D",
+  "#0F766E", "#0369A1", "#1D4ED8", "#6D28D9", "#A21CAF", "#9F1239",
 ];
 
-function successColor(rate: number | null): string {
-  if (rate === null) return "bg-white text-neutral-500 border-neutral-200";
-  if (rate >= 75) return "bg-emerald-50 text-emerald-800 border-emerald-200";
-  if (rate >= 50) return "bg-amber-50 text-amber-800 border-amber-200";
-  return "bg-rose-50 text-rose-800 border-rose-200";
+const PRIMARY_CHILD_LIMIT = 16;
+const EXPAND_LIMIT = 32;
+
+const RELATION_LABELS: Record<RelationFilter, string> = {
+  ALL: "All relationships",
+  BELONGS_TO: "System membership",
+  PREREQUISITE_FOR: "Prerequisites",
+  SHARES_CONCEPT: "Related system (shared topics)",
+};
+
+type QuestionBankClue = {
+  id: string;
+  diseaseName: string;
+  topicType: string;
+  system: string;
+  clues: string[];
+  discriminators: string[];
+};
+
+function edgeMatchesRelationFilter(edgeType: KnowledgeGraphEdgeType, relationFilter: RelationFilter): boolean {
+  return relationFilter === "ALL" || edgeType === relationFilter;
 }
 
-function successDot(rate: number | null): string {
-  if (rate === null) return "bg-neutral-300";
-  if (rate >= 75) return "bg-emerald-400";
-  if (rate >= 50) return "bg-amber-400";
-  return "bg-rose-400";
+function hashNumber(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  return hash;
 }
 
-function getMapKey(system: string): string {
-  if (system === 'Dermatology') return 'Integumentary';
-  if (system === 'Male Reproductive' || system === 'Female Reproductive') return 'Reproductive';
-  return system;
+function nodeSize(node: KnowledgeGraphNode, maxSystemQuestions: number): number {
+  if (node.type === "SYSTEM") {
+    const relativeVolume = Math.pow(node.questionCount / Math.max(maxSystemQuestions, 1), 0.6);
+    return 10 + relativeVolume * 24;
+  }
+  return 5 + Math.min(Math.log2(node.questionCount + 1) * 1.4, 7);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+function formatRelationship(type: KnowledgeGraphEdgeType): string {
+  return RELATION_LABELS[type].replace(/s$/, "");
+}
 
-export default function StrategyGraphExplorer({
-  data,
-  firstAidMap = {},
-  pathomaMap = {},
-}: {
-  data: SystemNode[];
-  firstAidMap?: Record<string, { chapter: string; pages: string; subChapters: SubChapterNode[] }>;
-  pathomaMap?: Record<string, { chapter: string; subChapters: SubChapterNode[] }>;
-}) {
+export default function StrategyGraphExplorer({ graphData, questionBankClues = [] }: { graphData: KnowledgeGraph; questionBankClues?: QuestionBankClue[] }) {
   const router = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<SigmaInstance | null>(null);
+  const draggedPositionsRef = useRef(new Map<string, { x: number; y: number }>());
 
-  const [selectedSystem, setSelectedSystem] = useState<string | null>(null);
-  const [selectedTopicType, setSelectedTopicType] = useState<string | null>(null);
-
-  const systemColorMap = useMemo(() => {
-    if (!data) return {};
-    const map: Record<string, string> = {};
-    data.forEach((s, i) => {
-      map[s.system] = SYSTEM_COLORS[i % SYSTEM_COLORS.length];
-    });
-    return map;
-  }, [data]);
-
-  const activeSystem = useMemo(
-    () => data?.find((s) => s.system === selectedSystem) ?? null,
-    [data, selectedSystem]
+  const nodeById = useMemo(
+    () => new Map(graphData.nodes.map((node) => [node.id, node])),
+    [graphData.nodes],
+  );
+  const systemIds = useMemo(
+    () => graphData.nodes.filter((node) => node.type === "SYSTEM").map((node) => node.id),
+    [graphData.nodes],
+  );
+  const maxSystemQuestions = useMemo(
+    () => Math.max(...graphData.nodes.filter((node) => node.type === "SYSTEM").map((node) => node.questionCount), 1),
+    [graphData.nodes],
+  );
+  const systemColorMap = useMemo(
+    () => new Map(systemIds.map((id, index) => [id, SYSTEM_COLORS[index % SYSTEM_COLORS.length]])),
+    [systemIds],
+  );
+  const colorForNode = useCallback(
+    (node: KnowledgeGraphNode) => node.type === "SYSTEM"
+      ? systemColorMap.get(node.id) ?? NODE_STYLES.SYSTEM.color
+      : NODE_STYLES[node.type].color,
+    [systemColorMap],
   );
 
-  const activeTopicType = useMemo(
-    () => activeSystem?.topicTypes.find((t) => t.topicType === selectedTopicType) ?? null,
-    [activeSystem, selectedTopicType]
+  const [visibleNodeIds, setVisibleNodeIds] = useState<Set<string>>(() => new Set(systemIds));
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [focusedSystemId, setFocusedSystemId] = useState<string | null>(null);
+  const [relationFilter, setRelationFilter] = useState<RelationFilter>("ALL");
+  const [nodeFilter, setNodeFilter] = useState<NodeFilter>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [showAllClues, setShowAllClues] = useState(false);
+
+  type HistorySnapshot = { label: string; visibleNodeIds: Set<string>; focusedSystemId: string | null };
+  const [navigationHistory, setNavigationHistory] = useState<HistorySnapshot[]>([]);
+  const expandedByRef = useRef(new Map<string, string[]>());
+
+  const questionBankCluesById = useMemo(
+    () => new Map(questionBankClues.map((entry) => [entry.id, entry])),
+    [questionBankClues],
   );
 
-  const sortedDiseases = useMemo(() => {
-    if (!activeTopicType?.diseases) return [];
-    return [...activeTopicType.diseases].sort((a, b) =>
-      a.diseaseName.localeCompare(b.diseaseName)
+  useEffect(() => {
+    setVisibleNodeIds(new Set(systemIds));
+    setSelectedNodeId(null);
+    setFocusedSystemId(null);
+    setNavigationHistory([]);
+    expandedByRef.current.clear();
+  }, [systemIds]);
+
+  const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) ?? null : null;
+
+  useEffect(() => {
+    setShowAllClues(false);
+  }, [selectedNodeId]);
+
+  const incidentEdges = useMemo(() => {
+    if (!selectedNodeId) return [];
+    return graphData.edges.filter(
+      (edge) => edge.source === selectedNodeId || edge.target === selectedNodeId,
     );
-  }, [activeTopicType]);
+  }, [graphData.edges, selectedNodeId]);
 
-  // Level 1 collision-packed layout
-  const CONTAINER_R = 350;
-  const computeSize = useCallback((total: number): number => {
-    if (!data) return 100;
-    const maxTotal = Math.max(...data.map((s) => s.total));
-    const minS = 85;
-    const maxS = 150;
-    const t = Math.log10(1 + (total / maxTotal) * 9);
-    return minS + t * (maxS - minS);
-  }, [data]);
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (query.length < 2) return [];
+    return graphData.nodes
+      .filter((node) => node.label.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aStarts = a.label.toLowerCase().startsWith(query) ? 1 : 0;
+        const bStarts = b.label.toLowerCase().startsWith(query) ? 1 : 0;
+        return bStarts - aStarts || b.questionCount - a.questionCount;
+      })
+      .slice(0, 8);
+  }, [graphData.nodes, searchQuery]);
 
-  const placements = useMemo(() => {
-    if (!data) return new Map<string, { x: number; y: number }>();
-    const GOLDEN_ANGLE = 137.508 * (Math.PI / 180);
-    const PADDING = 6;
-    const sorted = [...data].sort((a, b) => b.total - a.total);
+  // Fix #8: know when focusSystem's PRIMARY_CHILD_LIMIT clipped real content, so the UI can offer to load the rest
+  const focusedSystemChildren = useMemo(() => {
+    if (!focusedSystemId) return [];
+    return graphData.edges
+      .filter((edge) => edge.type === "BELONGS_TO" && edge.target === focusedSystemId)
+      .map((edge) => nodeById.get(edge.source))
+      .filter((candidate): candidate is KnowledgeGraphNode => Boolean(candidate))
+      .filter((candidate) => nodeFilter === "ALL" || candidate.type === nodeFilter)
+      .sort((a, b) => b.questionCount - a.questionCount);
+  }, [focusedSystemId, graphData.edges, nodeById, nodeFilter]);
 
-    const sizes = new Map<string, number>();
-    for (const s of data) sizes.set(s.system, computeSize(s.total));
+  const hiddenSystemChildrenCount = useMemo(() => {
+    if (!focusedSystemId) return 0;
+    return focusedSystemChildren.filter((child) => !visibleNodeIds.has(child.id)).length;
+  }, [focusedSystemChildren, focusedSystemId, visibleNodeIds]);
 
-    // Initial positions: golden spiral
-    const pos = new Map<string, { x: number; y: number }>();
-    sorted.forEach((s, i) => {
-      const angle = i * GOLDEN_ANGLE;
-      const dist = Math.sqrt(i + 0.5) * (CONTAINER_R * 0.22);
-      pos.set(s.system, { x: Math.cos(angle) * dist, y: Math.sin(angle) * dist });
+  const loadMoreSystemChildren = useCallback(() => {
+    setVisibleNodeIds((current) => {
+      const next = new Set(current);
+      focusedSystemChildren
+        .filter((child) => !current.has(child.id))
+        .slice(0, PRIMARY_CHILD_LIMIT)
+        .forEach((child) => next.add(child.id));
+      return next;
     });
+  }, [focusedSystemChildren]);
 
-    // Relaxation: push overlapping pairs apart, clamp to container
-    for (let iter = 0; iter < 150; iter++) {
-      const damp = 1 - iter / 150;
-      let moved = 0;
-      for (const [sys1, p1] of pos) {
-        const r1 = sizes.get(sys1)! / 2;
-        let fx = 0;
-        let fy = 0;
-        for (const [sys2, p2] of pos) {
-          if (sys1 === sys2) continue;
-          const r2 = sizes.get(sys2)! / 2;
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const dist = Math.hypot(dx, dy);
-          const minDist = r1 + r2 + PADDING;
-          if (dist < minDist && dist > 0.01) {
-            const force = (minDist - dist) * 0.55 * damp + 0.3 * damp;
-            fx += (dx / dist) * Math.min(force, 8);
-            fy += (dy / dist) * Math.min(force, 8);
-          }
-        }
-        if (Math.abs(fx) > 0.01 || Math.abs(fy) > 0.01) {
-          p1.x += fx;
-          p1.y += fy;
-          moved++;
-        }
-        const edgeMax = CONTAINER_R - r1 - PADDING;
-        const cDist = Math.hypot(p1.x, p1.y);
-        if (cDist > edgeMax && cDist > 0.01) {
-          const ratio = edgeMax / cDist;
-          p1.x *= ratio;
-          p1.y *= ratio;
-        }
+  const focusedCategoryCounts = useMemo(() => {
+    const counts = new Map<Exclude<KnowledgeGraphNodeType, "SYSTEM">, number>();
+    if (!focusedSystemId) return counts;
+
+    graphData.edges
+      .filter((edge) => edge.type === "BELONGS_TO" && edge.target === focusedSystemId)
+      .forEach((edge) => {
+        const child = nodeById.get(edge.source);
+        if (!child || child.type === "SYSTEM") return;
+        counts.set(child.type, (counts.get(child.type) ?? 0) + 1);
+      });
+
+    return counts;
+  }, [focusedSystemId, graphData.edges, nodeById]);
+
+  const pushHistory = useCallback((label: string) => {
+    setNavigationHistory((current) => [...current, { label, visibleNodeIds, focusedSystemId }]);
+  }, [visibleNodeIds, focusedSystemId]);
+
+  const focusSystem = useCallback((systemId: string, category: NodeFilter = nodeFilter, recordHistory = true) => {
+    const systemNode = nodeById.get(systemId);
+    if (recordHistory) pushHistory(systemNode?.label ?? "System view");
+
+    const primaryChildren = graphData.edges
+      .filter((edge) => edge.type === "BELONGS_TO" && edge.target === systemId)
+      .map((edge) => nodeById.get(edge.source))
+      .filter((candidate): candidate is KnowledgeGraphNode => Boolean(candidate))
+      .filter((candidate) => category === "ALL" || candidate.type === category)
+      .sort((a, b) => b.questionCount - a.questionCount)
+      .slice(0, PRIMARY_CHILD_LIMIT);
+
+    setFocusedSystemId(systemId);
+    setVisibleNodeIds(new Set([systemId, ...primaryChildren.map((child) => child.id)]));
+    expandedByRef.current.clear();
+  }, [graphData.edges, nodeById, nodeFilter, pushHistory]);
+
+  const expandNode = useCallback((nodeId: string) => {
+    const node = nodeById.get(nodeId);
+    if (!node) return;
+
+    if (node.type === "SYSTEM") {
+      focusSystem(nodeId);
+      return;
+    }
+
+    const connected = graphData.edges
+      .filter((edge) => edge.source === nodeId || edge.target === nodeId)
+      .filter((edge) => edgeMatchesRelationFilter(edge.type, relationFilter))
+      .map((edge) => nodeById.get(edge.source === nodeId ? edge.target : edge.source))
+      .filter((candidate): candidate is KnowledgeGraphNode => Boolean(candidate))
+      .filter((candidate) => candidate.type !== "SYSTEM" || candidate.id === focusedSystemId)
+      .filter((candidate) => nodeFilter === "ALL" || candidate.type === "SYSTEM" || candidate.type === nodeFilter)
+      .sort((a, b) => b.questionCount - a.questionCount);
+
+    setVisibleNodeIds((current) => {
+      const added = connected
+        .filter((candidate) => !current.has(candidate.id))
+        .slice(0, EXPAND_LIMIT);
+      if (added.length === 0) return current;
+      const next = new Set(current);
+      next.add(nodeId);
+      added.forEach((candidate) => next.add(candidate.id));
+      expandedByRef.current.set(nodeId, added.map((candidate) => candidate.id));
+      return next;
+    });
+  }, [focusSystem, focusedSystemId, graphData.edges, nodeById, nodeFilter, relationFilter]);
+
+  // Fix #4: remove exactly the nodes a given expand call introduced, unless another visible node still depends on them
+  const collapseNode = useCallback((nodeId: string) => {
+    const introduced = expandedByRef.current.get(nodeId);
+    if (!introduced || introduced.length === 0) return;
+
+    setVisibleNodeIds((current) => {
+      const next = new Set(current);
+      for (const candidateId of introduced) {
+        const stillNeeded = graphData.edges.some((edge) => {
+          if (edge.source !== candidateId && edge.target !== candidateId) return false;
+          const otherId = edge.source === candidateId ? edge.target : edge.source;
+          return otherId !== nodeId && next.has(otherId) && otherId !== candidateId;
+        });
+        if (!stillNeeded) next.delete(candidateId);
       }
-      if (moved === 0 && iter > 30) break;
-    }
+      return next;
+    });
+    expandedByRef.current.delete(nodeId);
+    setSelectedNodeId((current) => (current && introduced.includes(current) ? null : current));
+  }, [graphData.edges]);
 
-    // Final separation pass: hard push for remaining overlaps
-    for (let pass = 0; pass < 50; pass++) {
-      let anyOverlap = false;
-      for (const [sys1, p1] of pos) {
-        for (const [sys2, p2] of pos) {
-          if (sys1 >= sys2) continue;
-          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-          const min = sizes.get(sys1)! / 2 + sizes.get(sys2)! / 2 + PADDING;
-          if (dist < min && dist > 0.01) {
-            anyOverlap = true;
-            const push = (min - dist) * 0.5 / dist;
-            const dx = (p1.x - p2.x) * push;
-            const dy = (p1.y - p2.y) * push;
-            p1.x += dx; p1.y += dy;
-            p2.x -= dx; p2.y -= dy;
-          }
-        }
-      }
-      for (const [sys, p] of pos) {
-        const edgeMax = CONTAINER_R - sizes.get(sys)! / 2 - PADDING;
-        const d = Math.hypot(p.x, p.y);
-        if (d > edgeMax && d > 0.01) {
-          const r = edgeMax / d;
-          p.x *= r; p.y *= r;
-        }
-      }
-      if (!anyOverlap) break;
-    }
+  const revealNode = useCallback((node: KnowledgeGraphNode) => {
+    const memberships = node.type === "SYSTEM" ? [] : graphData.edges
+      .filter((edge) => edge.type === "BELONGS_TO" && edge.source === node.id)
+      .map((edge) => edge.target);
 
-    const result = new Map<string, { x: number; y: number }>();
-    for (const s of data) {
-      const p = pos.get(s.system);
-      result.set(s.system, { x: p?.x ?? 0, y: p?.y ?? 0 });
-    }
-    return result;
-  }, [data, computeSize]);
+    pushHistory(`Search: ${node.label}`);
 
-  const handleSystemClick = (system: string) => {
-    if (selectedSystem === system) {
-      setSelectedSystem(null);
-      setSelectedTopicType(null);
-    } else {
-      setSelectedSystem(system);
-      setSelectedTopicType(null);
+    if (node.type !== "SYSTEM" && memberships[0]) {
+      setFocusedSystemId(memberships[0]);
+      setVisibleNodeIds(new Set([memberships[0], node.id]));
+      expandedByRef.current.clear();
     }
-  };
+    setSelectedNodeId(node.id);
+    expandNode(node.id);
+    setSearchQuery("");
+    setSearchOpen(false);
+  }, [expandNode, graphData.edges, pushHistory]);
 
-  const handleBack = () => {
-    if (selectedTopicType) {
-      setSelectedTopicType(null);
-    } else {
-      setSelectedSystem(null);
-    }
-  };
+  const restoreHistory = useCallback((index: number) => {
+    setNavigationHistory((current) => {
+      const snapshot = current[index];
+      if (!snapshot) return current;
+      setVisibleNodeIds(snapshot.visibleNodeIds);
+      setFocusedSystemId(snapshot.focusedSystemId);
+      setSelectedNodeId(null);
+      expandedByRef.current.clear();
+      return current.slice(0, index);
+    });
+  }, []);
 
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center h-64 text-sm text-neutral-400">
-        Loading graph...
-      </div>
+  const resetScene = useCallback(() => {
+    setVisibleNodeIds(new Set(systemIds));
+    setSelectedNodeId(null);
+    setFocusedSystemId(null);
+    setRelationFilter("ALL");
+    setNodeFilter("ALL");
+    setSearchQuery("");
+    setNavigationHistory([]);
+    expandedByRef.current.clear();
+    draggedPositionsRef.current.clear();
+  }, [systemIds]);
+
+  const renderedNodeIds = useMemo(() => {
+    if (nodeFilter === "ALL") return visibleNodeIds;
+    return new Set(
+      [...visibleNodeIds].filter((id) => {
+        const node = nodeById.get(id);
+        return node?.type === "SYSTEM" || node?.type === nodeFilter;
+      }),
     );
-  }
+  }, [nodeById, nodeFilter, visibleNodeIds]);
 
-  // ── Level 1: System Constellation ──────────────────────────────────────────
-  if (!selectedSystem) {
+  // Fix #1: clear a selection that has fallen out of the rendered set (e.g. after a filter change or a collapse)
+  useEffect(() => {
+    if (selectedNodeId && !renderedNodeIds.has(selectedNodeId)) setSelectedNodeId(null);
+  }, [selectedNodeId, renderedNodeIds]);
 
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div
-          className="relative rounded-full bg-neutral-50/30 flex items-center justify-center"
-          style={{ width: CONTAINER_R * 2, height: CONTAINER_R * 2 }}
-        >
-          {data.map((s) => {
-            const pos = placements.get(s.system);
-            if (!pos) return null;
-            const size = computeSize(s.total);
-            return (
-              <button
-                key={s.system}
-                onClick={() => handleSystemClick(s.system)}
-                style={{
-                  width: size,
-                  height: size,
-                  transform: `translate(${pos.x}px, ${pos.y}px)`,
-                }}
-                className={`absolute flex flex-col items-center justify-center rounded-full border-2 text-center shadow-sm transition-all hover:shadow-xl hover:scale-110 active:scale-95 z-10 ${systemColorMap[s.system]}`}
-              >
-                <span
-                  className="font-black leading-tight px-3 uppercase tracking-tighter"
-                  style={{ fontSize: Math.max(10, size * 0.08) }}
-                >
-                  {s.system}
-                </span>
-                <span className="text-[10px] font-bold mt-1 opacity-60">
-                  {s.total}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!containerRef.current || renderedNodeIds.size === 0) return;
 
-  // ── Level 2 & 3: System Hub + Topic Type + Leaves ──────────────────────────
+    let cancelled = false;
+    let renderer: SigmaInstance | null = null;
+
+    async function renderGraph() {
+      const [{ default: Sigma }, { EdgeArrowProgram }] = await Promise.all([
+        import("sigma"),
+        import("sigma/rendering"),
+      ]);
+      if (cancelled || !containerRef.current) return;
+
+      const compactCanvas = containerRef.current.clientWidth < 640;
+      const displayGraph = new Graph({ type: "mixed", multi: true });
+      const visibleSystems = systemIds.filter((id) => renderedNodeIds.has(id));
+      const systemPosition = new Map<string, { x: number; y: number }>();
+
+      const systemsByVolume = [...visibleSystems].sort((a, b) => (
+        (nodeById.get(b)?.questionCount ?? 0) - (nodeById.get(a)?.questionCount ?? 0)
+      ));
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+      systemsByVolume.forEach((id, index) => {
+        if (index === 0) {
+          systemPosition.set(id, { x: 0, y: 0 });
+          return;
+        }
+
+        const rank = index / Math.max(systemsByVolume.length - 1, 1);
+        const radius = 4.5 + Math.pow(rank, 0.72) * 20;
+        const angle = index * goldenAngle - Math.PI / 2;
+        systemPosition.set(id, {
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+        });
+      });
+
+      for (const id of renderedNodeIds) {
+        const node = nodeById.get(id);
+        if (!node) continue;
+        const parentSystemId = graphData.edges.find(
+          (edge) => edge.type === "BELONGS_TO" && edge.source === id && renderedNodeIds.has(edge.target),
+        )?.target;
+        const parentPosition = parentSystemId ? systemPosition.get(parentSystemId) : undefined;
+        const hash = hashNumber(id);
+        const angle = (hash % 360) * Math.PI / 180;
+        const distance = 3 + (hash % 7);
+        const position = node.type === "SYSTEM"
+          ? systemPosition.get(id) ?? { x: 0, y: 0 }
+          : {
+              x: (parentPosition?.x ?? 0) + Math.cos(angle) * distance,
+              y: (parentPosition?.y ?? 0) + Math.sin(angle) * distance,
+            };
+
+        displayGraph.addNode(id, {
+          x: position.x,
+          y: position.y,
+          size: nodeSize(node, maxSystemQuestions),
+          label: node.label,
+          color: colorForNode(node),
+          kind: node.type,
+          questionCount: node.questionCount,
+        });
+      }
+
+      for (const edge of graphData.edges) {
+        if (!renderedNodeIds.has(edge.source) || !renderedNodeIds.has(edge.target)) continue;
+        if (!edgeMatchesRelationFilter(edge.type, relationFilter)) continue;
+        if (!displayGraph.hasNode(edge.source) || !displayGraph.hasNode(edge.target)) continue;
+
+        const attributes = {
+          relation: edge.type,
+          weight: edge.weight,
+          size: edge.type === "SHARES_CONCEPT"
+            ? Math.min(0.7 + Math.log2(edge.weight + 1) * 0.45, 3)
+            : edge.type === "PREREQUISITE_FOR" ? 1.4 : 0.75,
+          color: edge.type === "PREREQUISITE_FOR" ? "#94A3B8" : "#CBD5E1",
+          type: edge.directed ? "arrow" : "line",
+        };
+
+        if (edge.directed) {
+          displayGraph.addDirectedEdgeWithKey(edge.id, edge.source, edge.target, attributes);
+        } else {
+          displayGraph.addUndirectedEdgeWithKey(edge.id, edge.source, edge.target, attributes);
+        }
+      }
+
+      if (displayGraph.order > visibleSystems.length) {
+        forceAtlas2.assign(displayGraph, {
+          iterations: displayGraph.order > 120 ? 60 : 100,
+          settings: {
+            ...forceAtlas2.inferSettings(displayGraph),
+            adjustSizes: true,
+            gravity: 0.8,
+            scalingRatio: 5,
+            slowDown: 8,
+          },
+        });
+      }
+
+      draggedPositionsRef.current.forEach((position, id) => {
+        if (displayGraph.hasNode(id)) displayGraph.mergeNodeAttributes(id, position);
+      });
+
+      const neighborIds = new Set<string>();
+      if (selectedNodeId && displayGraph.hasNode(selectedNodeId)) {
+        displayGraph.neighbors(selectedNodeId).forEach((id) => neighborIds.add(id));
+      }
+
+      renderer = new Sigma(displayGraph, containerRef.current, {
+        allowInvalidContainer: false,
+        defaultNodeColor: "#64748B",
+        defaultEdgeColor: "#CBD5E1",
+        edgeProgramClasses: { arrow: EdgeArrowProgram },
+        labelColor: { color: "#334155" },
+        labelFont: "Inter, ui-sans-serif, system-ui, sans-serif",
+        labelSize: compactCanvas ? 10 : 12,
+        labelWeight: "600",
+        renderEdgeLabels: false,
+        stagePadding: compactCanvas ? 64 : 54,
+        minCameraRatio: 0.08,
+        maxCameraRatio: 8,
+        nodeReducer: (id, data) => {
+          if (!selectedNodeId) {
+            return compactCanvas ? { ...data, label: "" } : data;
+          }
+          const active = id === selectedNodeId;
+          const neighbor = neighborIds.has(id);
+          return {
+            ...data,
+            color: active || neighbor ? data.color : "#DCE3EA",
+            size: active ? data.size * 1.25 : data.size,
+            highlighted: active,
+            label: active || (!compactCanvas && (neighbor || data.kind === "SYSTEM")) ? data.label : "",
+            zIndex: active ? 3 : neighbor ? 2 : 1,
+          };
+        },
+        edgeReducer: (id, data) => {
+          if (!selectedNodeId) return data;
+          const [source, target] = displayGraph.extremities(id);
+          const active = source === selectedNodeId || target === selectedNodeId;
+          return {
+            ...data,
+            color: active ? "#06B6D4" : "#E6EBF0",
+            size: active ? Math.max(data.size ?? 1, 1.8) : 0.45,
+            zIndex: active ? 2 : 1,
+          };
+        },
+      });
+
+      renderer.on("clickNode", ({ node }) => {
+        setSelectedNodeId(node);
+        expandNode(node);
+      });
+      renderer.on("clickStage", () => setSelectedNodeId(null));
+
+      let draggedNode: string | null = null;
+      let dragMoved = false;
+      const mouseCaptor = renderer.getMouseCaptor();
+
+      renderer.on("enterNode", ({ node }) => {
+        if (displayGraph.getNodeAttribute(node, "kind") !== "SYSTEM" && containerRef.current) {
+          containerRef.current.style.cursor = "grab";
+        }
+      });
+      renderer.on("leaveNode", () => {
+        if (!draggedNode && containerRef.current) containerRef.current.style.cursor = "default";
+      });
+      renderer.on("downNode", ({ node, event }) => {
+        if (displayGraph.getNodeAttribute(node, "kind") === "SYSTEM") return;
+        draggedNode = node;
+        dragMoved = false;
+        if (containerRef.current) containerRef.current.style.cursor = "grabbing";
+        event.preventSigmaDefault();
+      });
+      mouseCaptor.on("mousemovebody", (event) => {
+        if (!draggedNode || !renderer) return;
+        const position = renderer.viewportToGraph(event);
+        displayGraph.mergeNodeAttributes(draggedNode, position);
+        draggedPositionsRef.current.set(draggedNode, position);
+        dragMoved = true;
+        event.preventSigmaDefault();
+        event.original.preventDefault();
+        renderer.refresh({ skipIndexation: true });
+      });
+      mouseCaptor.on("mouseup", () => {
+        if (!draggedNode) return;
+        draggedNode = null;
+        if (containerRef.current) containerRef.current.style.cursor = dragMoved ? "default" : "grab";
+      });
+      rendererRef.current = renderer;
+    }
+
+    renderGraph();
+
+    return () => {
+      cancelled = true;
+      renderer?.kill();
+      if (rendererRef.current === renderer) rendererRef.current = null;
+    };
+  }, [colorForNode, expandNode, graphData.edges, maxSystemQuestions, nodeById, relationFilter, renderedNodeIds, selectedNodeId, systemIds]);
+
   return (
-    <div className="space-y-8 min-h-[500px]">
-      {/* Breadcrumb / Back */}
-      <button
-        onClick={handleBack}
-        className="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-900 transition-colors"
-      >
-        <ArrowLeftIcon className="w-4 h-4" />
-        <span>Back to {selectedTopicType ? selectedSystem : "All Systems"}</span>
-      </button>
-
-      <div className="flex flex-col lg:flex-row gap-12 items-start justify-center">
-        {/* Level 2: The Hub (System + Surrounding Types) */}
-        <div className="relative flex-shrink-0 flex items-center justify-center w-[300px] h-[300px]">
-          {/* Central System Circle */}
-          <div className={`flex flex-col items-center justify-center w-32 h-32 rounded-full border-4 shadow-lg text-center z-10 ${systemColorMap[selectedSystem]}`}>
-            <span className="text-base font-black leading-tight px-4 uppercase tracking-tighter">
-              {selectedSystem}
-            </span>
-          </div>
-
-          {/* Topic Type Circles + Chapters Circle */}
-          {(() => {
-            const topicTypes = activeSystem?.topicTypes || [];
-            const totalCircles = topicTypes.length + 1;
-            
-            return [
-              ...topicTypes.map((tt, i) => {
-                const colors = TOPIC_TYPE_COLORS[tt.topicType] ?? TOPIC_TYPE_COLORS.CONCEPT;
-                const isActive = selectedTopicType === tt.topicType;
-                const angle = (i / totalCircles) * 2 * Math.PI - Math.PI / 2;
-                const radius = 100;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-
-                return (
-                  <button
-                    key={tt.topicType}
-                    onClick={() => setSelectedTopicType(isActive ? null : tt.topicType)}
-                    style={{ transform: `translate(${x}px, ${y}px)` }}
-                    className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
-                      isActive
-                        ? `${colors.bg} ${colors.border} ${colors.text} ${colors.shadow} ring-4 ring-white`
-                        : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold leading-none">{tt.topicType}</span>
-                    <span className="text-[9px] opacity-60 mt-1">{tt.count}</span>
-                  </button>
-                );
-              }),
-              (() => {
-                const isActive = selectedTopicType === "CHAPTERS";
-                const angle = ((totalCircles - 1) / totalCircles) * 2 * Math.PI - Math.PI / 2;
-                const radius = 100;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                
-                return (
-                  <button
-                    key="CHAPTERS"
-                    onClick={() => setSelectedTopicType(isActive ? null : "CHAPTERS")}
-                    style={{ transform: `translate(${x}px, ${y}px)` }}
-                    className={`absolute flex flex-col items-center justify-center w-20 h-20 rounded-full border-2 text-center transition-all hover:scale-110 shadow-sm ${
-                      isActive
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-indigo-100 ring-4 ring-white"
-                        : "bg-white border-neutral-100 text-neutral-400 hover:border-neutral-200"
-                    }`}
-                  >
-                    <span className="text-[10px] font-bold leading-none">Chapters</span>
-                    <span className="text-[9px] opacity-60 mt-1">Ref</span>
-                  </button>
-                );
-              })()
-            ];
-          })()}
+    <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white lg:min-h-0">
+      <div className="flex flex-col gap-3 border-b border-neutral-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative min-w-0 flex-1 lg:max-w-sm">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          <input
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setSearchOpen(true);
+            }}
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => setTimeout(() => setSearchOpen(false), 120)}
+            placeholder="Search systems, diseases, drugs..."
+            className="h-9 w-full rounded-lg border border-neutral-200 bg-neutral-50 pl-9 pr-3 text-sm text-neutral-800 outline-none transition focus:border-cyan-700/40 focus:bg-white focus:ring-2 focus:ring-cyan-700/10"
+          />
+          {searchOpen && searchResults.length > 0 && (
+            <div className="absolute left-0 right-0 top-11 z-30 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-xl">
+              {searchResults.map((node) => (
+                <button
+                  key={node.id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => revealNode(node)}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-neutral-50"
+                >
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: colorForNode(node) }} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-800">{node.label}</span>
+                  <span className="shrink-0 text-[10px] font-semibold uppercase text-neutral-400">{NODE_STYLES[node.type].label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Level 3: The List (Connected to Active Type) */}
-        {activeTopicType && selectedTopicType !== "CHAPTERS" && (
-          <div className="flex-1 w-full max-w-md animate-in slide-in-from-right-4 duration-300">
-            <div className="bg-neutral-50/50 rounded-3xl border border-neutral-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
-                  {activeTopicType.topicType}
-                </h3>
-                <span className="text-xs text-neutral-400">{activeTopicType.count} results</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            aria-label="Filter node type"
+            value={nodeFilter}
+            onChange={(event) => {
+              const category = event.target.value as NodeFilter;
+              setNodeFilter(category);
+              if (focusedSystemId) focusSystem(focusedSystemId, category, false);
+            }}
+            className="h-9 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-medium text-neutral-600 outline-none focus:border-cyan-700/40"
+          >
+            <option value="ALL">All categories</option>
+            {Object.entries(NODE_STYLES).filter(([type]) => type !== "SYSTEM").map(([type, style]) => (
+              <option key={type} value={type} disabled={Boolean(focusedSystemId) && !focusedCategoryCounts.has(type as Exclude<KnowledgeGraphNodeType, "SYSTEM">)}>
+                {style.label}{focusedSystemId ? ` (${focusedCategoryCounts.get(type as Exclude<KnowledgeGraphNodeType, "SYSTEM">) ?? 0})` : ""}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter relationship"
+            value={relationFilter}
+            onChange={(event) => setRelationFilter(event.target.value as RelationFilter)}
+            className="h-9 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-medium text-neutral-600 outline-none focus:border-cyan-700/40"
+          >
+            {Object.entries(RELATION_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <div className="flex h-9 items-center overflow-hidden rounded-lg border border-neutral-200 bg-white">
+            <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => rendererRef.current?.getCamera().animatedUnzoom()} className="grid h-full w-9 place-items-center text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
+              <MinusIcon className="h-4 w-4" />
+            </button>
+            <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => rendererRef.current?.getCamera().animatedZoom()} className="grid h-full w-9 place-items-center border-l border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
+              <PlusIcon className="h-4 w-4" />
+            </button>
+            <button type="button" title="Fit graph" aria-label="Fit graph" onClick={() => rendererRef.current?.getCamera().animatedReset()} className="grid h-full w-9 place-items-center border-l border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
+              <ArrowsPointingOutIcon className="h-4 w-4" />
+            </button>
+            <button type="button" title="Reset scene" aria-label="Reset scene" onClick={resetScene} className="grid h-full w-9 place-items-center border-l border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800">
+              <ArrowPathIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid flex-1 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative min-h-[560px] bg-[#F8FAFC] xl:min-h-0">
+          <div ref={containerRef} className="absolute inset-0" aria-label="Interactive medical knowledge graph" />
+          {(focusedSystemId || navigationHistory.length > 0) && (
+            <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={resetScene}
+                className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-neutral-600 shadow-sm transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5" />
+                All systems
+              </button>
+              {navigationHistory.map((snapshot, index) => (
+                <button
+                  key={`${snapshot.label}-${index}`}
+                  type="button"
+                  onClick={() => restoreHistory(index)}
+                  className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-neutral-200 bg-white/90 px-2.5 text-xs font-medium text-neutral-500 shadow-sm backdrop-blur-sm transition-colors hover:bg-neutral-50 hover:text-neutral-800"
+                  title={`Back to ${snapshot.label}`}
+                >
+                  <ChevronRightIcon className="h-3 w-3 text-neutral-300" />
+                  {snapshot.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {focusedSystemId && hiddenSystemChildrenCount > 0 && (
+            <button
+              type="button"
+              onClick={loadMoreSystemChildren}
+              className="absolute bottom-4 right-4 z-20 flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-[#0E7490] shadow-sm transition-colors hover:bg-cyan-50"
+            >
+              +{hiddenSystemChildrenCount} more, click to load
+            </button>
+          )}
+          <div className="pointer-events-none absolute bottom-4 left-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-neutral-200/80 bg-white/90 px-3 py-2 text-[10px] font-medium text-neutral-500 shadow-sm backdrop-blur-sm">
+            {Object.entries(NODE_STYLES).slice(0, 6).map(([type, style]) => (
+              <span key={type} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.color }} />
+                {style.label}
+              </span>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-white/85 px-2.5 py-1.5 text-[11px] font-medium text-neutral-500 shadow-sm backdrop-blur-sm">
+            {renderedNodeIds.size} of {graphData.nodes.length} nodes
+          </div>
+        </div>
+
+        <aside className="border-t border-neutral-200 bg-white p-5 xl:overflow-y-auto xl:border-l xl:border-t-0" aria-label="Node inspector">
+          {selectedNode ? (
+            <div className="space-y-5">
+              <div>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colorForNode(selectedNode) }} />
+                  <span className="text-[11px] font-semibold uppercase text-neutral-400">{NODE_STYLES[selectedNode.type].label}</span>
+                </div>
+                <h2 className="text-lg! font-semibold leading-snug text-neutral-900">{selectedNode.label}</h2>
+                <p className="mt-1 text-xs text-neutral-400">{selectedNode.questionCount.toLocaleString()} associated questions</p>
               </div>
-              
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                <style jsx>{`
-                  .custom-scrollbar::-webkit-scrollbar {
-                    width: 4px;
-                  }
-                  .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                  }
-                  .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #e5e5e5;
-                    border-radius: 10px;
-                  }
-                  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #d4d4d4;
-                  }
-                `}</style>
-                {sortedDiseases.map((d) => (
-                  <button
-                    key={d.diseaseName}
-                    onClick={() => router.push(`/strategy/${encodeURIComponent(d.diseaseName)}`)}
-                    className={`group w-full flex items-center justify-between gap-4 p-3 rounded-xl border transition-all hover:translate-x-1 ${successColor(d.successRate)}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${successDot(d.successRate)}`} />
-                      <span className="text-sm font-bold truncate">{d.diseaseName}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[10px] font-black italic">DRIL-DOWN →</span>
-                    </div>
-                    {d.successRate !== null && (
-                      <span className="text-xs font-black flex-shrink-0">{d.successRate}%</span>
+
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-neutral-200 bg-neutral-200">
+                <div className="bg-white p-3">
+                  <p className="text-[10px] font-medium uppercase text-neutral-400">Connections</p>
+                  <p className="mt-1 text-lg font-semibold text-neutral-900">{incidentEdges.length}</p>
+                </div>
+                <div className="bg-white p-3">
+                  <p className="text-[10px] font-medium uppercase text-neutral-400">Systems</p>
+                  <p className="mt-1 text-lg font-semibold text-neutral-900">{selectedNode.systems.length}</p>
+                </div>
+              </div>
+
+              {selectedNode.systems.length > 0 && (
+                <div>
+                  <h3 className="text-xs! font-semibold text-neutral-700">Connected systems</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedNode.systems.map((system) => (
+                      <span key={system} className="rounded-md bg-cyan-50 px-2 py-1 text-[11px] font-medium text-cyan-800">{system}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedNode.clues.length > 0 && (() => {
+                const fullClues = questionBankCluesById.get(selectedNode.id)?.clues ?? selectedNode.clues;
+                const cluesToShow = showAllClues ? fullClues : fullClues.slice(0, 3);
+                return (
+                  <div>
+                    <h3 className="text-xs! font-semibold text-neutral-700">High-leverage clues</h3>
+                    <ul className="mt-2 space-y-2">
+                      {cluesToShow.map((clue) => (
+                        <li key={clue} className="border-l-2 border-cyan-600/40 pl-2.5 text-xs leading-5 text-neutral-500">{clue}</li>
+                      ))}
+                    </ul>
+                    {fullClues.length > 3 && (
+                      <button type="button" onClick={() => setShowAllClues((current) => !current)} className="mt-1.5 text-[11px] font-semibold text-[#0E7490] hover:underline">
+                        {showAllClues ? "Show fewer" : `Show all ${fullClues.length}`}
+                      </button>
                     )}
+                  </div>
+                );
+              })()}
+
+              {(questionBankCluesById.get(selectedNode.id)?.discriminators ?? selectedNode.discriminators).length > 0 && (
+                <div>
+                  <h3 className="text-xs! font-semibold text-neutral-700">How to tell it apart</h3>
+                  <ul className="mt-2 space-y-2">
+                    {(questionBankCluesById.get(selectedNode.id)?.discriminators ?? selectedNode.discriminators).map((discriminator) => (
+                      <li key={discriminator} className="border-l-2 border-rose-500/40 pl-2.5 text-xs leading-5 text-neutral-500">{discriminator}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-1">
+                {selectedNode.type !== "SYSTEM" && (
+                  <button type="button" onClick={() => expandNode(selectedNode.id)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0E7490] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#155E75]">
+                    Expand connections
+                    <ChevronRightIcon className="h-4 w-4" />
                   </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Level 3 for Chapters */}
-        {selectedTopicType === "CHAPTERS" && (
-          <div className="flex-1 w-full max-w-md animate-in slide-in-from-right-4 duration-300">
-            <div className="bg-neutral-50/50 rounded-3xl border border-neutral-100 p-6">
-              <div className="mb-4">
-                <h3 className="text-sm font-black uppercase tracking-widest text-neutral-900">
-                  Combined References
-                </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">Chapters for {selectedSystem}</p>
+                )}
+                {selectedNode.type !== "SYSTEM" && selectedNode.type !== "PRINCIPLE" && (
+                  <button type="button" onClick={() => router.push(`/strategy/${encodeURIComponent(selectedNode.label)}`)} className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
+                    Open study page
+                  </button>
+                )}
+                {selectedNode.type !== "SYSTEM" && expandedByRef.current.has(selectedNode.id) && (
+                  <button type="button" onClick={() => collapseNode(selectedNode.id)} className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-800">
+                    Collapse connections
+                  </button>
+                )}
               </div>
 
-              <div className="space-y-4">
-                {/* First Aid Card */}
-                {(() => {
-                  const key = getMapKey(selectedSystem);
-                  const fa = firstAidMap[key];
-                  if (!fa) return null;
-
-                  return (
-                    <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase rounded bg-blue-50 text-blue-700 border border-blue-200">
-                          First Aid
-                        </span>
+              {incidentEdges.length > 0 && (
+                <div>
+                  <h3 className="text-xs! font-semibold text-neutral-700">Relationship summary</h3>
+                  <div className="mt-2 space-y-2">
+                    {[...new Set(incidentEdges.map((edge) => edge.type))].map((type) => (
+                      <div key={type} className="flex items-center justify-between text-xs text-neutral-500">
+                        <span>{formatRelationship(type)}</span>
+                        <span className="font-semibold text-neutral-700">{incidentEdges.filter((edge) => edge.type === type).length}</span>
                       </div>
-                      <h4 className="text-sm font-bold text-neutral-800">{fa.chapter}</h4>
-                      <p className="text-xs text-neutral-500 mt-1">Pages: <span className="font-semibold text-neutral-700">{fa.pages}</span></p>
-                      {fa.subChapters && fa.subChapters.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-neutral-100">
-                          <p className="text-[10px] font-black uppercase text-neutral-400 mb-2 tracking-wider">Chapters & Sub-topics</p>
-                          <ul className="space-y-3">
-                            {fa.subChapters.map((sub, idx) => (
-                              <li key={idx}>
-                                <span className="text-xs font-bold text-neutral-800">• {sub.title}</span>
-                                {sub.items && sub.items.length > 0 && (
-                                  <ul className="pl-3 mt-1 space-y-1 border-l-2 border-neutral-100 ml-1.5">
-                                    {sub.items.map((item, itemIdx) => (
-                                      <li key={itemIdx} className="text-[11px] font-semibold text-neutral-500">
-                                        - {item}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Pathoma Card */}
-                {(() => {
-                  const key = getMapKey(selectedSystem);
-                  const pathoma = pathomaMap[key];
-                  if (!pathoma) return null;
-
-                  return (
-                    <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase rounded bg-rose-50 text-rose-700 border border-rose-200">
-                          Pathoma
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold text-neutral-800 leading-snug">{pathoma.chapter}</h4>
-                      {pathoma.subChapters && pathoma.subChapters.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-neutral-100">
-                          <p className="text-[10px] font-black uppercase text-neutral-400 mb-2 tracking-wider">Chapters & Sub-topics</p>
-                          <ul className="space-y-3">
-                            {pathoma.subChapters.map((sub, idx) => (
-                              <li key={idx}>
-                                <span className="text-xs font-bold text-neutral-800">• {sub.title}</span>
-                                {sub.items && sub.items.length > 0 && (
-                                  <ul className="pl-3 mt-1 space-y-1 border-l-2 border-neutral-100 ml-1.5">
-                                    {sub.items.map((item, itemIdx) => (
-                                      <li key={itemIdx} className="text-[11px] font-semibold text-neutral-500">
-                                        - {item}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* Fallback */}
-                {(() => {
-                  const key = getMapKey(selectedSystem);
-                  if (!firstAidMap[key] && !pathomaMap[key]) {
-                    return (
-                      <p className="text-xs text-neutral-400 italic">
-                        No specific chapter mappings configured for this system.
-                      </p>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Level 3 Placeholder */}
-        {!activeTopicType && selectedTopicType !== "CHAPTERS" && (
-          <div className="flex-1 hidden lg:flex items-center justify-center text-neutral-300 italic text-sm border-2 border-dashed border-neutral-100 rounded-3xl h-[300px]">
-            Select a category circle to view topics
-          </div>
-        )}
+          ) : (
+            <div className="flex min-h-52 flex-col items-center justify-center text-center xl:min-h-full">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-cyan-50 text-[#0E7490]">
+                <MagnifyingGlassIcon className="h-5 w-5" />
+              </div>
+              <h2 className="mt-3 text-sm! font-semibold text-neutral-800">Select a node</h2>
+              <p className="mt-1 max-w-[220px] text-xs leading-5 text-neutral-400">Inspect its evidence and connections, then expand its neighborhood.</p>
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
