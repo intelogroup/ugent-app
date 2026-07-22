@@ -77,7 +77,7 @@ export default function StrategyHub() {
           <div>
             <h1 className="text-3xl font-bold text-neutral-900 mb-2">Strategy Hub</h1>
             <p className="text-neutral-600">
-              Explore relationships in your question bank and reinforce them with flashcards.
+              Explore relationships in your question bank and reinforce them with drill cards.
             </p>
           </div>
 
@@ -103,7 +103,7 @@ export default function StrategyHub() {
                 }`}
               >
                 <AcademicCapIcon className="w-3.5 h-3.5" />
-                Flashcards
+                Drill Cards
               </button>
             </div>
 
