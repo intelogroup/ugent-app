@@ -72,7 +72,7 @@ export default function Home() {
           </div>
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-white/50 rounded-full pl-3 pr-4 py-2 shadow-sm">
+            <div className="pill-glass flex items-center gap-2 rounded-full pl-3 pr-4 py-2">
               <SparklesIcon className="w-4 h-4 text-primary-600 shrink-0" />
               <input
                 type="text"
@@ -85,7 +85,7 @@ export default function Home() {
             <div className="relative">
               <button
                 onClick={() => setIsCleaMenuOpen((open) => !open)}
-                className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-white/50 rounded-full pl-1.5 pr-3 py-1.5 shadow-sm hover:bg-white/80 transition-colors"
+                className="pill-glass flex items-center gap-2 rounded-full pl-1.5 pr-3 py-1.5 transition-colors"
               >
                 <Avatar size="sm" />
                 <span className="text-sm font-medium text-neutral-900">Clea</span>
@@ -93,7 +93,7 @@ export default function Home() {
               </button>
 
               {isCleaMenuOpen && (
-                <div className="absolute right-0 mt-2 w-40 bg-white/90 backdrop-blur-md border border-white/50 rounded-lg shadow-lg overflow-hidden z-10">
+                <div className="menu-glass absolute right-0 mt-2 w-40 rounded-lg shadow-lg overflow-hidden z-10">
                   <Link href="/settings" className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100">Settings</Link>
                 </div>
               )}
