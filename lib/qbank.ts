@@ -1,4 +1,4 @@
-import { readDataFile } from './data-source';
+import { createClient } from './supabase/server';
 
 export interface ClassifiedQuestion {
   text: string;
@@ -11,12 +11,24 @@ export interface ClassifiedQuestion {
   difficulty: string;
 }
 
+function fromRow(row: any): ClassifiedQuestion {
+  return {
+    text: row.text,
+    correctAnswer: row.correct_answer,
+    options: row.options,
+    explanation: row.explanation,
+    textHash: row.id,
+    system: row.system,
+    subject: row.subject,
+    difficulty: row.difficulty,
+  };
+}
+
 export async function loadQuestions(): Promise<ClassifiedQuestion[]> {
-  const raw = await readDataFile('classified-questions.jsonl');
-  return raw
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as ClassifiedQuestion);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('questions').select('*');
+  if (error) throw error;
+  return (data ?? []).map(fromRow);
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -35,25 +47,32 @@ export async function queryQuestions(opts: {
   limit?: number;
 }) {
   const { subject, system, difficulty, limit = 20 } = opts;
-  const questions = await loadQuestions();
+  const supabase = await createClient();
 
-  let filtered = questions.filter((q) => q.options?.length);
-  if (subject) filtered = filtered.filter((q) => q.subject === subject);
-  if (system) filtered = filtered.filter((q) => q.system === system);
-  if (difficulty) filtered = filtered.filter((q) => q.difficulty === difficulty);
+  let query = supabase.from('questions').select('*', { count: 'exact' });
+  if (subject) query = query.eq('subject', subject);
+  if (system) query = query.eq('system', system);
+  if (difficulty) query = query.eq('difficulty', difficulty);
 
-  const selected = shuffle(filtered)
+  const { data, count, error } = await query;
+  if (error) throw error;
+
+  const matched = data ?? [];
+  const selected = shuffle(matched)
     .slice(0, limit)
-    .map((q) => ({
-      id: q.textHash,
-      text: q.text,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
-      explanation: q.explanation,
-      subject: q.subject,
-      system: q.system,
-      difficulty: q.difficulty,
-    }));
+    .map((row) => {
+      const q = fromRow(row);
+      return {
+        id: q.textHash,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        subject: q.subject,
+        system: q.system,
+        difficulty: q.difficulty,
+      };
+    });
 
-  return { questions: selected, matched: filtered.length };
+  return { questions: selected, matched: count ?? matched.length };
 }
