@@ -7,7 +7,9 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
   EyeIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon } from '@heroicons/react/24/solid';
 
@@ -334,150 +336,174 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
         </div>
       </div>
 
-      {/* Main Flashcard Grid */}
+      {/* Main Drill Card Carousel */}
       {subTab === 'qbank' ? (
-        filteredQBank.length === 0 ? (
+        activeList.length === 0 ? (
           <div className="card p-12 text-center text-sm text-neutral-400 border border-neutral-200">
             No matching question bank clues found. Try clearing your filters or search query.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQBank.map((card) => {
-              const isRevealed = !!revealedIds[card.id];
-              const isMastered = masteredIds.includes(card.id);
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-4 w-full max-w-xl">
+              <button
+                onClick={goPrev}
+                disabled={cardIndex === 0}
+                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Previous card"
+              >
+                <ChevronLeftIcon className="w-5 h-5" />
+              </button>
 
-              return (
-                <div
-                  key={card.id}
-                  onClick={() => toggleReveal(card.id)}
-                  className={`card flex flex-col justify-between cursor-pointer min-h-[260px] border transition-all duration-300 transform hover:-translate-y-1 hover:shadow-md ${
-                    isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
-                  }`}
-                >
-                  {/* Card Header */}
-                  <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-100 text-neutral-600">
-                        {card.system}
-                      </span>
-                      <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-50 text-blue-700">
-                        {card.topicType}
-                      </span>
+              {currentCard && (() => {
+                const card = currentCard as QuestionBankClue;
+                const isRevealed = !!revealedIds[card.id];
+                const isMastered = masteredIds.includes(card.id);
+
+                return (
+                  <div
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                    onClick={() => toggleReveal(card.id)}
+                    style={{ transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)` }}
+                    className={`card flex flex-col justify-between cursor-grab active:cursor-grabbing select-none flex-1 min-h-[260px] border transition-transform duration-150 ${
+                      isMastered ? 'border-emerald-200 bg-emerald-50/10' : 'border-neutral-200 bg-white'
+                    }`}
+                  >
+                    <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-neutral-100 text-neutral-600">
+                          {card.system}
+                        </span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-50 text-blue-700">
+                          {card.topicType}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={(e) => toggleMastered(card.id, e)}
+                        className="text-neutral-300 hover:text-emerald-600 transition-colors"
+                        title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
+                      >
+                        {isMastered ? (
+                          <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <CheckCircleIcon className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
 
-                    <button
-                      onClick={(e) => toggleMastered(card.id, e)}
-                      className="text-neutral-300 hover:text-emerald-600 transition-colors"
-                      title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
-                    >
-                      {isMastered ? (
-                        <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                        <CheckCircleIcon className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    {/* Front representation */}
-                    {!isRevealed ? (
-                      cardMode === 'clues-first' ? (
-                        <div className="space-y-3">
-                          <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
-                            Clinical Presentation
-                          </span>
-                          <ul className="space-y-1.5">
-                            {card.clues.slice(0, 3).map((clue, idx) => (
-                              <li key={idx} className="text-xs text-neutral-700 flex items-start gap-1.5 leading-relaxed">
-                                <span className="text-primary-500 mt-0.5">•</span>
-                                <span>{clue}</span>
-                              </li>
-                            ))}
-                            {card.clues.length > 3 && (
-                              <li className="text-[10px] text-neutral-400 italic">
-                                + {card.clues.length - 3} more clues...
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col justify-center items-center h-full text-center space-y-2 py-6">
-                          <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
-                            USMLE Target Topic
-                          </span>
-                          <h3 className="text-lg font-bold text-neutral-900">{card.diseaseName}</h3>
-                          <span className="text-xs text-neutral-400 italic">Click to reveal high-yield facts</span>
-                        </div>
-                      )
-                    ) : (
-                      /* Revealed back side */
-                      <div className="space-y-3">
-                        <div>
-                          <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
-                            Diagnosis
-                          </span>
-                          <h3 className="text-base font-bold text-neutral-900">{card.diseaseName}</h3>
-                        </div>
-
-                        {cardMode === 'clues-first' ? (
-                          card.discriminators.length > 0 && (
-                            <div className="border-t border-neutral-100 pt-2">
-                              <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block mb-1">
-                                High-Yield Discriminators & Traps
-                              </span>
-                              <ul className="space-y-1">
-                                {card.discriminators.slice(0, 2).map((trap, idx) => (
-                                  <li key={idx} className="text-[11px] text-rose-800 bg-rose-50 px-2 py-1 rounded border border-rose-100/50">
-                                    {trap}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )
-                        ) : (
-                          <div className="border-t border-neutral-100 pt-2 space-y-2">
-                            <div>
-                              <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
-                                Presentation Clues
-                              </span>
-                              <ul className="space-y-0.5 text-xs text-neutral-700">
-                                {card.clues.slice(0, 2).map((c, i) => (
-                                  <li key={i} className="truncate">• {c}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            {card.discriminators.length > 0 && (
-                              <div>
-                                <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block">
-                                  Traps
-                                </span>
-                                <p className="text-[11px] text-rose-800 italic truncate">
-                                  {card.discriminators[0]}
-                                </p>
-                              </div>
-                            )}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      {!isRevealed ? (
+                        cardMode === 'clues-first' ? (
+                          <div className="space-y-3">
+                            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                              Clinical Presentation
+                            </span>
+                            <ul className="space-y-1.5">
+                              {card.clues.slice(0, 3).map((clue, idx) => (
+                                <li key={idx} className="text-xs text-neutral-700 flex items-start gap-1.5 leading-relaxed">
+                                  <span className="text-primary-500 mt-0.5">•</span>
+                                  <span>{clue}</span>
+                                </li>
+                              ))}
+                              {card.clues.length > 3 && (
+                                <li className="text-[10px] text-neutral-400 italic">
+                                  + {card.clues.length - 3} more clues...
+                                </li>
+                              )}
+                            </ul>
                           </div>
+                        ) : (
+                          <div className="flex flex-col justify-center items-center h-full text-center space-y-2 py-6">
+                            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">
+                              USMLE Target Topic
+                            </span>
+                            <h3 className="text-lg font-bold text-neutral-900">{card.diseaseName}</h3>
+                            <span className="text-xs text-neutral-400 italic">Click to reveal high-yield facts</span>
+                          </div>
+                        )
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
+                              Diagnosis
+                            </span>
+                            <h3 className="text-base font-bold text-neutral-900">{card.diseaseName}</h3>
+                          </div>
+
+                          {cardMode === 'clues-first' ? (
+                            card.discriminators.length > 0 && (
+                              <div className="border-t border-neutral-100 pt-2">
+                                <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block mb-1">
+                                  High-Yield Discriminators & Traps
+                                </span>
+                                <ul className="space-y-1">
+                                  {card.discriminators.slice(0, 2).map((trap, idx) => (
+                                    <li key={idx} className="text-[11px] text-rose-800 bg-rose-50 px-2 py-1 rounded border border-rose-100/50">
+                                      {trap}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )
+                          ) : (
+                            <div className="border-t border-neutral-100 pt-2 space-y-2">
+                              <div>
+                                <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block">
+                                  Presentation Clues
+                                </span>
+                                <ul className="space-y-0.5 text-xs text-neutral-700">
+                                  {card.clues.slice(0, 2).map((c, i) => (
+                                    <li key={i} className="truncate">• {c}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              {card.discriminators.length > 0 && (
+                                <div>
+                                  <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block">
+                                    Traps
+                                  </span>
+                                  <p className="text-[11px] text-rose-800 italic truncate">
+                                    {card.discriminators[0]}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-4 pt-3 border-t border-neutral-50 flex items-center justify-between text-xs text-neutral-400">
+                        <span className="flex items-center gap-1">
+                          <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
+                          {isRevealed ? 'Hide details' : 'Click to flip'}
+                        </span>
+                        {isMastered && (
+                          <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
+                            <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
+                          </span>
                         )}
                       </div>
-                    )}
-
-                    {/* Reveal Prompter */}
-                    <div className="mt-4 pt-3 border-t border-neutral-50 flex items-center justify-between text-xs text-neutral-400">
-                      <span className="flex items-center gap-1">
-                        <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
-                        {isRevealed ? 'Hide details' : 'Click to flip'}
-                      </span>
-                      {isMastered && (
-                        <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
-                          <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
-                        </span>
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })()}
+
+              <button
+                onClick={goNext}
+                disabled={cardIndex === activeList.length - 1}
+                className="p-2 rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Next card"
+              >
+                <ChevronRightIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <span className="text-xs font-semibold text-neutral-400">
+              {cardIndex + 1} / {activeList.length}
+            </span>
           </div>
         )
       ) : (
