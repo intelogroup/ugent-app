@@ -58,6 +58,7 @@ scratch/
 __pycache__/
 *.wav
 *.png
+!public/*.png
 *.txt
 *.csv
 /public/temp-blobs.json
