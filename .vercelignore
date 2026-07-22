@@ -13,7 +13,6 @@ test-results
 
 *.log
 *.pdf
-*.png
 tsconfig.tsbuildinfo
 
 scraped_first_aid_final
