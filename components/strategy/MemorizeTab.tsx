@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   CheckCircleIcon,
   SparklesIcon,
@@ -58,6 +58,15 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const [masteredIds, setMasteredIds] = useState<string[]>([]);
   // Keep track of which cards are currently flipped/revealed in local state
   const [revealedIds, setRevealedIds] = useState<Record<string, boolean>>({});
+
+  // Carousel state
+  const [cardIndex, setCardIndex] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const dragStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    setCardIndex(0);
+  }, [subTab, selectedSystem, searchQuery, showMastered]);
 
   useEffect(() => {
     const saved = localStorage.getItem(FLASHCARD_STORAGE_KEY)
@@ -164,6 +173,37 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const activeTotal = subTab === 'qbank' ? qbankTotal : conceptsTotal;
   const activeMastered = subTab === 'qbank' ? qbankMastered : conceptsMastered;
   const percentComplete = activeTotal > 0 ? Math.round((activeMastered / activeTotal) * 100) : 0;
+
+  const activeList = subTab === 'qbank' ? filteredQBank : filteredConcepts;
+  const currentCard = activeList[cardIndex];
+
+  const goNext = () => {
+    setCardIndex((i) => Math.min(i + 1, activeList.length - 1));
+  };
+
+  const goPrev = () => {
+    setCardIndex((i) => Math.max(i - 1, 0));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragStartX.current = e.clientX;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragStartX.current === null) return;
+    setDragX(e.clientX - dragStartX.current);
+  };
+
+  const handlePointerUp = () => {
+    const SWIPE_THRESHOLD = 80;
+    if (dragX > SWIPE_THRESHOLD) {
+      goPrev();
+    } else if (dragX < -SWIPE_THRESHOLD) {
+      goNext();
+    }
+    dragStartX.current = null;
+    setDragX(0);
+  };
 
   return (
     <div className="space-y-6">
