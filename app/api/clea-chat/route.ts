@@ -219,13 +219,15 @@ export async function POST(request: NextRequest) {
   // embed+RPC latency is hidden behind whichever read is slowest, not
   // added on top.
   const queryText = messageQueryText(message);
-  const quizFire = detectQuizFire(queryText);
   const [attemptsRes, progressRes, previousMessages, groundingHits] = await Promise.all([
     supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
     supabase.from('curriculum_progress').select('block_id'),
     loadChat(id),
     queryText ? searchBooks(queryText) : Promise.resolve(''),
   ]);
+  const lastAi = previousMessages.filter(m => m.role === 'assistant').at(-1);
+  const wasQuizFire = lastAi ? /^Clues:|Answer:\s*[AB]/.test(messageQueryText(lastAi)) : false;
+  const quizFire = detectQuizFire(queryText) || wasQuizFire;
   console.log(`[clea-chat] stage=parallel-reads ms=${(performance.now() - t0).toFixed(0)}`);
 
   const attempts: QuizAttempt[] = (attemptsRes.data || []).map((row: any) => ({
