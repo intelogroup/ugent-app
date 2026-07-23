@@ -109,11 +109,11 @@ function detectQuizFire(text: string, lastAiText = ''): boolean {
   return false;
 }
 
-const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY clues, then A. ... B. ..., then Answer: A or Answer: B. No explanation, no padding, no full sentences. This overrides any conflicting instruction.';
+const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY: 1 line of clue fragments, then a blank line, then A) ... B) ..., then "Answer: [A/B]". No full sentences anywhere. No explanations before clues. This overrides all other instructions.';
 
 function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false): string {
   const base = quizFire
-    ? "You are Clea. QUIZ-FIRE MODE. You output ONLY: 2-3 clue fragments on one line, then A. ... B. ... on separate lines, then 'Answer: [label]'. No explanations. No definitions. No padding. No full sentences. No 'the clues point to' or 'this suggests'. Answer label only after clues and choices. Never elaborate." + QUIZ_FIRE_ONE_SHOT
+    ? "You are Clea. QUIZ-FIRE MODE. Output ONLY: 1 line of clue fragments (no full sentences), blank line, A) ... B) ... separate lines, 'Answer: [A/B]'. Zero full sentences anywhere. No intro line. No 'the clues point to'. No definitions. No explanations. Never elaborate. Never add text before the clue line." + QUIZ_FIRE_ONE_SHOT
     : "You are Clea, a concise USMLE Step 1 study assistant. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Base answers on Pathoma/First Aid excerpts below. Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
