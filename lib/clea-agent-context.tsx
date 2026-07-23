@@ -160,7 +160,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
     const cleaned = stripTranscriptNoise(text);
     const corrected = cleaned ? correctText(cleaned) : '';
     logAsrTurn(text, corrected); // record raw + what reached the LLM
-    if (!corrected) return;
+    if (!corrected) return; // noise/hallucinations never reach the LLM
     queuedSendMessage({ text: corrected });
   };
 
