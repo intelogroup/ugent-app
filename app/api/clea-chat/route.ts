@@ -294,6 +294,10 @@ export async function POST(request: NextRequest) {
 
     const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire);
     let { text: finalText } = await generate(baseSystem);
+    // ponytail: enforce grounding — if RAG found nothing and reply doesn't admit it, override
+    if (!groundingHits && !quizFire && !/do not cover|no relevant|not in your/i.test(finalText)) {
+      finalText = 'Your reference materials do not cover this topic. Would you like me to search the curriculum instead?';
+    }
     let violation = detectGuardrailViolation(finalText, activity);
     if (violation) {
       console.warn(`[clea-chat] guardrail violation=${violation}, retrying once`);
