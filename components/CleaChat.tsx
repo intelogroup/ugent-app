@@ -16,8 +16,28 @@ import {
 import CleaLiveOrb from './CleaLiveOrb';
 import { useWatch } from '@/lib/watch-context';
 import { useCleaAgent } from '@/lib/clea-agent-context';
+import { stripMarkdown } from '@/lib/strip-markdown';
 
 type CleaMode = 'closed' | 'chat' | 'live';
+
+// Tools whose output is real platform data — textbook pages and the question
+// bank. A reply backed by any of them is grounded; anything else came out of
+// the model itself, which is what the badge exists to make visible.
+const GROUNDING_TOOLS = ['searchPathoma', 'searchFirstAid', 'queryQbank'];
+
+type ToolPart = { type: string; toolName?: string; output?: { hits?: unknown[]; matched?: number } };
+
+// null = no grounding tool ran at all (e.g. small talk), so no badge.
+// false = searches ran and every one came back empty — the model fell back
+// to its own knowledge, exactly the case worth flagging.
+function groundingOf(message: { role: string; parts: unknown[] }): boolean | null {
+  if (message.role !== 'assistant') return null;
+  const calls = (message.parts as ToolPart[]).filter(
+    (part) => typeof part?.toolName === 'string' && GROUNDING_TOOLS.includes(part.toolName)
+  );
+  if (calls.length === 0) return null;
+  return calls.some((part) => (part.output?.hits?.length ?? part.output?.matched ?? 0) > 0);
+}
 
 export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
@@ -254,6 +274,7 @@ export default function CleaChat() {
             {messages.map((message, index) => {
               const isUser = message.role === 'user';
               const text = getMessageText(message);
+              const grounded = groundingOf(message);
               return (
                 <div key={message.id || index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
@@ -261,12 +282,21 @@ export default function CleaChat() {
                       ? 'rounded-br-md bg-primary-600 text-white'
                       : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-700'
                   }`}>
+                    {/* The system prompt bans markdown, but the model emits it in
+                        ~37% of replies and nothing renders it — so asterisks and
+                        list markers reach the user literally. Strip on display,
+                        same as the TTS path already does. */}
                     <p>
                       {message.parts
                         .filter((part) => part.type === 'text')
-                        .map((part, index) => <span key={index}>{(part as { text: string }).text}</span>)}
+                        .map((part, index) => (
+                          <span key={index}>{stripMarkdown((part as { text: string }).text)}</span>
+                        ))}
                     </p>
-                    <div className={`mt-1.5 flex gap-1 ${isUser ? 'justify-end' : 'justify-start'} ${isUser ? 'opacity-60' : 'opacity-40'} hover:opacity-100 transition-opacity`}>
+                    <div className={`mt-1.5 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                      {/* Only the icons fade — a badge inside the dimmed group
+                          inherits its opacity and is unreadable at rest. */}
+                      <span className={`flex gap-1 ${isUser ? 'opacity-60' : 'opacity-40'} transition-opacity hover:opacity-100`}>
                       <button
                         type="button"
                         onClick={() => copyMessage(message)}
@@ -284,6 +314,23 @@ export default function CleaChat() {
                         >
                           <SpeakerWaveIcon className="h-3.5 w-3.5" />
                         </button>
+                      )}
+                      </span>
+                      {grounded !== null && (
+                        <span
+                          title={
+                            grounded
+                              ? 'Based on First Aid, Pathoma, or the question bank'
+                              : 'Those sources returned nothing — this is the model’s own knowledge'
+                          }
+                          className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wide ${
+                            grounded
+                              ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                              : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+                          }`}
+                        >
+                          {grounded ? 'Verified' : 'AI'}
+                        </span>
                       )}
                     </div>
                   </div>

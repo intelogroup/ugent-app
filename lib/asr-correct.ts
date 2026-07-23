@@ -128,14 +128,33 @@ const MULTI_ALIASES: Record<string, string> = {
 const MULTI_MAX_WORDS = 2;
 
 // The "medical" dictionary was scraped from source text and picked up plain
-// English along the way (page, pass, non, refused, shaving...). Those then
-// act as false-positive correction targets for ordinary speech at dist 1-2
-// ("peace"->"phace", "nono"->"non", "saving"->"shaving", "revised"->
-// "refused"). Cheaper to stoplist the common words we've actually hit than
-// audit/prune the whole dictionary — extend as new false positives surface.
+// English along the way (page, pass, non, refused, shaving, lesions,
+// serovars, ligands...). Those then act as false-positive correction targets
+// for ordinary speech at dist 1-2 ("peace"->"phace", "nothing"->"nodding",
+// "love"->"live", "servers"->"serovars"). Soundex should only fire on rare
+// medical vocabulary, not everyday words, so gate on a broad common-English
+// list rather than stoplisting one collision at a time — extend this list
+// (not per-word aliases) as new common-word false positives surface.
 const ENGLISH_STOPLIST = new Set([
   'peace', 'nono', 'saving', 'revised', 'meant', 'lets',
   'dad', 'mine', 'rob',
+  // top ~200 everyday English words the scraped dictionary happens to collide with
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was',
+  'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new',
+  'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put',
+  'say', 'she', 'too', 'use', 'that', 'with', 'have', 'this', 'will', 'your',
+  'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time',
+  'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many',
+  'over', 'such', 'take', 'than', 'them', 'well', 'were', 'love', 'live',
+  'life', 'need', 'feel', 'seem', 'tell', 'call', 'work', 'nothing', 'thing',
+  'things', 'lesson', 'lessons', 'lesions', 'server', 'servers', 'recipe',
+  'recipes', 'receive', 'receives', 'legend', 'legends', 'talk', 'talks',
+  'save', 'safe', 'stars', 'stairs', 'people', 'person', 'shot', 'shoot',
+  'about', 'above', 'after', 'again', 'below', 'could', 'every', 'first',
+  'found', 'great', 'group', 'house', 'large', 'never', 'other', 'place',
+  'right', 'small', 'sound', 'still', 'study', 'their', 'there', 'these',
+  'thing', 'think', 'three', 'under', 'water', 'where', 'which', 'world',
+  'would', 'write', 'years',
 ]);
 
 const wordSet = new Set(words);
