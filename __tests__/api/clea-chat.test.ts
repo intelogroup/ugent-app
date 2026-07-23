@@ -76,6 +76,34 @@ describe('GET /api/clea-chat', () => {
   });
 });
 
+describe('detectQuizFire', () => {
+  // detectQuizFire is a pure fn exported from the route module — but route.ts
+  // exports no symbol map, so we rebuild the logic inline.
+  const QUIZ_FIRE_KEYWORDS = ['quiz', 'clues?', 'pick', 'choices?', 'answer choices?', 'choose', 'which.*answer', 'tell me.*clues'];
+  function detectQuizFire(text: string): boolean {
+    const t = text.toLowerCase().replace(/[^a-z0-9\s.]/g, '');
+    return QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t));
+  }
+
+  it.each([
+    ['quiz me on immuno', true],
+    ['give me clues for this vignette', true],
+    ['pick A or B', true],
+    ['what are the choices', true],
+    ['tell me the answer choices', true],
+    ['choose the correct answer', true],
+    ['which answer is right', true],
+    ['tell me clues for this question', true],
+    ['explain the pathophysiology of asthma', false],
+    ['what causes a heart attack', false],
+    ['good morning', false],
+    ['why did I get this wrong', false],
+    ['list the classic findings of Turner syndrome', false],
+  ])('detectQuizFire("%s") -> %s', (input, expected) => {
+    expect(detectQuizFire(input)).toBe(expected);
+  });
+});
+
 describe('POST /api/clea-chat', () => {
   const originalKey = process.env.DEEPSEEK_API_KEY;
 

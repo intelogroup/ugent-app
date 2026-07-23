@@ -1,4 +1,6 @@
-"""Local TTS server: Piper (ONNX, CPU) over HTTP, streams mp3 bytes as synthesized.
+"""Local TTS server: Piper (ONNX, CPU) over HTTP, streams WAV (16-bit PCM,
+22050Hz mono) as synthesized — never mp3, since the browser forwards these
+bytes straight to Wav2Lip's /lipsync-stream, which wants raw int16 PCM.
 Run: python3 scripts/local-piper-server.py  (port 8768)
 
 A/B alternative to local-kokoro-server.py (:8767) — Piper measured ~5-10x
@@ -7,6 +9,7 @@ more robotic voice. Same streaming/ffmpeg pattern as the Kokoro server so it
 drops into app/api/tts-audio/route.ts the same way if you want to swap.
 """
 import asyncio
+import os
 import queue
 import re
 import subprocess
@@ -19,7 +22,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from piper import PiperVoice
 
-MODEL_PATH = "/tmp/piper_voices/en_US-lessac-medium.onnx"
+# ponytail: ~/.local/share, not /tmp — /tmp gets wiped and the server then
+# dies on load with a missing-file error until the model is re-downloaded.
+MODEL_PATH = os.path.expanduser("~/.local/share/piper_voices/en_US-lessac-medium.onnx")
 SAMPLE_RATE = 22050  # lessac-medium's native rate
 
 app = FastAPI()

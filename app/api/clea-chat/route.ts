@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   convertToModelMessages,
+  createUIMessageStream,
   createUIMessageStreamResponse,
   streamText,
   generateText,
@@ -13,7 +14,7 @@ import {
 import { deepseek } from '@ai-sdk/deepseek';
 import type { ActivitySnapshot } from '@/lib/watch-context';
 import type { QuizAttempt } from '@/lib/quizAttempts';
-import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts, makeQueryCurriculumProgress } from '@/lib/clea-tools';
+import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts, makeQueryCurriculumProgress, searchBooks } from '@/lib/clea-tools';
 import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
 import { createClient } from '@/lib/supabase/server'
 import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
@@ -96,9 +97,17 @@ function buildAttemptSummary(attempts: QuizAttempt[]): string {
   return ` The student has completed ${total} quiz session(s) (${totalQ} questions, ${overallPct}% overall). Most recent: ${lastPct}% on ${last.subject ?? 'mixed'} (${last.system ?? 'any system'}).`;
 }
 
-function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[]): string {
-  const base =
-    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Answer in 1-3 short sentences, plain prose, always — keep every reply as short as possible even when explaining reasoning, never pad. Use simple, everyday words over medical jargon or fancy vocabulary whenever a plain word means the same thing — this helps students understand complex concepts. When a technical term is necessary, briefly say what it means in plain words. Never use abbreviations or acronyms (no HSV, CSF, TB, MI, CNS, etc.) — always say the full term out loud in plain words, since abbreviations spoken by text-to-speech are hard to parse and ASR often mishears letter-strings. Always call searchPathoma and/or searchFirstAid before answering any USMLE content question, and base your answer on their returned excerpts rather than on your own training knowledge — only fall back to your own knowledge if both searches return no hits. You can call queryMyAttempts to see the student's past quiz performance, queryQbank to look up practice questions by subject/system/difficulty, queryCurriculum to check disease frequency and weak-area stats across the curriculum, and queryCurriculumProgress to see the student's own percent-complete, current week, and next uncompleted study blocks. When explaining a quiz question or answer, the student can already see the vignette on screen — never restate or reread it back to them. Go straight into teasing out the clues: name one discriminating finding at a time and drill the logic (what it rules in, what it rules out) so the student does the thinking, rather than dumping the full reasoning chain at once. Never lead with the correct answer — only state it after the clue-by-clue reasoning, so the student learns to spot the pattern themselves next time. Never use markdown formatting of any kind: no asterisks, no **bold**, no bullet points, no numbered lists, no headers, no dashes-as-bullets. If you need to list options, name them inline in a single sentence separated by commas. The user speaks through automatic speech recognition which can mishear words. If a word seems like a phonetic misspelling of a medical term, infer the intended term and respond accordingly.";
+const QUIZ_FIRE_KEYWORDS = ['quiz', 'clues?', 'pick', 'choices?', 'answer choices?', 'a\\.\\s*.*b\\.', 'choose', 'which.*answer', 'tell me.*clues'];
+
+function detectQuizFire(text: string): boolean {
+  const t = text.toLowerCase().replace(/[^a-z0-9\s.]/g, '');
+  return QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t));
+}
+
+function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false): string {
+  const base = quizFire
+    ? "You are Clea. QUIZ-FIRE MODE. You output ONLY: 2-3 clue fragments on one line, then A. ... B. ... on separate lines, then 'Answer: [label]'. No explanations. No definitions. No padding. No full sentences. No 'the clues point to' or 'this suggests'. Answer label only after clues and choices. Never elaborate."
+    : "You are Clea, a concise USMLE Step 1 study assistant. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Base answers on Pathoma/First Aid excerpts below. Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -118,7 +127,47 @@ function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, a
     : '';
   const attemptBlock = buildAttemptSummary(attempts);
   const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
-  return `${base}${activityLine}${attemptBlock}${summaryBlock}`;
+  const groundingBlock = grounding ? `\n\nReference material (Pathoma / First Aid excerpts for the student's latest message):\n${grounding}` : '';
+  return `${base}${activityLine}${attemptBlock}${summaryBlock}${groundingBlock}`;
+}
+
+// Prompt-only enforcement of "never quote the vignette" and "never lead with
+// the answer" has a real ceiling — DeepSeek still slips on both occasionally
+// (confirmed via scripts/eval-clea-prompt.mjs). This is the code-level
+// backstop for the quiz-explain path only: cheap n-gram/substring checks run
+// against the model's own draft, with one retry before we give up and ship
+// the second draft as-is (no infinite loop).
+function detectGuardrailViolation(text: string, activity: ActivitySnapshot): 'vignette-reread' | 'premature-answer' | null {
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+
+  const vignetteWords = normalize(activity.questionText);
+  const replyWords = normalize(text);
+  const GRAM = 4;
+  if (vignetteWords.length >= GRAM) {
+    const vignetteGrams = new Set<string>();
+    for (let i = 0; i + GRAM <= vignetteWords.length; i++) vignetteGrams.add(vignetteWords.slice(i, i + GRAM).join(' '));
+    for (let i = 0; i + GRAM <= replyWords.length; i++) {
+      if (vignetteGrams.has(replyWords.slice(i, i + GRAM).join(' '))) return 'vignette-reread';
+    }
+  }
+
+  if (activity.hasSelectedAnswer && activity.currentQuestionCorrect === false) {
+    const firstSentence = (text.split(/(?<=[.!?])\s/)[0] || '').toLowerCase();
+    const leaked = activity.optionTexts.find(
+      (opt) => opt !== activity.selectedOptionText && opt.trim() && firstSentence.includes(opt.toLowerCase())
+    );
+    if (leaked) return 'premature-answer';
+  }
+
+  return null;
+}
+
+function messageQueryText(message: UIMessage): string {
+  return message.parts
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+    .map((part) => part.text)
+    .join(' ')
+    .slice(0, 300);
 }
 
 export async function GET(request: NextRequest) {
@@ -155,15 +204,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'id and message are required' }, { status: 400 });
   }
 
+  const t0 = performance.now();
   const serverState = null;
   const activity = clientActivity;
 
   const supabase = await createClient()
-  const { data: attemptsData } = await supabase
-    .from('quiz_attempts')
-    .select('*')
-    .order('created_at', { ascending: false })
-  const attempts: QuizAttempt[] = (attemptsData || []).map((row: any) => ({
+
+  // Independent reads — none depend on each other's result — run in
+  // parallel instead of as three sequential round trips. The RAG prefetch
+  // (search both books against the raw user utterance) also has no
+  // dependency on these and rides along in the same Promise.all so its
+  // embed+RPC latency is hidden behind whichever read is slowest, not
+  // added on top.
+  const queryText = messageQueryText(message);
+  const quizFire = detectQuizFire(queryText);
+  const [attemptsRes, progressRes, previousMessages, groundingHits] = await Promise.all([
+    supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
+    supabase.from('curriculum_progress').select('block_id'),
+    loadChat(id),
+    queryText ? searchBooks(queryText) : Promise.resolve(''),
+  ]);
+  console.log(`[clea-chat] stage=parallel-reads ms=${(performance.now() - t0).toFixed(0)}`);
+
+  const attempts: QuizAttempt[] = (attemptsRes.data || []).map((row: any) => ({
     timestamp: new Date(row.created_at).getTime(),
     subject: row.subject,
     system: row.system,
@@ -173,11 +236,7 @@ export async function POST(request: NextRequest) {
   }))
 
   const queryMyAttempts = makeQueryMyAttempts(attempts);
-
-  const { data: progressData } = await supabase.from('curriculum_progress').select('block_id');
-  const queryCurriculumProgress = makeQueryCurriculumProgress((progressData || []).map((r: any) => r.block_id));
-
-  const previousMessages = await loadChat(id);
+  const queryCurriculumProgress = makeQueryCurriculumProgress((progressRes.data || []).map((r: any) => r.block_id));
 
   let validatedMessages: UIMessage[];
   try {
@@ -198,21 +257,97 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const summaryT0 = performance.now();
   const { text: summary, upTo } = await updateSummary(id, validatedMessages);
+  console.log(`[clea-chat] stage=updateSummary ms=${(performance.now() - summaryT0).toFixed(0)}`);
   const recentMessages = validatedMessages.slice(upTo);
+  const modelMessages = await convertToModelMessages(recentMessages);
+  const quizFireOverride = quizFire
+    ? [{ role: 'system' as const, content: 'QUIZ-FIRE MODE: Output ONLY: clues on one line, then A. ... B. ... on separate lines, then "Answer: A" or "Answer: B". Zero explanation. Zero padding. No full sentences.' }]
+    : [];
+  const modelMessagesWithOverride = [...quizFireOverride, ...modelMessages];
+  const sharedTools = { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress };
+  const chatTools = { queryQbank, queryCurriculum, queryMyAttempts, queryCurriculumProgress };
 
+  // Quiz-explain turns are exactly where "never quote the vignette" /
+  // "never lead with the answer" get violated, and the filler-ack already
+  // masks the latency of a non-streamed reply here — so this path buffers
+  // the full answer, runs the code-level guardrail check, and retries once
+  // before shipping. General chat (no vignette in play) keeps streaming
+  // straight through below, since eval showed those rules hold up fine there.
+  if (activity && activity.questionText) {
+    const genT0 = performance.now();
+    const generate = (system: string) =>
+      generateText({
+        model: deepseek('deepseek-chat'),
+        system,
+        messages: modelMessagesWithOverride,
+    tools: sharedTools,
+        stopWhen: stepCountIs(8),
+      });
+
+    const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire);
+    let { text: finalText } = await generate(baseSystem);
+    let violation = detectGuardrailViolation(finalText, activity);
+    if (violation) {
+      console.warn(`[clea-chat] guardrail violation=${violation}, retrying once`);
+      const retrySystem = `${baseSystem}\n\nIMPORTANT: your previous draft violated the rule against ${
+        violation === 'vignette-reread' ? 'quoting the vignette verbatim' : 'revealing the correct answer before reasoning through a clue'
+      }. Rewrite the reply so it doesn't do that this time.`;
+      const retry = await generate(retrySystem);
+      finalText = retry.text;
+      violation = detectGuardrailViolation(finalText, activity);
+      // Last resort for a leaked answer: the leak is always in the opening
+      // sentence (that's the whole definition of "premature"), so dropping
+      // it deterministically removes the leak without needing a 3rd model
+      // call. Vignette-reread has no such fixed location, so it's left as
+      // logged-only — a targeted redaction there would be more likely to
+      // mangle the sentence than fix it.
+      if (violation === 'premature-answer') {
+        console.warn('[clea-chat] guardrail violation=premature-answer persisted after retry, dropping leaked opening sentence');
+        const sentences = finalText.split(/(?<=[.!?])\s+/);
+        finalText = sentences.slice(1).join(' ').trim() || finalText;
+      } else if (violation) {
+        console.warn(`[clea-chat] guardrail violation=${violation} persisted after retry, shipping anyway`);
+      }
+    }
+    console.log(`[clea-chat] stage=guarded-generate ms=${(performance.now() - genT0).toFixed(0)}`);
+
+    const stream = createUIMessageStream({
+      originalMessages: validatedMessages,
+      execute: ({ writer }) => {
+        writer.write({ type: 'start' });
+        writer.write({ type: 'start-step' });
+        writer.write({ type: 'text-start', id: 'txt-0' });
+        writer.write({ type: 'text-delta', id: 'txt-0', delta: finalText });
+        writer.write({ type: 'text-end', id: 'txt-0' });
+        writer.write({ type: 'finish-step' });
+        writer.write({ type: 'finish' });
+      },
+      onError: clientErrorMessage,
+      onEnd: ({ messages }) => {
+        void saveChat({ chatId: id, messages });
+      },
+    });
+    return createUIMessageStreamResponse({ stream });
+  }
+
+  let firstChunkLogged = false;
   const result = streamText({
     model: deepseek('deepseek-chat'),
-    system: buildSystemPrompt(activity, summary, attempts),
-    messages: await convertToModelMessages(recentMessages),
-    tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress },
+    system: buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire),
+    messages: modelMessagesWithOverride,
+    tools: chatTools,
     stopWhen: stepCountIs(8),
+    onChunk: () => {
+      if (firstChunkLogged) return;
+      firstChunkLogged = true;
+      console.log(`[clea-chat] stage=streamText-first-chunk ms=${(performance.now() - t0).toFixed(0)}`);
+    },
     onError: ({ error }) => {
       void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);
     },
   });
-
-  result.consumeStream();
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({
