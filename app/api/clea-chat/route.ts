@@ -134,7 +134,9 @@ function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, a
     : '';
   const attemptBlock = buildAttemptSummary(attempts);
   const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
-  const groundingBlock = grounding ? `\n\nReference material (Pathoma / First Aid excerpts for the student's latest message):\n${grounding}` : '';
+  const groundingBlock = grounding
+    ? `\n\nReference material (Pathoma / First Aid excerpts for the student's latest message):\n${grounding}`
+    : '\n\nNo relevant Pathoma or First Aid excerpts found for this query. Do not use outside knowledge.';
   return `${base}${activityLine}${attemptBlock}${summaryBlock}${groundingBlock}`;
 }
 
