@@ -247,6 +247,14 @@ const KNOWN_NOISE = new Set([
   'cough', 'sigh', 'sighs', 'noise', 'background noise',
   'phone ringing', 'ringing', 'beep', 'tone',
   'shh', 'shhh', 'hmm', 'mmm', 'uh', 'um', 'ah',
+  // Canonical Whisper silence/near-silence hallucinations — the model emits
+  // these on empty or noise-only audio even with language=en. As a WHOLE
+  // transcript they're never real study input, so drop them before they reach
+  // the LLM (real short answers like "yes"/"okay"/"cool" stay). Extend as new
+  // hallucination phrases surface in data/asr-log.jsonl.
+  'huh', 'mhm', 'mmhmm', 'uhhuh',
+  'thank you', 'thanks', 'thank you very much', 'thanks for watching',
+  'thank you for watching', 'you', 'bye', 'goodbye',
 ]);
 
 // Whisper-family models occasionally hallucinate foreign-script tokens on

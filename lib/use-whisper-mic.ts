@@ -25,7 +25,11 @@ const SPEECH_ONSET_MS = 150;
 // ponytail: untuned guess — lower this (toward SILENCE_RMS_THRESHOLD) if
 // barge-in isn't firing on real speech, raise it if TTS bleed triggers it.
 const BARGE_RMS_THRESHOLD = 0.045;
-const BARGE_ONSET_MS = 400;
+// 1s sustained onset: a barge must be a deliberate, held utterance — short
+// coughs, chair scrapes, and TTS-bleed blips fall well under this and never
+// interrupt Clea. Raised from 400ms after those short noises were cutting her
+// off mid-reply.
+const BARGE_ONSET_MS = 1000;
 
 /** Continuously listens to the mic while `active`, using an in-browser Whisper
  *  pipeline gated by energy-based VAD. Recording never stops while a previous
