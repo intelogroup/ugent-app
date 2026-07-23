@@ -225,7 +225,9 @@ export async function POST(request: NextRequest) {
   // dependency on these and rides along in the same Promise.all so its
   // embed+RPC latency is hidden behind whichever read is slowest, not
   // added on top.
-  const queryText = messageQueryText(message);
+  // Quiz answer turns are often just a bare letter ("A"/"B") — searching that
+  // literally returns nothing, so ground on the vignette text instead when present.
+  const queryText = activity?.questionText || messageQueryText(message);
   const [attemptsRes, progressRes, previousMessages, groundingHits] = await Promise.all([
     supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
     supabase.from('curriculum_progress').select('block_id'),

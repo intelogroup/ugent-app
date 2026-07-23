@@ -13,6 +13,8 @@ import type { QuizAttempt } from '@/lib/quizAttempts';
 type TextPage = { page: number; text: string };
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
+// ponytail: fixed cutoff, tune from eval data if false-refusals/false-groundings show up.
+const SIMILARITY_THRESHOLD = 0.4;
 
 function buildExcerpt(query: string, text: string): string {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -30,11 +32,18 @@ function buildExcerpt(query: string, text: string): string {
 // ponytail: word-overlap scoring — used only when data/.embeddings/<book>
 // hasn't been built yet (run `node scripts/build-book-embeddings.mjs`).
 // Kept as the safety-net path, not the primary one.
+// Common words that clear a naive "shared word" bar on almost any two
+// English passages — counting these as a match is what let an unrelated
+// (e.g. culinary) query pull back real-looking medical excerpts.
+const STOPWORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'over', 'under', 'is', 'are', 'was', 'were',
+  'and', 'or', 'but', 'with', 'without', 'for', 'from', 'by', 'at', 'as', 'this', 'that', 'these', 'those',
+  'its', 'it', 'his', 'her', 'their', 'one', 'low', 'high', 'due', 'per', 'into', 'onto', 'not']);
+
 function searchByWordOverlap(file: string, query: string, limit: number) {
   const lines = readFileSync(path.join(process.cwd(), 'data', file), 'utf8')
     .split('\n')
     .filter(Boolean);
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = query.toLowerCase().split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
   const pages = lines.map((line) => JSON.parse(line) as TextPage);
 
   const scored = pages.map(({ page, text }) => {
@@ -46,8 +55,12 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
   const maxScore = Math.max(0, ...scored.map((s) => s.matched.length));
   if (maxScore === 0) return [];
 
-  const thresholds = [Math.ceil(words.length * 0.6), Math.ceil(words.length * 0.3), 1];
-  const threshold = thresholds.find((t) => t <= maxScore) ?? 1;
+  // Floor of 3 — 1-2 shared content words is still coincidence-prone over an
+  // 800-page corpus (verified: an unrelated culinary query matched a renal
+  // page on just "original"+"volume"), same false-grounding failure mode as
+  // the embedding path's low-similarity hits.
+  const thresholds = [Math.ceil(words.length * 0.6), Math.ceil(words.length * 0.3), 3];
+  const threshold = thresholds.find((t) => t <= maxScore) ?? 3;
 
   return scored
     .filter((s) => s.matched.length >= threshold)
@@ -80,7 +93,15 @@ async function searchByEmbedding(book: 'pathoma' | 'firstaid', query: string, li
   if (error) throw error;
   if (!data || data.length === 0) return null;
 
-  return data.map(({ page, text }: { page: number; text: string }) => ({
+  // Cosine top-k always returns *something*, even for a query with nothing
+  // relevant in the book — off-topic queries were observed pulling back
+  // real-looking excerpts at similarity <0.4 (see migration comment above),
+  // which defeats the grounding-refusal rule downstream since the caller
+  // only checks "did we get hits", not "were the hits actually relevant".
+  const relevant = data.filter((row: { similarity: number }) => row.similarity >= SIMILARITY_THRESHOLD);
+  if (relevant.length === 0) return null;
+
+  return relevant.map(({ page, text }: { page: number; text: string }) => ({
     page,
     excerpt: buildExcerpt(query, text),
   }));
