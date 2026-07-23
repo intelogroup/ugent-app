@@ -33,7 +33,10 @@ type ToolPart = { type: string; toolName?: string; output?: { hits?: unknown[]; 
 function groundingOf(message: { role: string; parts: unknown[] }): boolean | null {
   if (message.role !== 'assistant') return null;
   const calls = (message.parts as ToolPart[]).filter(
-    (part) => typeof part?.toolName === 'string' && GROUNDING_TOOLS.includes(part.toolName)
+    (part) =>
+      typeof part?.type === 'string' &&
+      part.type.startsWith('tool-') &&
+      GROUNDING_TOOLS.includes(part.type.slice('tool-'.length))
   );
   if (calls.length === 0) return null;
   return calls.some((part) => (part.output?.hits?.length ?? part.output?.matched ?? 0) > 0);

@@ -65,14 +65,18 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
 async function searchByEmbedding(book: 'pathoma' | 'firstaid', query: string, limit: number) {
   if (!process.env.OPENAI_API_KEY) return null;
 
+  const tEmbed = performance.now();
   const { embedding } = await embed({ model: openai.textEmbeddingModel(EMBEDDING_MODEL), value: query });
+  console.log(`[clea-tools] stage=embed book=${book} ms=${(performance.now() - tEmbed).toFixed(0)}`);
 
   const supabase = await createClient();
+  const tRpc = performance.now();
   const { data, error } = await supabase.rpc('match_book_pages', {
     p_book: book,
     query_embedding: embedding,
     match_count: limit,
   });
+  console.log(`[clea-tools] stage=match_book_pages book=${book} ms=${(performance.now() - tRpc).toFixed(0)}`);
   if (error) throw error;
   if (!data || data.length === 0) return null;
 
@@ -93,6 +97,22 @@ async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query:
     console.error('searchByEmbedding failed, falling back to word overlap', error);
   }
   return searchByWordOverlap(file, query, limit);
+}
+
+// Server-side prefetch used by the chat route to inject grounding excerpts
+// into the system prompt directly, instead of forcing the model to spend a
+// full sequential tool-call round trip just to satisfy the "always search
+// before answering" instruction. searchPathoma/searchFirstAid stay available
+// as tools too, for a follow-up search with a model-refined query.
+export async function searchBooks(query: string, limit = 4): Promise<string> {
+  const [pathoma, firstAid] = await Promise.all([
+    searchTextFile('pathoma_text.jsonl', 'pathoma', query, limit).catch(() => []),
+    searchTextFile('firstaid_text.jsonl', 'firstaid', query, limit).catch(() => []),
+  ]);
+  const lines: string[] = [];
+  if (pathoma.length) lines.push(`Pathoma:\n${pathoma.map((h: { page: number; excerpt: string }) => `(p.${h.page}) ${h.excerpt}`).join('\n')}`);
+  if (firstAid.length) lines.push(`First Aid:\n${firstAid.map((h: { page: number; excerpt: string }) => `(p.${h.page}) ${h.excerpt}`).join('\n')}`);
+  return lines.join('\n\n');
 }
 
 export const searchPathoma = tool({

@@ -102,6 +102,13 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
       return chat.sendMessage(...args);
     }
     sendQueueRef.current.push(args);
+    // The drain effect only runs on a `status` transition. Anything enqueued
+    // while status is already 'ready' would wait for a change that never
+    // comes, and the turn would be silently lost — so drain it here instead.
+    if (statusRef.current === 'ready') {
+      const next = sendQueueRef.current.shift();
+      if (next) void chat.sendMessage(...next);
+    }
     return Promise.resolve();
   };
 

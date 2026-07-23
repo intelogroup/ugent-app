@@ -14,6 +14,13 @@ const PREBUFFER_FRAMES = 2;
 const CLIP_FRAME_COUNT = 250;
 const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development' || !!process.env.NEXT_PUBLIC_WAV2LIP_WS_URL;
 
+// Spoken instantly while the real reply is still computing (RAG + LLM
+// generation can take a couple seconds) so the user hears something within
+// ~1s instead of staring at silence. Deliberately generic — never references
+// message content, so it's safe to fire before we know what the question was.
+const FILLER_PHRASES = ['One moment.', 'Let me check that.', 'Give me a second.'];
+const FILLER_DELAY_MS = 700;
+
 export default function FloatingAvatar() {
   const [expanded, setExpanded] = useState(false);
   const [pos, setPos] = useState(() => ({
@@ -77,7 +84,7 @@ export default function FloatingAvatar() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Guards against overlapping speak() calls (e.g. a fast second reply while
   // the first is still streaming) stacking multiple audio/WS flows at once.
-  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket | null } | null>(null);
+  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket | null; endAudio?: () => void } | null>(null);
   const orphanAudiosRef = useRef<Set<HTMLAudioElement>>(new Set());
   const lastSpokenTextRef = useRef<string | null>(null);
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +116,7 @@ export default function FloatingAvatar() {
     active.ws?.close();
     active.audio.pause();
     active.audio.src = '';
+    active.endAudio?.();
     resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
   };
 
@@ -134,6 +142,16 @@ export default function FloatingAvatar() {
     const t0 = performance.now();
     const audio = new Audio();
     orphanAudiosRef.current.add(audio);
+    // Chrome's MediaSource never accepted 'audio/wav' as a container
+    // (MediaSource.isTypeSupported('audio/wav') === false in every Chromium
+    // build tested), so the sourceBuffer-append path below is MSE-only and
+    // only ever actually engages for the mp3 fallback. WAV — Kokoro, Piper,
+    // and the ElevenLabs-pcm route all emit WAV — is played by scheduling
+    // each chunk as its own AudioBuffer on this context instead, so audio
+    // starts on chunk 1 like the video WS already does, rather than silently
+    // falling back to buffer-the-whole-reply-then-play (which read as a
+    // ~500ms delay on short replies and an 11s dead-air freeze on long ones).
+    const webAudioCtxBox: { current: AudioContext | null } = { current: null };
     try {
       // Check prefetch cache first — background fetch started while LLM
       // was still streaming may have already downloaded this audio.
@@ -182,7 +200,9 @@ export default function FloatingAvatar() {
         console.log(`[tts] AUDIO STARTED at +${ms.toFixed(0)}ms (after ${chunkCount} chunk(s))`);
         setIsSpeaking(true);
         setLatencyMs(ms);
-        audio.play().catch((err) => console.error('audio.play() failed', err));
+        // WAV plays through webAudioCtx (scheduled in scheduleWavChunk), not
+        // this <audio> element — it exists only as a MediaSource host for mp3.
+        if (!isWav) audio.play().catch((err) => console.error('audio.play() failed', err));
         audioStartedAt = ms;
         logSyncGap();
       };
@@ -196,9 +216,10 @@ export default function FloatingAvatar() {
       const isWav = audioRes.headers.get('content-type')?.includes('wav') ?? true;
       console.log(`[tts] audio format=${isWav ? 'WAV' : 'MP3'}`);
 
-      // Try MediaSource streaming. WAV path uses incremental PCM to Wav2Lip;
-      // MP3 (ElevenLabs fallback) uses old full-buffer approach.
-      const canStreamAudio = typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(isWav ? 'audio/wav' : 'audio/mpeg');
+      // MediaSource never supports 'audio/wav' — only the mp3 fallback can
+      // stream via sourceBuffer. WAV playback is handled by scheduleWavChunk
+      // below instead (see comment at webAudioCtx declaration).
+      const canStreamAudio = !isWav && typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported('audio/mpeg');
 
       let mediaSource: MediaSource | null = null;
       let sourceBuffer: SourceBuffer | null = null;
@@ -207,9 +228,49 @@ export default function FloatingAvatar() {
         audio.src = URL.createObjectURL(mediaSource);
       }
 
+      let webAudioCursor = 0;
+      let webAudioStartCtxTime = 0;
+      let webAudioEnded = false;
+      const lastSourceNodeBox: { current: AudioBufferSourceNode | null } = { current: null };
+      let audioSampleRate: number | null = null;
+      let wavEndedResolve: (() => void) | null = null;
+      const wavEndedPromise = new Promise<void>((resolve) => { wavEndedResolve = resolve; });
+      const endWavPlayback = () => {
+        if (webAudioEnded) return;
+        webAudioEnded = true;
+        wavEndedResolve?.();
+        webAudioCtxBox.current?.close().catch(() => {});
+      };
+      const getWavElapsed = () => (webAudioCtxBox.current ? Math.max(0, webAudioCtxBox.current.currentTime - webAudioStartCtxTime) : 0);
+      // Schedules one network chunk as its own AudioBuffer, back-to-back on
+      // the shared context timeline. ponytail: assumes each chunk starts on
+      // a 2-byte sample boundary — true in practice since ffmpeg's stdout
+      // pipe reads land on 4096-byte (even) boundaries; a misaligned chunk
+      // would just glitch one join, not corrupt playback overall.
+      const scheduleWavChunk = (pcm: Uint8Array, sampleRate: number) => {
+        const sampleCount = Math.floor(pcm.length / 2);
+        if (sampleCount === 0) return;
+        if (!webAudioCtxBox.current) webAudioCtxBox.current = new AudioContext();
+        const ctx = webAudioCtxBox.current;
+        const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, sampleCount);
+        const float32 = new Float32Array(sampleCount);
+        for (let i = 0; i < sampleCount; i++) float32[i] = int16[i] / 32768;
+        const buffer = ctx.createBuffer(1, sampleCount, sampleRate);
+        buffer.copyToChannel(float32, 0);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        const startAt = Math.max(ctx.currentTime, webAudioCursor);
+        if (webAudioCursor === 0) webAudioStartCtxTime = startAt;
+        source.start(startAt);
+        webAudioCursor = startAt + buffer.duration;
+        lastSourceNodeBox.current = source;
+        if (!audioStarted) startAudioPlayback();
+      };
+
       const ws = ENABLE_LIPSYNC ? new WebSocket(STREAM_WS_URL) : null;
       if (ws) ws.binaryType = 'arraybuffer';
-      activeSpeechRef.current = { audio, ws };
+      activeSpeechRef.current = { audio, ws, endAudio: isWav ? endWavPlayback : undefined };
 
       // Strip WAV header from first chunk — Wav2Lip expects raw PCM.
       // Search for "data" marker to handle any ffmpeg-produced variant.
@@ -243,17 +304,21 @@ export default function FloatingAvatar() {
           pcm = stripped.pcm;
           wavHeaderStripped = true;
           pendingSampleRate = stripped.sampleRate;
+          audioSampleRate = stripped.sampleRate ?? 24000;
         }
-        if (pcm.length === 0 || !ws) return;
-        if (ws.readyState === WebSocket.OPEN) {
-          if (pendingSampleRate) {
-            ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
-            pendingSampleRate = null;
+        if (pcm.length === 0) return;
+        if (ws) {
+          if (ws.readyState === WebSocket.OPEN) {
+            if (pendingSampleRate) {
+              ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
+              pendingSampleRate = null;
+            }
+            ws.send(pcm);
+          } else {
+            pcmBuffer.push(pcm);
           }
-          ws.send(pcm);
-        } else {
-          pcmBuffer.push(pcm);
         }
+        if (!stale() && audioSampleRate) scheduleWavChunk(pcm, audioSampleRate);
       };
 
       // Start reading chunks immediately. Await sourceBuffer setup before
@@ -293,7 +358,13 @@ export default function FloatingAvatar() {
           }
           if (mediaSource && mediaSource.readyState === 'open') mediaSource.endOfStream();
           console.log(`[tts] all chunks received at +${(performance.now() - t0).toFixed(0)}ms (${chunkCount} total)`);
-          if (!canStreamAudio) {
+          if (isWav) {
+            // Playback already happened per-chunk via scheduleWavChunk — just
+            // mark completion once the last scheduled buffer finishes.
+            if (lastSourceNodeBox.current) lastSourceNodeBox.current.onended = endWavPlayback;
+            else endWavPlayback(); // empty reply, nothing was ever scheduled
+          }
+          if (!canStreamAudio && !isWav) {
             const audioType = isWav ? 'audio/wav' : 'audio/mpeg';
             const total = chunks.reduce((sum, c) => sum + c.length, 0);
             const merged = new Uint8Array(total);
@@ -343,6 +414,13 @@ export default function FloatingAvatar() {
 
       if (!ws) {
         // Audio-only prod fallback: no lipsync video, just wait for playback to finish.
+        if (isWav) {
+          await wavEndedPromise;
+          activeSpeechRef.current = null;
+          orphanAudiosRef.current.delete(audio);
+          setIsSpeaking(false);
+          return;
+        }
         await new Promise<void>((resolve) => {
           const finish = () => {
             activeSpeechRef.current = null;
@@ -414,7 +492,8 @@ export default function FloatingAvatar() {
               ctx.drawImage(idleVideo, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
             }
             const paint = () => {
-              const wantIdx = Math.floor(audio.currentTime * fps);
+              const currentTime = isWav ? getWavElapsed() : audio.currentTime;
+              const wantIdx = Math.floor(currentTime * fps);
               const bitmap = frames.get(wantIdx) ?? frames.get(lastDrawnIdx);
               if (bitmap && ctx && canvas) {
                 const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
@@ -426,7 +505,7 @@ export default function FloatingAvatar() {
                 lastDrawnIdx = frames.has(wantIdx) ? wantIdx : lastDrawnIdx;
                 lastFrameTimeRef.current = (lastDrawnIdx % CLIP_FRAME_COUNT) / fps;
               }
-              if (!audio.ended) requestAnimationFrame(paint);
+              if (!(isWav ? webAudioEnded : audio.ended)) requestAnimationFrame(paint);
               else {
                 console.log(`[tts] DONE at +${(performance.now() - t0).toFixed(0)}ms`);
                 activeSpeechRef.current = null;
@@ -446,6 +525,7 @@ export default function FloatingAvatar() {
       setLatencyMs(-1);
       activeSpeechRef.current = null;
       orphanAudiosRef.current.delete(audio);
+      webAudioCtxBox.current?.close().catch(() => {});
       resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
     } finally {
       setLoading(false);
@@ -477,6 +557,8 @@ export default function FloatingAvatar() {
   // Which assistant message is currently forming or playing. A fresh reply
   // interrupts older playback instead of stacking audio over it.
   const activeMessageIdRef = useRef<string | null>(null);
+  const fillerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fillerFiredRef = useRef(false);
 
   const pumpQueue = async () => {
     if (pumpingRef.current) return;
@@ -496,6 +578,11 @@ export default function FloatingAvatar() {
     void pumpQueue();
   };
 
+  const cancelFillerTimer = () => {
+    if (fillerTimerRef.current) clearTimeout(fillerTimerRef.current);
+    fillerTimerRef.current = null;
+  };
+
   useEffect(() => {
     // Skip the very first non-empty messages snapshot — that's history
     // restored from disk on mount, not a fresh reply to speak aloud.
@@ -510,10 +597,35 @@ export default function FloatingAvatar() {
     // Only the surface the user is actually looking at speaks — a reply
     // sent from the plain text chat (or while the orb owns voice) must
     // stay silent here, otherwise text replies get spoken unexpectedly.
-    if (voiceSurface !== 'avatar') return;
+    if (voiceSurface !== 'avatar') {
+      cancelFillerTimer();
+      return;
+    }
+
+    // Arm a filler ack the moment a turn is submitted, in case the real
+    // reply (RAG + LLM generation) takes a while — cancelled below as soon
+    // as real text shows up, or here once the turn resolves/errors.
+    if (status === 'submitted' && !fillerTimerRef.current && !fillerFiredRef.current) {
+      fillerTimerRef.current = setTimeout(() => {
+        fillerTimerRef.current = null;
+        fillerFiredRef.current = true;
+        enqueueSpeech(FILLER_PHRASES[Math.floor(Math.random() * FILLER_PHRASES.length)]);
+      }, FILLER_DELAY_MS);
+    }
+    if (status === 'ready' || status === 'error') {
+      cancelFillerTimer();
+      fillerFiredRef.current = false;
+    }
+
     const last = messages[messages.length - 1];
     if (!last || last.role !== 'assistant') return;
     if (last.id === lastSpokenIdRef.current && status !== 'streaming') return;
+
+    const hasRealText = last.parts.some((part) => part.type === 'text' && (part as { text: string }).text.trim());
+    // Real content arrived — the filler (if it hasn't fired yet) is no
+    // longer needed. If it already fired and is playing, interruptSpeech()
+    // below (new message id vs activeMessageIdRef) cuts it over cleanly.
+    if (hasRealText) cancelFillerTimer();
 
     if (last.id !== activeMessageIdRef.current) {
       interruptSpeech();
@@ -552,6 +664,12 @@ export default function FloatingAvatar() {
     // internally comma-splits streaming within a single request,
     // so one shot plays gaplessly.
     if (status !== 'streaming') {
+      // Kill any still-pending prefetch timer before speaking. The debounce
+      // (300ms after the last delta) can fire AFTER speak() has started its
+      // own /tts, and the Kokoro generation counter treats that stray request
+      // as the newest — superseding the live one mid-reply, so playback stops
+      // after the first sentence. Clearing the timer here removes the stray.
+      if (prefetchTimerRef.current) { clearTimeout(prefetchTimerRef.current); prefetchTimerRef.current = null; }
       if (text.trim()) enqueueSpeech(text);
       lastSpokenIdRef.current = last.id;
     }
@@ -568,10 +686,12 @@ export default function FloatingAvatar() {
   useEffect(() => {
     if (voiceSurface !== 'avatar') {
       if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+      cancelFillerTimer();
       interruptSpeech();
     }
     return () => {
       if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+      cancelFillerTimer();
       interruptSpeech();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -4,10 +4,16 @@
 // TTS-then-lipsync-then-mux of /api/lipsync-tts.
 //
 // Tries local Kokoro (scripts/local-kokoro-server.py, :8767) first — better
-// voice quality, now with comma-splitting for lower first-chunk latency.
-// Falls back to Piper (:8768, ~9x faster but more robotic) if Kokoro is down,
-// then ElevenLabs if both local servers are down. Local servers return WAV
-// (PCM streamed via ffmpeg), ElevenLabs returns MP3.
+// voice quality, synthesized one sentence at a time so first audio costs one
+// sentence instead of the whole reply. Falls back to Piper (:8768, ~9x faster
+// but more robotic) if Kokoro is down, then ElevenLabs if both are down.
+//
+// Every path this route returns is WAV / 16-bit PCM, never mp3: the browser
+// forwards these bytes straight to Wav2Lip's /lipsync-stream, which wants raw
+// int16 PCM. Local servers emit WAV via ffmpeg; ElevenLabs is asked for
+// pcm_24000 and given a streaming WAV header here. The mp3 branch below is a
+// fallback only for accounts whose tier silently downgrades pcm to mpeg —
+// that path costs a client-side decodeAudioData before lipsync can start.
 const LOCAL_PIPER_URL = process.env.LOCAL_PIPER_URL || 'http://localhost:8768/tts';
 const LOCAL_KOKORO_URL = process.env.LOCAL_KOKORO_URL || 'http://localhost:8767/tts';
 

@@ -1,4 +1,5 @@
 import words from './asr-dictionary.json';
+import commonEnglish from './common-english.json';
 
 function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -133,29 +134,19 @@ const MULTI_MAX_WORDS = 2;
 // for ordinary speech at dist 1-2 ("peace"->"phace", "nothing"->"nodding",
 // "love"->"live", "servers"->"serovars"). Soundex should only fire on rare
 // medical vocabulary, not everyday words, so gate on a broad common-English
-// list rather than stoplisting one collision at a time — extend this list
-// (not per-word aliases) as new common-word false positives surface.
-const ENGLISH_STOPLIST = new Set([
-  'peace', 'nono', 'saving', 'revised', 'meant', 'lets',
-  'dad', 'mine', 'rob',
-  // top ~200 everyday English words the scraped dictionary happens to collide with
-  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was',
-  'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new',
-  'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put',
-  'say', 'she', 'too', 'use', 'that', 'with', 'have', 'this', 'will', 'your',
-  'from', 'they', 'know', 'want', 'been', 'good', 'much', 'some', 'time',
-  'very', 'when', 'come', 'here', 'just', 'like', 'long', 'make', 'many',
-  'over', 'such', 'take', 'than', 'them', 'well', 'were', 'love', 'live',
-  'life', 'need', 'feel', 'seem', 'tell', 'call', 'work', 'nothing', 'thing',
-  'things', 'lesson', 'lessons', 'lesions', 'server', 'servers', 'recipe',
-  'recipes', 'receive', 'receives', 'legend', 'legends', 'talk', 'talks',
-  'save', 'safe', 'stars', 'stairs', 'people', 'person', 'shot', 'shoot',
-  'about', 'above', 'after', 'again', 'below', 'could', 'every', 'first',
-  'found', 'great', 'group', 'house', 'large', 'never', 'other', 'place',
-  'right', 'small', 'sound', 'still', 'study', 'their', 'there', 'these',
-  'thing', 'think', 'three', 'under', 'water', 'where', 'which', 'world',
-  'would', 'write', 'years',
-]);
+// list (top ~10k words, common-english.json) — measured on the real asr-log,
+// this protects the bulk of false positives while blocking zero genuine
+// medical fixes. The scraped dict has no common word rare enough to be a real
+// correction target, so guarding every common word is safe.
+// STOPLIST_EXTRA covers what the 10k list misses: apostrophe-stripped
+// contractions (alphaKey drops the ') and a few high-frequency stragglers.
+const STOPLIST_EXTRA = [
+  'ive', 'shes', 'hes', 'youre', 'theyre', 'weve', 'youve', 'im', 'dont',
+  'cant', 'wont', 'isnt', 'arent', 'wasnt', 'werent', 'didnt', 'doesnt',
+  'couldnt', 'wouldnt', 'shouldnt', 'thats', 'whats', 'lets', 'gonna', 'wanna',
+  'mane', 'huh', 'hmm', 'nono', 'meant', 'grounded',
+];
+const ENGLISH_STOPLIST = new Set<string>([...commonEnglish, ...STOPLIST_EXTRA]);
 
 const wordSet = new Set(words);
 const soundexIndex = new Map<string, string[]>();
