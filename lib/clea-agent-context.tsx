@@ -51,8 +51,12 @@ const CleaAgentContext = createContext<CleaAgentValue | null>(null);
 
 export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const { activity } = useWatch();
+  // ponytail: sticky — the quiz page nulls activity on every dep change (and on
+  // navigation), but the vignette only ever reaches the model via the system
+  // prompt, never the message history. Without this Clea forgets the question
+  // it is mid-discussion on and falls back to queryQbank.
   const activityRef = useRef(activity);
-  activityRef.current = activity;
+  if (activity) activityRef.current = activity;
 
   const [chatId] = useState(() => {
     if (typeof window === 'undefined') return generateId();

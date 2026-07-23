@@ -86,10 +86,18 @@ export default function FloatingAvatar() {
   const queueRef = useRef<string[]>([]);
   const pumpingRef = useRef(false);
 
+  // Bumped by every stopSpeaking(). speak() captures the value at entry and
+  // bails at each await boundary once it no longer matches — without this a
+  // barge-in landing before the TTS fetch resolves cancels nothing (there is
+  // no activeSpeechRef yet), and the stale closure goes on to create and play
+  // its own audio on top of the reply that replaced it.
+  const speechGenRef = useRef(0);
+
   // Called at the top of every speak() too (cancels a stray previous clip),
   // so it must NOT clear queueRef. Callers that want a full interrupt
   // (barge-in, surface switch, manual replay) clear queueRef themselves first.
   const stopSpeaking = () => {
+    speechGenRef.current++;
     for (const el of orphanAudiosRef.current) {
       el.pause();
       el.src = '';
@@ -116,6 +124,8 @@ export default function FloatingAvatar() {
     // Only one voice may play at a time — cancel whatever this widget was
     // already saying before starting the next reply.
     stopSpeaking();
+    const gen = speechGenRef.current;
+    const stale = () => gen !== speechGenRef.current;
 
     const text = stripMarkdown(rawText);
     lastSpokenTextRef.current = text;
@@ -146,6 +156,12 @@ export default function FloatingAvatar() {
           body: JSON.stringify({ text }),
         });
       }
+      // Interrupted while the fetch was in flight — drop it before it can
+      // claim activeSpeechRef and start playing over the newer reply.
+      if (stale()) {
+        orphanAudiosRef.current.delete(audio);
+        return;
+      }
       if (!audioRes.ok || !audioRes.body) {
         throw new Error(`tts-audio returned ${audioRes.status}: ${audioRes.body ? await audioRes.text() : 'no body'}`);
       }
@@ -160,7 +176,7 @@ export default function FloatingAvatar() {
       const chunks: Uint8Array[] = [];
 
       const startAudioPlayback = () => {
-        if (audioStarted) return;
+        if (audioStarted || stale()) return;
         audioStarted = true;
         const ms = performance.now() - t0;
         console.log(`[tts] AUDIO STARTED at +${ms.toFixed(0)}ms (after ${chunkCount} chunk(s))`);
@@ -252,6 +268,12 @@ export default function FloatingAvatar() {
         }
         try {
           while (true) {
+            // This IIFE is deliberately not awaited by speak(), so it outlives
+            // an interrupt unless it checks for itself.
+            if (stale()) {
+              await reader.cancel().catch(() => {});
+              return;
+            }
             const { done, value } = await reader.read();
             if (done) break;
             processChunk(value);
@@ -301,6 +323,7 @@ export default function FloatingAvatar() {
             }
             const pcmBytes = new Uint8Array(pcm16.buffer);
             audioCtx.close();
+            if (stale()) return;
 
             const send = () => {
               ws.send(JSON.stringify({ sampleRate: decoded.sampleRate }));
@@ -321,12 +344,16 @@ export default function FloatingAvatar() {
       if (!ws) {
         // Audio-only prod fallback: no lipsync video, just wait for playback to finish.
         await new Promise<void>((resolve) => {
-          audio.addEventListener('ended', () => {
+          const finish = () => {
             activeSpeechRef.current = null;
             orphanAudiosRef.current.delete(audio);
             setIsSpeaking(false);
             resolve();
-          }, { once: true });
+          };
+          audio.addEventListener('ended', finish, { once: true });
+          // An interrupt pauses this element, which never then fires 'ended' —
+          // without this the queue pump would wait on it forever.
+          audio.addEventListener('pause', finish, { once: true });
         });
         return;
       }
@@ -346,6 +373,7 @@ export default function FloatingAvatar() {
         };
 
         ws.onmessage = async (ev) => {
+          if (stale()) return;
           if (typeof ev.data === 'string') {
             fps = JSON.parse(ev.data).fps;
             return;

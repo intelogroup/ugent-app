@@ -213,13 +213,13 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
     const systemNode = nodeById.get(systemId);
     if (recordHistory) pushHistory(systemNode?.label ?? "System view");
 
-    const primaryChildren = graphData.edges
+    const matchingChildren = graphData.edges
       .filter((edge) => edge.type === "BELONGS_TO" && edge.target === systemId)
       .map((edge) => nodeById.get(edge.source))
       .filter((candidate): candidate is KnowledgeGraphNode => Boolean(candidate))
       .filter((candidate) => category === "ALL" || candidate.type === category)
-      .sort((a, b) => b.questionCount - a.questionCount)
-      .slice(0, PRIMARY_CHILD_LIMIT);
+      .sort((a, b) => b.questionCount - a.questionCount);
+    const primaryChildren = category === "ALL" ? matchingChildren.slice(0, PRIMARY_CHILD_LIMIT) : matchingChildren;
 
     setFocusedSystemId(systemId);
     setVisibleNodeIds(new Set([systemId, ...primaryChildren.map((child) => child.id)]));
