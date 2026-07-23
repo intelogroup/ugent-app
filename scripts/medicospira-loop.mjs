@@ -149,12 +149,13 @@ async function selectSubjectsAndGenerate(page) {
   console.log('[CREATE] Clicked master Subjects checkbox');
   await page.waitForTimeout(2000);
 
-  // Step 2: Infectious Diseases system checkbox (index 114) → ID only
+  // Step 2: master "Systems" checkbox (index 14) → selects ALL systems
+  // ID-only: change cbs[14] → cbs[114] and update comment
   await page.evaluate(() => {
     const cbs = document.querySelectorAll('.custom-checkbox-lg');
-    if (cbs[114]) cbs[114].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    if (cbs[14]) cbs[14].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   });
-  console.log('[CREATE] Clicked Infectious Diseases system checkbox');
+  console.log('[CREATE] Clicked master Systems checkbox');
   await page.waitForTimeout(2000);
 
   // Step 3: set Q count = 5 (input is type="text")
@@ -290,15 +291,8 @@ async function extractQuestions(page, questionsData) {
       console.log(`[Q${i + 1}] Images: ${imgSrcs.join(', ')}`);
     }
 
-    // Click answer — 25% chance to click wrong answer to avoid detection
+    // Click the correct answer choice
     const correctLetter = (qApi.correct_choice || '').trim().toUpperCase();
-    const allLetters = (qApi.rag_qus_options || []).map(o => (o.option_sequence || '').toUpperCase()).filter(Boolean);
-    const lettersFromChoices = choices.map(c => c.letter);
-    const allLetters2 = allLetters.length >= 2 ? allLetters : lettersFromChoices.length >= 2 ? lettersFromChoices : ['A','B','C','D','E','F','G','H'];
-    const clickLetter = Math.random() < 0.25 && allLetters2.some(l => l !== correctLetter)
-      ? allLetters2.filter(l => l !== correctLetter)[Math.floor(Math.random() * (allLetters2.length - 1))]
-      : correctLetter;
-    if (clickLetter !== correctLetter) console.log(`[Q${i + 1}] INTENTIONAL WRONG: clicked ${clickLetter} instead of ${correctLetter}`);
     await page.evaluate((letter) => {
       const choiceDivs = document.querySelectorAll('[class*="answerChoices"] > div');
       for (const d of choiceDivs) {
@@ -308,7 +302,7 @@ async function extractQuestions(page, questionsData) {
           return;
         }
       }
-    }, clickLetter);
+    }, correctLetter);
     await page.waitForTimeout(500);
 
     // Click Submit
