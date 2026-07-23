@@ -97,9 +97,17 @@ function buildAttemptSummary(attempts: QuizAttempt[]): string {
   return ` The student has completed ${total} quiz session(s) (${totalQ} questions, ${overallPct}% overall). Most recent: ${lastPct}% on ${last.subject ?? 'mixed'} (${last.system ?? 'any system'}).`;
 }
 
-function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string): string {
-  const base =
-    "You are Clea, a friendly and concise USMLE Step 1 study assistant for the Ugent platform. Answer in 1-3 short sentences, plain prose, always — this is a hard limit, not a suggestion: if your draft answer would run to 4 or more sentences, cut it down to the single most important point instead of covering everything. Keep every reply as short as possible even when explaining reasoning, never pad. Always write as one single paragraph, never split a reply into multiple paragraphs or line breaks — a reply about a mechanism should be trimmed to fit 1-3 sentences, not spread across several short paragraphs. Use simple, everyday words over medical jargon or fancy vocabulary whenever a plain word means the same thing — this helps students understand complex concepts. When a technical term is necessary, briefly say what it means in plain words. Never use abbreviations or acronyms of any kind, including route/dose/unit shorthand (no HSV, CSF, TB, MI, CNS, IM, IV, PO, mg, mL, etc.) — always say the full term out loud in plain words (e.g. say intramuscular instead of IM, say milligrams instead of mg), since abbreviations spoken by text-to-speech are hard to parse and ASR often mishears letter-strings. Base any USMLE content answer on the Pathoma/First Aid excerpts already provided below under 'Reference material', rather than on your own training knowledge — only fall back to your own knowledge if that section is empty or clearly doesn't cover the question. If the provided excerpts miss the mark, you can still call searchPathoma/searchFirstAid yourself with a more targeted query. You can call queryMyAttempts to see the student's past quiz performance, queryQbank to look up practice questions by subject/system/difficulty, queryCurriculum to check disease frequency and weak-area stats across the curriculum, and queryCurriculumProgress to see the student's own percent-complete, current week, and next uncompleted study blocks. When explaining a quiz question or answer, the student can already see the vignette on screen — never quote or reread any phrase from it verbatim, not even a short clause of 3+ consecutive words copied in the same order. For example, if the vignette describes crushing chest pain radiating to the left arm, do not say that phrase back — instead say something like the described chest pain or that pain pattern and reason about what it means, never its exact wording. Drill the logic one finding at a time (what it rules in, what it rules out) so the student does the thinking, rather than dumping the full reasoning chain at once. Never lead with the correct answer — the correct option's name must not appear anywhere before you've walked through at least one discriminating clue; state it only after that reasoning, so the student learns to spot the pattern themselves next time. Never use markdown formatting of any kind: no asterisks, no **bold**, no bullet points, no numbered lists, no headers, no dashes-as-bullets. If you need to list options, name them inline in a single sentence separated by commas. The user speaks through automatic speech recognition which can mishear words. If a word seems like a phonetic misspelling of a medical term, infer the intended term and respond accordingly.";
+const QUIZ_FIRE_KEYWORDS = ['quiz', 'clues?', 'pick', 'choices?', 'answer choices?', 'a\\.\\s*.*b\\.', 'choose', 'which.*answer', 'tell me.*clues'];
+
+function detectQuizFire(text: string): boolean {
+  const t = text.toLowerCase().replace(/[^a-z0-9\s.]/g, '');
+  return QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t));
+}
+
+function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false): string {
+  const base = quizFire
+    ? "You are Clea. QUIZ-FIRE MODE. You output ONLY: 2-3 clue fragments on one line, then A. ... B. ... on separate lines, then 'Answer: [label]'. No explanations. No definitions. No padding. No full sentences. No 'the clues point to' or 'this suggests'. Answer label only after clues and choices. Never elaborate."
+    : "You are Clea, a concise USMLE Step 1 study assistant. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Base answers on Pathoma/First Aid excerpts below. Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -209,6 +217,7 @@ export async function POST(request: NextRequest) {
   // embed+RPC latency is hidden behind whichever read is slowest, not
   // added on top.
   const queryText = messageQueryText(message);
+  const quizFire = detectQuizFire(queryText);
   const [attemptsRes, progressRes, previousMessages, groundingHits] = await Promise.all([
     supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
     supabase.from('curriculum_progress').select('block_id'),
@@ -253,7 +262,12 @@ export async function POST(request: NextRequest) {
   console.log(`[clea-chat] stage=updateSummary ms=${(performance.now() - summaryT0).toFixed(0)}`);
   const recentMessages = validatedMessages.slice(upTo);
   const modelMessages = await convertToModelMessages(recentMessages);
+  const quizFireOverride = quizFire
+    ? [{ role: 'system' as const, content: 'QUIZ-FIRE MODE: Output ONLY: clues on one line, then A. ... B. ... on separate lines, then "Answer: A" or "Answer: B". Zero explanation. Zero padding. No full sentences.' }]
+    : [];
+  const modelMessagesWithOverride = [...quizFireOverride, ...modelMessages];
   const sharedTools = { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress };
+  const chatTools = { queryQbank, queryCurriculum, queryMyAttempts, queryCurriculumProgress };
 
   // Quiz-explain turns are exactly where "never quote the vignette" /
   // "never lead with the answer" get violated, and the filler-ack already
@@ -267,12 +281,12 @@ export async function POST(request: NextRequest) {
       generateText({
         model: deepseek('deepseek-chat'),
         system,
-        messages: modelMessages,
-        tools: sharedTools,
+        messages: modelMessagesWithOverride,
+    tools: sharedTools,
         stopWhen: stepCountIs(8),
       });
 
-    const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits);
+    const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire);
     let { text: finalText } = await generate(baseSystem);
     let violation = detectGuardrailViolation(finalText, activity);
     if (violation) {
@@ -321,9 +335,9 @@ export async function POST(request: NextRequest) {
   let firstChunkLogged = false;
   const result = streamText({
     model: deepseek('deepseek-chat'),
-    system: buildSystemPrompt(activity, summary, attempts, groundingHits),
-    messages: modelMessages,
-    tools: sharedTools,
+    system: buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire),
+    messages: modelMessagesWithOverride,
+    tools: chatTools,
     stopWhen: stepCountIs(8),
     onChunk: () => {
       if (firstChunkLogged) return;
@@ -334,8 +348,6 @@ export async function POST(request: NextRequest) {
       void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);
     },
   });
-
-  result.consumeStream();
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({

@@ -172,6 +172,80 @@ const cases = [
     input: { text: 'good morning, how are you today' },
     check: (r) => (r.toolCalls.includes('searchPathoma') || r.toolCalls.includes('searchFirstAid') ? 'reply called a book-search tool for non-medical small talk' : null),
   },
+  {
+    name: 'quiz-fire mode — ultra-terse output, ≤3 lines',
+    input: {
+      text: 'quiz me on immuno, give me clues and 2 choices to pick from',
+      activity: {
+        questionText: 'A 30-year-old woman with recurrent DVTs and miscarriages. Labs show prolonged aPTT.',
+        optionTexts: ['Factor V Leiden', 'Antiphospholipid syndrome', 'Protein C deficiency', 'Protein S deficiency', 'Lupus anticoagulant'],
+        questionNumber: 1,
+        totalQuestions: 5,
+        subject: 'Immunology',
+        system: 'Immunology',
+        difficulty: 'MEDIUM',
+        totalAnsweredSoFar: 0,
+        correctSoFar: 0,
+        hasSelectedAnswer: false,
+        currentQuestionCorrect: null,
+        selectedOptionText: null,
+      },
+    },
+    check: (r) => {
+      const lines = r.reply.trim().split('\n').filter(Boolean);
+      if (lines.length > 4) return `quiz-fire: ${lines.length} lines (expected ≤4)`;
+      return null;
+    },
+  },
+  {
+    name: 'quiz-fire mode — contains "Answer: [label]"',
+    input: {
+      text: 'quiz me, give me clues and 2 answer choices',
+      activity: {
+        questionText: 'A 70-year-old man with progressive fatigue, easy bruising. Pancytopenia on smear.',
+        optionTexts: ['Hypercellular marrow with dysplastic changes', 'Empty marrow replaced by fat'],
+        questionNumber: 1,
+        totalQuestions: 5,
+        subject: 'Hematology',
+        system: 'Hematology',
+        difficulty: 'MEDIUM',
+        totalAnsweredSoFar: 0,
+        correctSoFar: 0,
+        hasSelectedAnswer: false,
+        currentQuestionCorrect: null,
+        selectedOptionText: null,
+      },
+    },
+    check: (r) => {
+      const expected = r.reply.match(/^Answer:\s*[AB]/im);
+      return expected ? null : 'quiz-fire: no "Answer: A" or "Answer: B" found in reply';
+    },
+  },
+  {
+    name: 'quiz-fire mode — no full-sentence fluff',
+    input: {
+      text: 'quiz me on heme, give me clues and 2 choices',
+      activity: {
+        questionText: 'A 60-year-old patient presents with fatigue, pallor, and a beefy red tongue.',
+        optionTexts: ['Vitamin B12 deficiency', 'Iron deficiency anemia', 'Anemia of chronic disease', 'Thalassemia minor'],
+        questionNumber: 1,
+        totalQuestions: 5,
+        subject: 'Hematology',
+        system: 'Hematology',
+        difficulty: 'MEDIUM',
+        totalAnsweredSoFar: 0,
+        correctSoFar: 0,
+        hasSelectedAnswer: false,
+        currentQuestionCorrect: null,
+        selectedOptionText: null,
+      },
+    },
+    check: (r) => {
+      const fluff = /the clues point to|this suggests|based on the|we can see|this indicates|the correct answer|in summary|first,|second,|additionally|furthermore|moreover|however,|therefore|in addition/i;
+      const hits = r.reply.match(fluff);
+      return hits ? `quiz-fire: fluff phrase "${hits[0]}" in reply` : null;
+    },
+  },
 ];
 
 async function main() {
