@@ -11,7 +11,7 @@ jest.mock('@supabase/ssr', () => ({
   }),
 }));
 
-import { middleware } from '@/middleware';
+import { proxy as middleware } from '@/proxy';
 
 function req(path: string) {
   return new NextRequest(new URL(path, 'https://app.test'));

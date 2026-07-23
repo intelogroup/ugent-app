@@ -9,6 +9,9 @@ const SIZE = 200;
 
 const STREAM_WS_URL = process.env.NEXT_PUBLIC_WAV2LIP_WS_URL || 'ws://localhost:8765/lipsync-stream';
 const PREBUFFER_FRAMES = 2;
+// Both clea1 sources (idle loop + Wav2Lip face clip) are the same 250-frame
+// clip — breaks if either is swapped for a different-length clip.
+const CLIP_FRAME_COUNT = 250;
 const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development' || !!process.env.NEXT_PUBLIC_WAV2LIP_WS_URL;
 
 export default function FloatingAvatar() {
@@ -22,7 +25,7 @@ export default function FloatingAvatar() {
     x: typeof window === 'undefined' ? 300 : window.innerWidth - THUMB_SIZE - 48,
     y: 48,
   }));
-  const videoSrc = '/clea_avatar_loop.mp4';
+  const videoSrc = '/clea1-avatar-480p.mp4';
   // Prefetch /api/tts-audio while LLM streams. On each text tick, abort
   // old request and restart with accumulated text. When LLM finishes, the
   // last prefetched response (if resolved) is handed directly to Wav2Lip —
@@ -35,6 +38,41 @@ export default function FloatingAvatar() {
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
+  // Paused/resumed imperatively at each setStreaming call site (not via a
+  // useEffect watching `streaming`) — an effect fires a render tick after
+  // the opacity style is applied, so the video kept playing live for an
+  // extra frame right as the crossfade started, reading as a black/smeared
+  // pop at the exact transition instant.
+  const idleVideoRef = useRef<HTMLVideoElement>(null);
+  // Idle video and Wav2Lip's face source are the same clip (confirmed by
+  // frame diff), so seeking idle to this timestamp before resuming makes
+  // the freeze-frame match the last live canvas frame instead of whatever
+  // random point the idle loop happened to be at — that pose mismatch was
+  // the actual cause of the talk->idle flick, not transition timing.
+  const lastFrameTimeRef = useRef(0);
+  // Resume the idle video at the frame matching Wav2Lip's last output, then
+  // run onReady (which flips `streaming` off, starting the crossfade). We gate
+  // the crossfade on the 'seeked' event: setting currentTime updates the
+  // property instantly but the decoded pixels lag ~1 frame, so firing the
+  // fade immediately can blend the stale pre-seek frame in for a frame at the
+  // exact transition. Waiting for 'seeked' means the video shows the matched
+  // frame before it ever becomes visible. Canvas holds its last frame (opaque)
+  // during the short wait, so nothing flickers.
+  const resumeIdleVideo = (onReady: () => void) => {
+    const video = idleVideoRef.current;
+    if (!video) { onReady(); return; }
+    const start = () => { video.play().catch(() => {}); onReady(); };
+    const target = lastFrameTimeRef.current;
+    if (target > 0 && Math.abs(video.currentTime - target) > 0.02) {
+      let done = false;
+      const fire = () => { if (done) return; done = true; video.removeEventListener('seeked', fire); start(); };
+      video.addEventListener('seeked', fire);
+      video.currentTime = target;
+      setTimeout(fire, 120); // fallback if 'seeked' never fires
+    } else {
+      start();
+    }
+  };
   const dragRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Guards against overlapping speak() calls (e.g. a fast second reply while
@@ -63,8 +101,7 @@ export default function FloatingAvatar() {
     active.ws?.close();
     active.audio.pause();
     active.audio.src = '';
-    setStreaming(false);
-    setIsSpeaking(false);
+    resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
   };
 
   const replayLast = (e: React.MouseEvent) => {
@@ -324,6 +361,7 @@ export default function FloatingAvatar() {
             console.log(`[tts] VIDEO STARTED (${PREBUFFER_FRAMES} frames prebuffered) at +${videoStartedAt.toFixed(0)}ms`);
             if (!isWav) startAudioPlayback(); // MP3 path: sync audio start to video readiness
             logSyncGap();
+            idleVideoRef.current?.pause();
             setStreaming(true);
 
             let lastDrawnIdx = -1;
@@ -334,6 +372,19 @@ export default function FloatingAvatar() {
               canvas.height = SIZE * dpr;
             }
             const ctx = canvas?.getContext('2d');
+            // Seed the canvas with the current idle-video frame before the
+            // first Wav2Lip frame paints — otherwise the freshly-resized
+            // (blank) canvas fades in over a black shadow for the one or
+            // two frames it takes the WS stream to catch up.
+            const idleVideo = idleVideoRef.current;
+            if (ctx && canvas && idleVideo && idleVideo.videoWidth) {
+              const scale = Math.max(canvas.width / idleVideo.videoWidth, canvas.height / idleVideo.videoHeight);
+              const sw = canvas.width / scale;
+              const sh = canvas.height / scale;
+              const sx = (idleVideo.videoWidth - sw) / 2;
+              const sy = (idleVideo.videoHeight - sh) / 2;
+              ctx.drawImage(idleVideo, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            }
             const paint = () => {
               const wantIdx = Math.floor(audio.currentTime * fps);
               const bitmap = frames.get(wantIdx) ?? frames.get(lastDrawnIdx);
@@ -345,14 +396,14 @@ export default function FloatingAvatar() {
                 const sy = (bitmap.height - sh) / 2;
                 ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
                 lastDrawnIdx = frames.has(wantIdx) ? wantIdx : lastDrawnIdx;
+                lastFrameTimeRef.current = (lastDrawnIdx % CLIP_FRAME_COUNT) / fps;
               }
               if (!audio.ended) requestAnimationFrame(paint);
               else {
                 console.log(`[tts] DONE at +${(performance.now() - t0).toFixed(0)}ms`);
                 activeSpeechRef.current = null;
                 orphanAudiosRef.current.delete(audio);
-                setStreaming(false);
-                setIsSpeaking(false);
+                resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
                 resolve();
               }
             };
@@ -367,8 +418,7 @@ export default function FloatingAvatar() {
       setLatencyMs(-1);
       activeSpeechRef.current = null;
       orphanAudiosRef.current.delete(audio);
-      setStreaming(false);
-      setIsSpeaking(false);
+      resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
     } finally {
       setLoading(false);
     }
@@ -661,23 +711,32 @@ export default function FloatingAvatar() {
       <div className="relative h-full w-full">
         {/* Circular clip lives on its own layer — corner-positioned buttons below sit
             outside this mask so they aren't clipped by the rounded-full circle. */}
-        <div className="absolute inset-0 overflow-hidden rounded-full border-2 border-white shadow-2xl">
+        <div className="absolute inset-0 overflow-hidden rounded-full border-2 border-white shadow-2xl bg-neutral-800">
+          {/* Simultaneous crossfade — a staggered/sequential fade leaves a
+              gap where both layers sit near-zero opacity at once, exposing
+              this div's background as a bright flash. Overlapping them
+              instead means there's always at least one layer near full
+              opacity. The outgoing layer is paused (see idleVideoRef effect
+              above) so the overlap blends a static frame, not two live
+              motions — two videos playing at once during the crossfade
+              read as a smear. */}
           <video
+            ref={idleVideoRef}
             key={videoSrc}
             src={videoSrc}
             autoPlay
             loop
             muted
             playsInline
-            className="h-full w-full object-cover"
-            style={{ display: streaming ? 'none' : 'block' }}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-in-out"
+            style={{ opacity: streaming ? 0 : 1 }}
           />
           <canvas
             ref={canvasRef}
             width={SIZE}
             height={SIZE}
-            className="h-full w-full object-cover"
-            style={{ display: streaming ? 'block' : 'none' }}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-in-out"
+            style={{ opacity: streaming ? 1 : 0 }}
           />
         </div>
         <button
