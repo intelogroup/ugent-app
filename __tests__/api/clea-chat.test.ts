@@ -80,27 +80,39 @@ describe('detectQuizFire', () => {
   // detectQuizFire is a pure fn exported from the route module — but route.ts
   // exports no symbol map, so we rebuild the logic inline.
   const QUIZ_FIRE_KEYWORDS = ['quiz', 'clues?', 'pick', 'choices?', 'answer choices?', 'choose', 'which.*answer', 'tell me.*clues'];
-  function detectQuizFire(text: string): boolean {
+  function detectQuizFire(text: string, lastAiText = ''): boolean {
     const t = text.toLowerCase().replace(/[^a-z0-9\s.]/g, '');
-    return QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t));
+    if (QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t))) return true;
+    if (/^[ab]$/.test(t.trim()) || /the answer is [ab]/i.test(t)) return true;
+    if (/^Clues:|Answer:\s*[AB]/.test(lastAiText)) return true;
+    return false;
   }
 
   it.each([
-    ['quiz me on immuno', true],
-    ['give me clues for this vignette', true],
-    ['pick A or B', true],
-    ['what are the choices', true],
-    ['tell me the answer choices', true],
-    ['choose the correct answer', true],
-    ['which answer is right', true],
-    ['tell me clues for this question', true],
-    ['explain the pathophysiology of asthma', false],
-    ['what causes a heart attack', false],
-    ['good morning', false],
-    ['why did I get this wrong', false],
-    ['list the classic findings of Turner syndrome', false],
-  ])('detectQuizFire("%s") -> %s', (input, expected) => {
-    expect(detectQuizFire(input)).toBe(expected);
+    ['quiz me on immuno', true, ''],
+    ['give me clues for this vignette', true, ''],
+    ['pick A or B', true, ''],
+    ['what are the choices', true, ''],
+    ['tell me the answer choices', true, ''],
+    ['choose the correct answer', true, ''],
+    ['which answer is right', true, ''],
+    ['tell me clues for this question', true, ''],
+    ['explain the pathophysiology of asthma', false, ''],
+    ['what causes a heart attack', false, ''],
+    ['good morning', false, ''],
+    ['why did I get this wrong', false, ''],
+    ['list the classic findings of Turner syndrome', false, ''],
+    ['b', true, ''],
+    ['a', true, ''],
+    ['the answer is A', true, ''],
+    ['the answer is b', true, ''],
+    ['AB', false, ''],
+    ['abc', false, ''],
+    ['what about CVID vs Bruton', true, 'Oliguric phase, muddy brown casts, ATN A. Prerenal B. Intrarenal\n\nAnswer: B'],
+    ['good morning', true, 'Clues: X-linked, infant onset\n\nAnswer: A'],
+    ['why did I get this wrong', false, ''],
+  ])('detectQuizFire("%s", "%s") -> %s', (input, expected, lastAi) => {
+    expect(detectQuizFire(input, lastAi)).toBe(expected);
   });
 });
 

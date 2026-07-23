@@ -99,9 +99,14 @@ function buildAttemptSummary(attempts: QuizAttempt[]): string {
 
 const QUIZ_FIRE_KEYWORDS = ['quiz', 'clues?', 'pick', 'choices?', 'answer choices?', 'a\\.\\s*.*b\\.', 'choose', 'which.*answer', 'tell me.*clues'];
 
-function detectQuizFire(text: string): boolean {
+function detectQuizFire(text: string, lastAiText = ''): boolean {
   const t = text.toLowerCase().replace(/[^a-z0-9\s.]/g, '');
-  return QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t));
+  if (QUIZ_FIRE_KEYWORDS.some((kw) => new RegExp(kw, 'i').test(t))) return true;
+  // single letter answer (a/b) or "the answer is X" — persist quiz-fire from prior turn
+  if (/^[ab]$/.test(t.trim()) || /the answer is [ab]/i.test(t)) return true;
+  // last AI reply was in quiz-fire format — persist
+  if (/^Clues:|Answer:\s*[AB]/.test(lastAiText)) return true;
+  return false;
 }
 
 const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY clues, then A. ... B. ..., then Answer: A or Answer: B. No explanation, no padding, no full sentences. This overrides any conflicting instruction.';
@@ -225,9 +230,8 @@ export async function POST(request: NextRequest) {
     loadChat(id),
     queryText ? searchBooks(queryText) : Promise.resolve(''),
   ]);
-  const lastAi = previousMessages.filter(m => m.role === 'assistant').at(-1);
-  const wasQuizFire = lastAi ? /^Clues:|Answer:\s*[AB]/.test(messageQueryText(lastAi)) : false;
-  const quizFire = detectQuizFire(queryText) || wasQuizFire;
+  const lastAiText = previousMessages.filter(m => m.role === 'assistant').at(-1)?.parts.filter((p): p is { type: 'text'; text: string } => p.type === 'text').map(p => p.text).join(' ') ?? '';
+  const quizFire = detectQuizFire(queryText, lastAiText);
   console.log(`[clea-chat] stage=parallel-reads ms=${(performance.now() - t0).toFixed(0)}`);
 
   const attempts: QuizAttempt[] = (attemptsRes.data || []).map((row: any) => ({
