@@ -125,6 +125,8 @@ async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query:
 // full sequential tool-call round trip just to satisfy the "always search
 // before answering" instruction. searchPathoma/searchFirstAid stay available
 // as tools too, for a follow-up search with a model-refined query.
+// ponytail: when books return little content, fall back to qbank search on
+// same query — the ILIKE across question text+explanation catches facts
 export async function searchBooks(query: string, limit = 4): Promise<string> {
   const [pathoma, firstAid] = await Promise.all([
     searchTextFile('pathoma_text.jsonl', 'pathoma', query, limit).catch(() => []),
@@ -133,6 +135,14 @@ export async function searchBooks(query: string, limit = 4): Promise<string> {
   const lines: string[] = [];
   if (pathoma.length) lines.push(`Pathoma:\n${pathoma.map((h: { page: number; excerpt: string }) => `(p.${h.page}) ${h.excerpt}`).join('\n')}`);
   if (firstAid.length) lines.push(`First Aid:\n${firstAid.map((h: { page: number; excerpt: string }) => `(p.${h.page}) ${h.excerpt}`).join('\n')}`);
+  try {
+    const { questions } = await queryQuestions({ query, limit: 3 });
+    if (questions.length) {
+      lines.push(`Qbank:\n${questions.map((q) => `Q: ${q.text.slice(0, 200)}\nExplanation: ${q.explanation.slice(0, 300)}`).join('\n---\n')}`);
+    }
+  } catch (e) {
+    console.error('qbank search failed', e);
+  }
   return lines.join('\n\n');
 }
 
@@ -160,28 +170,120 @@ export const searchFirstAid = tool({
   }),
 });
 
-export const queryQbank = tool({
+const PUBMED_MIN_YEAR = 2020;
+
+// PubMed only indexes journal-vetted content (unlike bioRxiv/medRxiv), so
+// "Journal Article"[pt] + excluding "Preprint"[pt] is the lazy proxy for
+// peer-reviewed here — there's no dedicated peer-review flag in E-utilities.
+async function searchPubMedImpl(query: string, limit: number) {
+  const term = `${query} AND ${PUBMED_MIN_YEAR}:3000[pdat] AND Journal Article[pt] NOT Preprint[pt]`;
+  const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=${limit}&term=${encodeURIComponent(term)}`;
+  const searchRes = await fetch(searchUrl);
+  if (!searchRes.ok) throw new Error(`PubMed esearch failed: ${searchRes.status}`);
+  const searchJson = await searchRes.json();
+  const ids: string[] = searchJson.esearchresult?.idlist ?? [];
+  if (ids.length === 0) return { count: 0, results: [] };
+
+  const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=${ids.join(',')}`;
+  const summaryRes = await fetch(summaryUrl);
+  if (!summaryRes.ok) throw new Error(`PubMed esummary failed: ${summaryRes.status}`);
+  const summaryJson = await summaryRes.json();
+
+  const results = ids.map((id) => {
+    const doc = summaryJson.result?.[id];
+    if (!doc) return null;
+    const doi = doc.articleids?.find((a: { idtype: string }) => a.idtype === 'doi')?.value;
+    return {
+      pmid: id,
+      title: doc.title,
+      journal: doc.fulljournalname,
+      pubdate: doc.pubdate,
+      doi,
+      url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+    };
+  }).filter(Boolean);
+
+  return { count: Number(searchJson.esearchresult?.count ?? results.length), results };
+}
+
+export const searchPubMed = tool({
   description:
-    'Look up USMLE quiz questions by subject, system, or difficulty to check what the student has practiced.',
+    `Search PubMed for peer-reviewed medical literature published ${PUBMED_MIN_YEAR} or later, to cite external evidence beyond Pathoma/First Aid/qbank. Excludes preprints.`,
   inputSchema: z.object({
-    subject: z.string().optional().describe('e.g. "Cardiovascular", "Pharmacology"'),
-    system: z.string().optional().describe('e.g. "Cardiovascular", "Renal"'),
-    difficulty: z.string().optional().describe('e.g. "EASY", "MEDIUM", "HARD"'),
+    query: z.string().describe('Search terms, e.g. "trigeminal neuralgia multiple sclerosis"'),
     limit: z.number().int().min(1).max(10).default(5),
   }),
-  execute: async ({ subject, system, difficulty, limit }) => {
-    const { questions, matched } = await queryQuestions({ subject, system, difficulty, limit });
-    return {
-      matched,
-      sample: questions.map((q) => ({
-        subject: q.subject,
-        system: q.system,
-        difficulty: q.difficulty,
-        text: q.text.slice(0, 140),
-      })),
-    };
-  },
+  execute: ({ query, limit }) => searchPubMedImpl(query, limit),
 });
+
+async function runQbankQuery(
+  { subject, system, difficulty, query, limit }:
+    { subject?: string; system?: string; difficulty?: string; query?: string; limit: number }
+) {
+  const { questions, matched } = await queryQuestions({ subject, system, difficulty, query, limit });
+  return {
+    matched,
+    sample: questions.map((q) => ({
+      subject: q.subject,
+      system: q.system,
+      difficulty: q.difficulty,
+      text: query ? q.text : q.text.slice(0, 140),
+      // Only surface the explanation for a content search — it's where facts
+      // like "TN can be caused by an MS plaque" live, buried past char 140 of
+      // the vignette; the metadata-browse path doesn't need it.
+      ...(query ? { explanation: q.explanation } : {}),
+    })),
+  };
+}
+
+const QBANK_INPUT = z.object({
+  subject: z.string().optional().describe('e.g. "Cardiovascular", "Pharmacology"'),
+  system: z.string().optional().describe('e.g. "Cardiovascular", "Renal"'),
+  difficulty: z.string().optional().describe('e.g. "EASY", "MEDIUM", "HARD"'),
+  query: z.string().optional().describe('Keyword or phrase to search for in question text/explanation, e.g. "trigeminal neuralgia multiple sclerosis"'),
+  limit: z.number().int().min(1).max(10).default(5),
+});
+
+export const queryQbank = tool({
+  description:
+    'Look up USMLE quiz questions by subject/system/difficulty, or full-text search question+explanation content with `query` to find facts buried in an explanation.',
+  inputSchema: QBANK_INPUT,
+  execute: runQbankQuery,
+});
+
+// Bridges topic-router's canonical system labels (see canonicalizeSystem) -> the
+// qbank `questions.system` vocab. Router output is already canonicalized, so this
+// is near-identity — only Hematology and Neurology differ. An unmapped predicted
+// system is intentionally absent so the factory leaves `system` undefined rather
+// than eq-filtering to zero rows.
+const ENRICHED_SYSTEM_TO_QBANK: Record<string, string> = {
+  'Neurology': 'Neurology',
+  'Cardiovascular': 'Cardiovascular',
+  'Endocrine': 'Endocrine',
+  'Respiratory': 'Respiratory',
+  'Renal': 'Renal',
+  'Gastrointestinal': 'Gastrointestinal',
+  'Hematology': 'Hematology & Oncology',
+  'Immunology': 'Immunology',
+  'Infectious Disease': 'Infectious Disease',
+  'Musculoskeletal': 'Musculoskeletal',
+  'Reproductive': 'Reproductive',
+  'Integumentary': 'Integumentary',
+};
+
+// Factory variant: defaults `system` to the router-predicted specialty when the
+// model omits it, so tool calls come pre-narrowed. Falls back to the plain tool's
+// behavior when the prediction can't be mapped to a qbank system.
+export function makeQueryQbank(predictedSystem: string | null) {
+  const mapped = predictedSystem ? ENRICHED_SYSTEM_TO_QBANK[predictedSystem] : undefined;
+  if (!mapped) return queryQbank;
+  return tool({
+    description: queryQbank.description,
+    inputSchema: QBANK_INPUT,
+    execute: ({ subject, system, difficulty, query, limit }) =>
+      runQbankQuery({ subject, system: system ?? mapped, difficulty, query, limit }),
+  });
+}
 
 // Factory instead of a shared tool instance: attempts must come from the
 // current request's own user, not a module-level cache — a single mutable
