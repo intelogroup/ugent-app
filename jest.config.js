@@ -11,12 +11,15 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // double-metaphone is ESM-only; Jest can't eval it.
+    '^double-metaphone$': '<rootDir>/__tests__/__mocks__/double-metaphone.ts',
   },
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
   ],
   testPathIgnorePatterns: [
     '<rootDir>/__tests__/quiz-questions.test.ts',
+    '<rootDir>/__tests__/__mocks__/',
     // vitest-authored tests (use vi.mock/vi.fn) — run these via `npx vitest run <path>`, not jest
     '<rootDir>/__tests__/api/quiz-activity.test.ts',
     '<rootDir>/__tests__/lib/supabase/queries.test.ts',

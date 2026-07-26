@@ -46,20 +46,31 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
   const words = query.toLowerCase().split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
   const pages = lines.map((line) => JSON.parse(line) as TextPage);
 
+  // Count how many pages contain each word — words that appear in 0 pages
+  // are junk (garbled ASR, gibberish, misspellings) and shouldn't inflate
+  // thresholds. Only meaningful words count toward the overlap requirement.
+  const wordPageCount = new Map<string, number>();
+  for (const { text } of pages) {
+    const lower = text.toLowerCase();
+    for (const w of words) {
+      if (lower.includes(w)) wordPageCount.set(w, (wordPageCount.get(w) ?? 0) + 1);
+    }
+  }
+  const meaningfulWords = words.filter((w) => (wordPageCount.get(w) ?? 0) > 0);
+  if (meaningfulWords.length === 0) return [];
+
   const scored = pages.map(({ page, text }) => {
     const lower = text.toLowerCase();
-    const matched = words.filter((w) => lower.includes(w));
+    const matched = meaningfulWords.filter((w) => lower.includes(w));
     return { page, text, matched };
   });
 
   const maxScore = Math.max(0, ...scored.map((s) => s.matched.length));
-  if (maxScore === 0) return [];
-
   // Floor of 3 — 1-2 shared content words is still coincidence-prone over an
   // 800-page corpus (verified: an unrelated culinary query matched a renal
   // page on just "original"+"volume"), same false-grounding failure mode as
   // the embedding path's low-similarity hits.
-  const thresholds = [Math.ceil(words.length * 0.6), Math.ceil(words.length * 0.3), 3];
+  const thresholds = [Math.ceil(meaningfulWords.length * 0.6), Math.ceil(meaningfulWords.length * 0.3), 3];
   const threshold = thresholds.find((t) => t <= maxScore) ?? 3;
 
   return scored
