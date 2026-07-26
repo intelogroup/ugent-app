@@ -1,7 +1,8 @@
+import { doubleMetaphone } from 'double-metaphone';
 import words from './asr-dictionary.json';
 import commonEnglish from './common-english.json';
 
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
   let prev = new Uint8Array(n + 1);
   let curr = new Uint8Array(n + 1);
@@ -30,6 +31,19 @@ function soundex(word: string): string {
     .replace(/[aeiouhwy]/g, '')
     .replace(/(\d)\1+/g, '$1');
   return first + code + '000'.slice(code.length);
+}
+
+// Double Metaphone beats classic Soundex on the Greek/Latin/eponym vocabulary
+// this dict is full of (soundex only keys off the first letter + 3 digits, so
+// it mis-buckets long medical roots). But metaphone and soundex mis-bucket
+// *different* words, so we index under both and union the candidates — recall
+// is strictly wider than either alone, and the edit-distance gates below still
+// decide what actually gets corrected. Metaphone returns [primary, secondary].
+function phoneticKeys(word: string): string[] {
+  const [primary, secondary] = doubleMetaphone(word);
+  const keys = ['S:' + soundex(word), 'M:' + primary];
+  if (secondary !== primary) keys.push('M:' + secondary);
+  return keys;
 }
 
 const ALIASES: Record<string, string> = {
@@ -93,6 +107,10 @@ const ALIASES: Record<string, string> = {
   'coccidiomycosis': 'coccidioidomycosis',
   // Whisper common patterns: vowel shift + dropped medial
   'andocarditis': 'endocarditis',
+  // Whisper drops the medial 'l' — neither metaphone (SMNL vs SLMNL) nor edit
+  // distance bridges it, so pin the common mangling explicitly.
+  'sawmonilla': 'salmonella',
+  'salmanela': 'salmonella',
   // real user Whisper output from chat session
   'coccidoidometrosis': 'coccidioidomycosis',
   'coccidoidomatosis': 'coccidioidomycosis',
@@ -108,6 +126,10 @@ const ALIASES: Record<string, string> = {
   'otoviewises': 'orthomyxoviruses',
   // real user Whisper output: "Atoid arthritis" — dropped the "rheum" prefix
   'atoid': 'rheumatoid',
+  // dry-run finding: "falow" (tetralogy of Fallot) is dist-1 from "flow" but
+  // dist-2 from "fallot" — edit distance alone picks the wrong, more common
+  // word even though "fallot" is in-dict. Pin explicitly.
+  'falow': 'fallot',
 };
 
 // ponytail: per-word corrector can't rejoin a term Whisper split across a
@@ -144,17 +166,33 @@ const STOPLIST_EXTRA = [
   'ive', 'shes', 'hes', 'youre', 'theyre', 'weve', 'youve', 'im', 'dont',
   'cant', 'wont', 'isnt', 'arent', 'wasnt', 'werent', 'didnt', 'doesnt',
   'couldnt', 'wouldnt', 'shouldnt', 'thats', 'whats', 'lets', 'gonna', 'wanna',
-  'mane', 'huh', 'hmm', 'nono', 'meant', 'grounded',
+  'mane', 'huh', 'hmm', 'nono', 'meant', 'grounded', 'discriminator',
 ];
 const ENGLISH_STOPLIST = new Set<string>([...commonEnglish, ...STOPLIST_EXTRA]);
 
+// Known medical minimal pairs that are ALL valid words yet sit 1-2 edits (and
+// often the same metaphone bucket) apart — correcting one into the other flips
+// the meaning ("ilium" pelvis vs "ileum" gut). Both members must also be in the
+// dictionary so a clean utterance early-returns; this set adds the extra guard
+// that a garbled input equidistant from two pair members is left untouched
+// rather than guessed. ponytail: hand-curated from data/asr-log.jsonl misses,
+// not exhaustive — extend as new confusable flips surface.
+const CONFUSABLE = new Set<string>([
+  'ilium', 'ileum',
+  'afferent', 'efferent',
+  'mucus', 'mucous',
+  'malleus', 'malleolus',
+  'perineal', 'peroneal',
+]);
+
 const wordSet = new Set(words);
-const soundexIndex = new Map<string, string[]>();
+const phoneticIndex = new Map<string, string[]>();
 for (const w of words) {
-  const code = soundex(w);
-  let bucket = soundexIndex.get(code);
-  if (!bucket) soundexIndex.set(code, bucket = []);
-  bucket.push(w);
+  for (const key of phoneticKeys(w)) {
+    let bucket = phoneticIndex.get(key);
+    if (!bucket) phoneticIndex.set(key, bucket = []);
+    bucket.push(w);
+  }
 }
 
 function correctWord(word: string): string {
@@ -167,15 +205,28 @@ function correctWord(word: string): string {
   // the soundex code (built off word[0]) and the match never happens.
   const lower = alphaKey(word);
   if (lower.length < 3) return word;
-  if (ENGLISH_STOPLIST.has(lower)) return word;
+  // A word we own in the medical dict is normalized to its lowercase form even
+  // if it's also common English ("Diseases" → "diseases") — this must run
+  // before the stoplist, or the stoplist returns the original-cased token and
+  // the normalization never happens.
   if (wordSet.has(lower)) return lower;
+  if (ENGLISH_STOPLIST.has(lower)) return word;
 
   const alias = ALIASES[word] ?? ALIASES[lower];
   if (alias) return alias;
 
-  const code = soundex(lower);
-  const candidates = soundexIndex.get(code);
-  if (!candidates) return word;
+  // A valid confusable-pair member reaching here is OOV only because it's
+  // missing from the dict; never let it snap to its sibling. Leave untouched.
+  if (CONFUSABLE.has(lower)) return lower;
+
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const key of phoneticKeys(lower)) {
+    for (const c of phoneticIndex.get(key) ?? []) {
+      if (!seen.has(c)) { seen.add(c); candidates.push(c); }
+    }
+  }
+  if (candidates.length === 0) return word;
 
   // ponytail: the dictionary is medical-only, so common English words absent
   // from it ("meant", "lets") would otherwise snap to a medical term 2 edits
@@ -184,10 +235,16 @@ function correctWord(word: string): string {
   const maxDist = lower.length <= 6 ? 1 : 2;
   let best: string | null = null;
   let bestDist = Infinity;
+  let tieAtBest = false;
   for (const c of candidates) {
     const d = levenshtein(lower, c);
-    if (d < bestDist) { bestDist = d; best = c; }
+    if (d < bestDist) { bestDist = d; best = c; tieAtBest = false; }
+    else if (d === bestDist && c !== best) { tieAtBest = true; }
   }
+  // A garbled input equidistant from a confusable-pair member is genuinely
+  // ambiguous ("iliam" is dist-1 from neither ilium nor ileum uniquely) — don't
+  // guess which meaning was intended, leave it for the LLM's context to resolve.
+  if (tieAtBest && CONFUSABLE.has(best!)) return word;
   if (bestDist <= maxDist) return best!;
   // Single-candidate Soundex bucket has no ambiguity — relax to ratio 0.25.
   if (candidates.length === 1) {

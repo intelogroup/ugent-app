@@ -14,7 +14,8 @@ import {
 import { deepseek } from '@ai-sdk/deepseek';
 import type { ActivitySnapshot } from '@/lib/watch-context';
 import type { QuizAttempt } from '@/lib/quizAttempts';
-import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, makeQueryMyAttempts, makeQueryCurriculumProgress, searchBooks } from '@/lib/clea-tools';
+import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, searchPubMed, makeQueryMyAttempts, makeQueryCurriculumProgress, searchBooks, makeQueryQbank } from '@/lib/clea-tools';
+import { routeTopic } from '@/lib/topic-router';
 import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
 import { createClient } from '@/lib/supabase/server'
 import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
@@ -23,18 +24,25 @@ export const dynamic = 'force-dynamic';
 
 // Full history is always persisted (loadChat/saveChat use the untrimmed
 // list). The model's window is everything from `upTo` (how far the summary
-// has caught up to) onward — not a fixed last-40 slice — so nothing is ever
-// dropped from context before it's been folded into the summary. That window
-// is allowed to float between MAX_MODEL_HISTORY and MAX_MODEL_HISTORY +
-// SUMMARY_BATCH_SIZE; once it exceeds the ceiling, the oldest
-// SUMMARY_BATCH_SIZE messages get folded into the summary in one call and
-// `upTo` jumps forward, snapping the window back down near MAX_MODEL_HISTORY.
-// Batching trades summarization frequency (every ~5 turns instead of every
-// turn) for a temporarily larger model window — never a context gap.
-// ponytail: fixed-count tail, not token-aware — bump this or add real token
-// counting if replies start losing relevant older context.
-const MAX_MODEL_HISTORY = 40;
-const SUMMARY_BATCH_SIZE = 10;
+// has caught up to) onward — sized by token budget, not a fixed message
+// count, so twenty one-line turns and one giant explanation both fill the
+// same window fairly instead of the giant turn blowing past a count-based cap.
+// Budget: 24k target context - 8k reserved for the answer - 2k reserved for
+// retrieved RAG excerpts = ~14k left for conversation history. Walk messages
+// newest-first accumulating estimated tokens; anything that doesn't fit gets
+// folded into the summary in one call, same batching-over-per-turn tradeoff
+// as before (still snaps `upTo` forward in one jump, never a context gap).
+const TARGET_CONTEXT_TOKENS = 24_000;
+const RESERVE_ANSWER_TOKENS = 8_000;
+const RESERVE_DOCS_TOKENS = 2_000;
+const CONVO_TOKEN_BUDGET = TARGET_CONTEXT_TOKENS - RESERVE_ANSWER_TOKENS - RESERVE_DOCS_TOKENS;
+// ponytail: chars/4 heuristic, not a real tokenizer — no tiktoken/gpt-tokenizer
+// dependency in this project yet. Good enough for a budget cutoff (English
+// BPE averages ~4 chars/token); swap for a real encoder if the estimate drifts
+// enough to matter.
+function estimateTokens(s: string): number {
+  return Math.ceil(s.length / 4);
+}
 
 function messageText(message: UIMessage): string {
   return message.parts
@@ -44,8 +52,8 @@ function messageText(message: UIMessage): string {
 }
 
 // Returns the summary text to use this turn, and how many messages (from the
-// start of `allMessages`) it now covers. Only calls the model when enough
-// overflow has piled up past MAX_MODEL_HISTORY + SUMMARY_BATCH_SIZE.
+// start of `allMessages`) it now covers. Only calls the model when the
+// unsummarized tail's estimated token count exceeds the conversation budget.
 async function updateSummary(
   chatId: string,
   allMessages: UIMessage[]
@@ -54,12 +62,20 @@ async function updateSummary(
   const upTo = stored?.upTo ?? 0;
   const text = stored?.text ?? '';
 
-  const unsummarizedTail = allMessages.length - upTo;
-  if (unsummarizedTail <= MAX_MODEL_HISTORY + SUMMARY_BATCH_SIZE) {
+  const tail = allMessages.slice(upTo);
+  // Walk from the newest message backward, keeping whatever fits in budget —
+  // the fold boundary is wherever the running total first exceeds it.
+  let fitCount = tail.length;
+  let running = 0;
+  for (let i = tail.length - 1; i >= 0; i--) {
+    running += estimateTokens(messageText(tail[i]));
+    if (running > CONVO_TOKEN_BUDGET) { fitCount = tail.length - 1 - i; break; }
+  }
+  const foldCount = tail.length - fitCount;
+  if (foldCount <= 0) {
     return { text, upTo };
   }
 
-  const foldCount = unsummarizedTail - MAX_MODEL_HISTORY;
   const toFold = allMessages.slice(upTo, upTo + foldCount);
   const transcript = toFold
     .map((m) => `${m.role}: ${messageText(m)}`)
@@ -73,7 +89,7 @@ async function updateSummary(
   }
 
   const { text: newText } = await generateText({
-    model: deepseek('deepseek-chat'),
+    model: deepseek('deepseek-v4-flash'),
     system:
       'Summarize this study-assistant conversation excerpt in under 150 words. Keep concrete facts (topics covered, questions asked, decisions made) that would help the assistant continue the conversation naturally. Be terse.',
     prompt: text
@@ -111,10 +127,10 @@ function detectQuizFire(text: string, lastAiText = ''): boolean {
 
 const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY: 1 line of clue fragments, then a blank line, then A) ... B) ..., then "Answer: [A/B]". No full sentences anywhere. No explanations before clues. This overrides all other instructions.';
 
-function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false): string {
+function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false, predictedSystem: string | null = null): string {
   const base = quizFire
     ? "You are Clea. QUIZ-FIRE MODE. Output ONLY: 1 line of clue fragments (no full sentences), blank line, A) ... B) ... separate lines, 'Answer: [A/B]'. Zero full sentences anywhere. No intro line. No 'the clues point to'. No definitions. No explanations. Never elaborate. Never add text before the clue line." + QUIZ_FIRE_ONE_SHOT
-    : "You are Clea, a concise USMLE Step 1 study assistant. GROUNDING RULE: Answer ONLY from Pathoma/First Aid excerpts provided below. If those excerpts don't contain relevant info, say 'Your reference materials do not cover this topic' and offer to search the curriculum. Never use outside knowledge. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
+    : "You are Clea, a concise USMLE Step 1 study assistant. GROUNDING RULE: Answer ONLY from Pathoma/First Aid/excerpts provided below. If those excerpts don't contain relevant info, say 'Your reference materials do not cover this topic'. Never use outside knowledge. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress, searchPubMed. searchPubMed is second intention only — call it only after Pathoma/First Aid/qbank were checked and came up empty, never as a first move, and only once you've asked the student whether they want you to check PubMed for outside literature (peer-reviewed, 2020+) and they said yes. Never call it unprompted or unconfirmed. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -135,9 +151,14 @@ function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, a
   const attemptBlock = buildAttemptSummary(attempts);
   const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
   const groundingBlock = grounding
-    ? `\n\nReference material (Pathoma / First Aid excerpts for the student's latest message):\n${grounding}`
-    : '\n\nNo relevant Pathoma or First Aid excerpts found for this query. Do not use outside knowledge.';
-  return `${base}${activityLine}${attemptBlock}${summaryBlock}${groundingBlock}`;
+    ? `\n\nReference material (excerpts for the student's latest message):\n${grounding}`
+    : '\n\nNo relevant excerpts found for this query. Do not use outside knowledge.';
+  // Deterministic specialty prediction (lib/topic-router) — a soft anchor when
+  // the excerpts are thin or the query is ambiguous, not a hard override.
+  const systemHint = predictedSystem
+    ? `\n\nLikely topic system: ${predictedSystem}. Use only as a tie-breaker; the excerpts above still govern the answer.`
+    : '';
+  return `${base}${activityLine}${attemptBlock}${summaryBlock}${groundingBlock}${systemHint}`;
 }
 
 // Prompt-only enforcement of "never quote the vignette" and "never lead with
@@ -228,12 +249,20 @@ export async function POST(request: NextRequest) {
   // Quiz answer turns are often just a bare letter ("A"/"B") — searching that
   // literally returns nothing, so ground on the vignette text instead when present.
   const queryText = activity?.questionText || messageQueryText(message);
-  const [attemptsRes, progressRes, previousMessages, groundingHits] = await Promise.all([
+  // ponytail: per-leg timing proves routeTopic finishes inside searchBooks's
+  // shadow (leg=routeTopic ms ≪ leg=searchBooks ms), so it adds ~0 wall time.
+  const timed = <T,>(label: string, p: Promise<T>): Promise<T> => {
+    const s = performance.now();
+    return p.finally(() => console.log(`[clea-chat] leg=${label} ms=${(performance.now() - s).toFixed(1)}`));
+  };
+  const [attemptsRes, progressRes, previousMessages, groundingHits, topicRoute] = await Promise.all([
     supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
     supabase.from('curriculum_progress').select('block_id'),
     loadChat(id),
-    queryText ? searchBooks(queryText) : Promise.resolve(''),
+    queryText ? timed('searchBooks', searchBooks(queryText)) : Promise.resolve(''),
+    queryText ? timed('routeTopic', routeTopic(queryText)) : Promise.resolve({ system: null, confidence: 'none' as const }),
   ]);
+  const predictedSystem = topicRoute.system;
   const lastAiText = previousMessages.filter(m => m.role === 'assistant').at(-1)?.parts.filter((p): p is { type: 'text'; text: string } => p.type === 'text').map(p => p.text).join(' ') ?? '';
   const quizFire = detectQuizFire(queryText, lastAiText);
   console.log(`[clea-chat] stage=parallel-reads ms=${(performance.now() - t0).toFixed(0)}`);
@@ -258,7 +287,7 @@ export async function POST(request: NextRequest) {
       // parameterized UIMessage<...> generic; without one, TS can't unify
       // our concrete tool() definitions with its default unknown/unknown
       // shape even though they're structurally compatible at runtime.
-      tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress } as unknown as Record<string, never>,
+      tools: { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, searchPubMed, queryMyAttempts, queryCurriculumProgress } as unknown as Record<string, never>,
     });
   } catch (error) {
     if (error instanceof TypeValidationError) {
@@ -274,8 +303,11 @@ export async function POST(request: NextRequest) {
   console.log(`[clea-chat] stage=updateSummary ms=${(performance.now() - summaryT0).toFixed(0)}`);
   const recentMessages = validatedMessages.slice(upTo);
   const modelMessages = await convertToModelMessages(recentMessages);
-  const sharedTools = { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress };
-  const chatTools = { queryQbank, queryCurriculum, queryMyAttempts, queryCurriculumProgress };
+  // Pre-narrow qbank lookups to the router-predicted system when the model omits
+  // one (no-op if the prediction can't be mapped to a qbank system vocab).
+  const scopedQueryQbank = makeQueryQbank(predictedSystem);
+  const sharedTools = { queryQbank: scopedQueryQbank, queryCurriculum, searchPathoma, searchFirstAid, queryMyAttempts, queryCurriculumProgress };
+  const chatTools = { queryQbank: scopedQueryQbank, queryCurriculum, queryMyAttempts, queryCurriculumProgress, searchPubMed };
 
   // Quiz-explain turns are exactly where "never quote the vignette" /
   // "never lead with the answer" get violated, and the filler-ack already
@@ -287,18 +319,18 @@ export async function POST(request: NextRequest) {
     const genT0 = performance.now();
     const generate = (system: string) =>
       generateText({
-        model: deepseek('deepseek-chat'),
+        model: deepseek('deepseek-v4-flash'),
         system,
         messages: modelMessages,
     tools: sharedTools,
         stopWhen: stepCountIs(8),
       });
 
-    const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire);
+    const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
     let { text: finalText } = await generate(baseSystem);
     // ponytail: enforce grounding — if RAG found nothing and reply doesn't admit it, override
     if (!groundingHits && !quizFire && !/do not cover|no relevant|not in your/i.test(finalText)) {
-      finalText = 'Your reference materials do not cover this topic. Would you like me to search the curriculum instead?';
+      finalText = 'Your reference materials do not cover this topic.';
     }
     let violation = detectGuardrailViolation(finalText, activity);
     if (violation) {
@@ -344,10 +376,60 @@ export async function POST(request: NextRequest) {
     return createUIMessageStreamResponse({ stream });
   }
 
+  const chatSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
+
+  // General chat had no code-level grounding check (unlike the quiz-explain
+  // branch above) — that's exactly the gap that let ungrounded answers (e.g.
+  // "standard USMLE content" citations) stream straight to the client. Book
+  // grounding is known upfront here, so only the no-grounding case pays for a
+  // buffered generate+override; the common grounded case still streams.
+  // ponytail: same blind spot as the quiz-path override — a mid-generation
+  // tool call (queryQbank/searchPubMed) can produce a legitimately grounded
+  // answer even when book groundingHits is empty, and this will still nuke
+  // it. Narrow the check to tool-call presence if that starts misfiring.
+  if (!groundingHits && !quizFire) {
+    const genT0 = performance.now();
+    let finalText: string;
+    try {
+      const { text: rawText } = await generateText({
+        model: deepseek('deepseek-v4-flash'),
+        system: chatSystem,
+        messages: modelMessages,
+        tools: chatTools,
+        stopWhen: stepCountIs(8),
+      });
+      finalText = /do not cover|no relevant|not in your/i.test(rawText)
+        ? rawText
+        : 'Your reference materials do not cover this topic.';
+    } catch (error) {
+      void logAgentError({ chatId: id, route: 'clea-chat/guarded-generate-nogrounding' }, error);
+      finalText = clientErrorMessage(error);
+    }
+    console.log(`[clea-chat] stage=guarded-generate-nogrounding ms=${(performance.now() - genT0).toFixed(0)}`);
+
+    const stream = createUIMessageStream({
+      originalMessages: validatedMessages,
+      execute: ({ writer }) => {
+        writer.write({ type: 'start' });
+        writer.write({ type: 'start-step' });
+        writer.write({ type: 'text-start', id: 'txt-0' });
+        writer.write({ type: 'text-delta', id: 'txt-0', delta: finalText });
+        writer.write({ type: 'text-end', id: 'txt-0' });
+        writer.write({ type: 'finish-step' });
+        writer.write({ type: 'finish' });
+      },
+      onError: clientErrorMessage,
+      onEnd: ({ messages }) => {
+        void saveChat({ chatId: id, messages });
+      },
+    });
+    return createUIMessageStreamResponse({ stream });
+  }
+
   let firstChunkLogged = false;
   const result = streamText({
-    model: deepseek('deepseek-chat'),
-    system: buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire),
+    model: deepseek('deepseek-v4-flash'),
+    system: chatSystem,
     messages: modelMessages,
     tools: chatTools,
     stopWhen: stepCountIs(8),
