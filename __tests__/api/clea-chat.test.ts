@@ -5,6 +5,14 @@
 // which Node provides natively but jsdom (this repo's default test
 // environment) does not.
 
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: (body: any, init?: any) => ({
+      status: init?.status || 200,
+      json: async () => body,
+    }),
+  },
+}));
 jest.mock('next/server', () => ({
   NextResponse: {
     json: (body: any, init?: any) => ({
@@ -16,6 +24,17 @@ jest.mock('next/server', () => ({
 
 const chatStore = new Map<string, any[]>();
 
+vi.mock('@/lib/clea-chat-store', () => ({
+  loadChat: async (id: string) => chatStore.get(id) ?? [],
+  saveChat: async ({ chatId, messages }: { chatId: string; messages: any[] }) => {
+    chatStore.set(chatId, messages);
+  },
+  loadSummary: async () => null,
+  saveSummary: async () => {},
+  deleteChat: async (id: string) => {
+    chatStore.delete(id);
+  },
+}));
 jest.mock('@/lib/clea-chat-store', () => ({
   loadChat: async (id: string) => chatStore.get(id) ?? [],
   saveChat: async ({ chatId, messages }: { chatId: string; messages: any[] }) => {
@@ -28,8 +47,17 @@ jest.mock('@/lib/clea-chat-store', () => ({
   },
 }));
 
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({
+    auth: { getUser: async () => ({ data: { user: { id: 'test-user' } } }) },
+    from: () => ({
+      select: () => ({ order: async () => ({ data: [] }) }),
+    }),
+  }),
+}));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
+    auth: { getUser: async () => ({ data: { user: { id: 'test-user' } } }) },
     from: () => ({
       select: () => ({ order: async () => ({ data: [] }) }),
     }),
@@ -133,8 +161,9 @@ describe('POST /api/clea-chat', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 500 when DEEPSEEK_API_KEY is not configured', async () => {
+  it('returns 500 when no LLM API key is configured', async () => {
     delete process.env.DEEPSEEK_API_KEY;
+    delete process.env.OPENAI_API_KEY;
     const res = await POST(fakePostRequest({ id: 'chat-x', message: { id: 'm1', role: 'user', parts: [] }, activity: null }));
     expect(res.status).toBe(500);
   });

@@ -12,10 +12,12 @@ import {
   type UIMessage,
 } from 'ai';
 import { deepseek } from '@ai-sdk/deepseek';
+import { openai } from '@ai-sdk/openai';
 import type { ActivitySnapshot } from '@/lib/watch-context';
 import type { QuizAttempt } from '@/lib/quizAttempts';
 import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, searchPubMed, makeQueryMyAttempts, makeQueryCurriculumProgress, searchBooks, makeQueryQbank } from '@/lib/clea-tools';
 import { routeTopic } from '@/lib/topic-router';
+import { correctText } from '@/lib/asr-correct';
 import { loadChat, saveChat, loadSummary, saveSummary, deleteChat } from '@/lib/clea-chat-store';
 import { createClient } from '@/lib/supabase/server'
 import { logAgentError, clientErrorMessage } from '@/lib/agent-error-logger';
@@ -32,6 +34,27 @@ export const dynamic = 'force-dynamic';
 // newest-first accumulating estimated tokens; anything that doesn't fit gets
 // folded into the summary in one call, same batching-over-per-turn tradeoff
 // as before (still snaps `upTo` forward in one jump, never a context gap).
+const FALLBACK_MODEL = 'gpt-4o-mini';
+// Once deepseek fails, every other call in the process skips straight to
+// openai — no auto-retry timer. Stays down until the process restarts
+// (manual redeploy/restart = the "manual" reset).
+// ponytail: process-lifetime in-memory flag, not persisted — fine for this
+// single-instance deployment; a multi-instance/serverless deploy would need
+// this in Supabase/Redis instead.
+let deepseekDown = false;
+
+async function generateTextWithFallback(opts: Record<string, unknown>) {
+  if (deepseekDown) {
+    return await generateText({ ...opts, model: openai(FALLBACK_MODEL) } as any);
+  }
+  try {
+    return await generateText({ ...opts, model: deepseek('deepseek-v4-flash') } as any);
+  } catch (e) {
+    console.warn('[clea-chat] deepseek failed, disabling it for rest of process — falling back to openai until manual restart', e);
+    deepseekDown = true;
+    return await generateText({ ...opts, model: openai(FALLBACK_MODEL) } as any);
+  }
+}
 const TARGET_CONTEXT_TOKENS = 24_000;
 const RESERVE_ANSWER_TOKENS = 8_000;
 const RESERVE_DOCS_TOKENS = 2_000;
@@ -88,14 +111,14 @@ async function updateSummary(
     return updated;
   }
 
-  const { text: newText } = await generateText({
-    model: deepseek('deepseek-v4-flash'),
+  const res = await generateTextWithFallback({
     system:
       'Summarize this study-assistant conversation excerpt in under 150 words. Keep concrete facts (topics covered, questions asked, decisions made) that would help the assistant continue the conversation naturally. Be terse.',
     prompt: text
       ? `Existing summary of earlier turns:\n${text}\n\nNew turns to fold in:\n${transcript}`
       : `Turns to summarize:\n${transcript}`,
   });
+  const newText = (res as any).text;
 
   const updated = { text: newText, upTo: upTo + foldCount };
   await saveSummary(chatId, updated);
@@ -129,8 +152,8 @@ const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY: 1 line of clue fra
 
 function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false, predictedSystem: string | null = null): string {
   const base = quizFire
-    ? "You are Clea. QUIZ-FIRE MODE. Output ONLY: 1 line of clue fragments (no full sentences), blank line, A) ... B) ... separate lines, 'Answer: [A/B]'. Zero full sentences anywhere. No intro line. No 'the clues point to'. No definitions. No explanations. Never elaborate. Never add text before the clue line." + QUIZ_FIRE_ONE_SHOT
-    : "You are Clea, a concise USMLE Step 1 study assistant. GROUNDING RULE: Answer ONLY from Pathoma/First Aid/excerpts provided below. If those excerpts don't contain relevant info, say 'Your reference materials do not cover this topic'. Never use outside knowledge. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress, searchPubMed. searchPubMed is second intention only — call it only after Pathoma/First Aid/qbank were checked and came up empty, never as a first move, and only once you've asked the student whether they want you to check PubMed for outside literature (peer-reviewed, 2020+) and they said yes. Never call it unprompted or unconfirmed. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
+    ? "You are Clea. QUIZ-FIRE MODE. GROUNDING RULE: only quiz on topics covered by the Pathoma/First Aid/excerpts provided below or the active vignette; if the requested topic is not covered and not the active vignette, say 'Your reference materials do not cover this topic' instead of quizzing on outside knowledge. Otherwise output ONLY: 1 line of clue fragments (no full sentences), blank line, A) ... B) ... separate lines, 'Answer: A' or 'Answer: B' (the single correct letter, never the literal text \"A/B\"). Zero full sentences anywhere. No intro line. No 'the clues point to'. No definitions. No explanations. Never elaborate. Never add text before the clue line." + QUIZ_FIRE_ONE_SHOT
+    : "You are Clea, a concise USMLE Step 1 study assistant. GROUNDING RULE: Answer ONLY from Pathoma/First Aid/excerpts provided below. If those excerpts don't contain relevant info, say 'Your reference materials do not cover this topic'. Never use outside knowledge. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress, searchPubMed. A request for practice questions must call queryQbank, and a question about disease/topic frequency or study schedule must call queryCurriculum — the GROUNDING RULE above is about medical-content questions, not these; never refuse them as 'not covered' without calling the matching tool first. searchPubMed is second intention only — call it only after Pathoma/First Aid/qbank were checked and came up empty, never as a first move, and only once you've asked the student whether they want you to check PubMed for outside literature (peer-reviewed, 2020+) and they said yes. Never call it unprompted or unconfirmed. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -200,7 +223,16 @@ function messageQueryText(message: UIMessage): string {
     .slice(0, 300);
 }
 
+async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  if (!(await requireUser(supabase))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const id = request.nextUrl.searchParams.get('id');
   if (!id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -210,6 +242,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  if (!(await requireUser(supabase))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { id } = (await request.json()) as { id: string };
   if (!id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -219,8 +255,13 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return NextResponse.json({ error: 'DEEPSEEK_API_KEY not configured' }, { status: 500 });
+  if (!process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'No LLM API key configured (need DEEPSEEK_API_KEY or OPENAI_API_KEY)' }, { status: 500 });
+  }
+
+  const authSupabase = await createClient();
+  if (!(await requireUser(authSupabase))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const { id, message, activity: clientActivity, quizAttempts: clientAttempts } = (await request.json()) as {
@@ -249,6 +290,14 @@ export async function POST(request: NextRequest) {
   // Quiz answer turns are often just a bare letter ("A"/"B") — searching that
   // literally returns nothing, so ground on the vignette text instead when present.
   const queryText = activity?.questionText || messageQueryText(message);
+  // Quiz-fire intent lives in what the user actually typed/said, not the
+  // vignette — using queryText here would hide "quiz me..." behind an
+  // on-screen question's text whenever activity.questionText is set.
+  const userMessageText = messageQueryText(message);
+  // Typed queries carry the same kind of typo/mangling ASR corrects for voice
+  // (e.g. "adamsts13", "wvf" for "vwf") — reuse correctText so a dictionary
+  // hit fixes search/routing without touching quiz-fire letter-answer detection.
+  const searchQueryText = queryText ? correctText(queryText) : queryText;
   // ponytail: per-leg timing proves routeTopic finishes inside searchBooks's
   // shadow (leg=routeTopic ms ≪ leg=searchBooks ms), so it adds ~0 wall time.
   const timed = <T,>(label: string, p: Promise<T>): Promise<T> => {
@@ -259,12 +308,12 @@ export async function POST(request: NextRequest) {
     supabase.from('quiz_attempts').select('*').order('created_at', { ascending: false }),
     supabase.from('curriculum_progress').select('block_id'),
     loadChat(id),
-    queryText ? timed('searchBooks', searchBooks(queryText)) : Promise.resolve(''),
-    queryText ? timed('routeTopic', routeTopic(queryText)) : Promise.resolve({ system: null, confidence: 'none' as const }),
+    searchQueryText ? timed('searchBooks', searchBooks(searchQueryText)) : Promise.resolve(''),
+    searchQueryText ? timed('routeTopic', routeTopic(searchQueryText)) : Promise.resolve({ system: null, confidence: 'none' as const }),
   ]);
   const predictedSystem = topicRoute.system;
   const lastAiText = previousMessages.filter(m => m.role === 'assistant').at(-1)?.parts.filter((p): p is { type: 'text'; text: string } => p.type === 'text').map(p => p.text).join(' ') ?? '';
-  const quizFire = detectQuizFire(queryText, lastAiText);
+  const quizFire = detectQuizFire(userMessageText, lastAiText);
   console.log(`[clea-chat] stage=parallel-reads ms=${(performance.now() - t0).toFixed(0)}`);
 
   const attempts: QuizAttempt[] = (attemptsRes.data || []).map((row: any) => ({
@@ -317,14 +366,13 @@ export async function POST(request: NextRequest) {
   // straight through below, since eval showed those rules hold up fine there.
   if (activity && activity.questionText) {
     const genT0 = performance.now();
-    const generate = (system: string) =>
-      generateText({
-        model: deepseek('deepseek-v4-flash'),
+    const generate = async (system: string) =>
+      generateTextWithFallback({
         system,
         messages: modelMessages,
-    tools: sharedTools,
+        tools: sharedTools,
         stopWhen: stepCountIs(8),
-      });
+      }) as ReturnType<typeof generateText>;
 
     const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
     let { text: finalText } = await generate(baseSystem);
@@ -390,15 +438,25 @@ export async function POST(request: NextRequest) {
   if (!groundingHits && !quizFire) {
     const genT0 = performance.now();
     let finalText: string;
+    // toolCalls/toolResults from whichever generateText call actually ran —
+    // a tool-driven answer (queryMyAttempts/queryCurriculumProgress/queryQbank/
+    // queryCurriculum) is grounded in Supabase, not book excerpts, so it must
+    // survive the no-grounding override below instead of being nuked to the
+    // canned refusal, and its tool call needs to reach the client same as any
+    // other branch would.
+    let toolCalls: { toolCallId: string; toolName: string; input: unknown }[] = [];
+    let toolResults: { toolCallId: string; output: unknown }[] = [];
     try {
-      const { text: rawText } = await generateText({
-        model: deepseek('deepseek-v4-flash'),
+      const res = (await generateTextWithFallback({
         system: chatSystem,
         messages: modelMessages,
         tools: chatTools,
         stopWhen: stepCountIs(8),
-      });
-      finalText = /do not cover|no relevant|not in your/i.test(rawText)
+      })) as Awaited<ReturnType<typeof generateText>>;
+      const rawText = res.text;
+      toolCalls = res.toolCalls;
+      toolResults = res.toolResults;
+      finalText = toolCalls.length > 0 || /do not cover|no relevant|not in your/i.test(rawText)
         ? rawText
         : 'Your reference materials do not cover this topic.';
     } catch (error) {
@@ -412,6 +470,13 @@ export async function POST(request: NextRequest) {
       execute: ({ writer }) => {
         writer.write({ type: 'start' });
         writer.write({ type: 'start-step' });
+        for (const call of toolCalls) {
+          writer.write({ type: 'tool-input-available', toolCallId: call.toolCallId, toolName: call.toolName, input: call.input });
+          const result = toolResults.find((r) => r.toolCallId === call.toolCallId);
+          if (result) {
+            writer.write({ type: 'tool-output-available', toolCallId: call.toolCallId, output: result.output });
+          }
+        }
         writer.write({ type: 'text-start', id: 'txt-0' });
         writer.write({ type: 'text-delta', id: 'txt-0', delta: finalText });
         writer.write({ type: 'text-end', id: 'txt-0' });
@@ -426,31 +491,46 @@ export async function POST(request: NextRequest) {
     return createUIMessageStreamResponse({ stream });
   }
 
-  let firstChunkLogged = false;
-  const result = streamText({
-    model: deepseek('deepseek-v4-flash'),
-    system: chatSystem,
-    messages: modelMessages,
-    tools: chatTools,
-    stopWhen: stepCountIs(8),
-    onChunk: () => {
-      if (firstChunkLogged) return;
-      firstChunkLogged = true;
-      console.log(`[clea-chat] stage=streamText-first-chunk ms=${(performance.now() - t0).toFixed(0)}`);
-    },
-    onError: ({ error }) => {
-      void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);
-    },
-  });
+  const genT0 = performance.now();
+  let responseText: string;
+  try {
+    const res = await generateTextWithFallback({
+      system: chatSystem,
+      messages: modelMessages,
+      tools: chatTools,
+      stopWhen: stepCountIs(8),
+    });
+    responseText = res.text;
+    // quizFire skips the no-grounding branch's refusal override (line 436) so
+    // an active-vignette quiz can still work with zero book hits, but that
+    // let quiz-fire-on-an-untethered-topic (e.g. "quiz me on Raft consensus")
+    // fall through here with no grounding check at all and answer from
+    // outside knowledge. Gate it here: no book hits, no active vignette, no
+    // tool call to ground the answer in Supabase data -> refuse.
+    if (quizFire && !groundingHits && !activity?.questionText && res.toolCalls.length === 0 && !/do not cover|no relevant|not in your/i.test(responseText)) {
+      responseText = 'Your reference materials do not cover this topic.';
+    }
+  } catch (error) {
+    void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);
+    responseText = clientErrorMessage(error);
+  }
+  console.log(`[clea-chat] stage=generateTextWithFallback ms=${(performance.now() - genT0).toFixed(0)}`);
 
-  return createUIMessageStreamResponse({
-    stream: toUIMessageStream({
-      stream: result.stream,
-      originalMessages: validatedMessages,
-      onError: clientErrorMessage,
-      onEnd: ({ messages }) => {
-        void saveChat({ chatId: id, messages });
-      },
-    }),
+  const stream = createUIMessageStream({
+    originalMessages: validatedMessages,
+    execute: ({ writer }) => {
+      writer.write({ type: 'start' });
+      writer.write({ type: 'start-step' });
+      writer.write({ type: 'text-start', id: 'txt-0' });
+      writer.write({ type: 'text-delta', id: 'txt-0', delta: responseText });
+      writer.write({ type: 'text-end', id: 'txt-0' });
+      writer.write({ type: 'finish-step' });
+      writer.write({ type: 'finish' });
+    },
+    onError: clientErrorMessage,
+    onEnd: ({ messages }) => {
+      void saveChat({ chatId: id, messages });
+    },
   });
+  return createUIMessageStreamResponse({ stream });
 }
