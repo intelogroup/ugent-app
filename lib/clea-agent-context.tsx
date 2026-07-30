@@ -4,9 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, generateId, type UIMessage } from 'ai';
 import { useWatch } from '@/lib/watch-context';
-import { useContinuousMic } from '@/lib/use-continuous-mic';
 import { useWhisperMic } from '@/lib/use-whisper-mic';
-import { getWhisperPipeline } from '@/lib/whisper-pipeline';
 import { correctText, stripTranscriptNoise } from '@/lib/asr-correct';
 import { logAsrTurn, getAsrLog, getAsrCorrections } from '@/lib/asr-log';
 import { getQuizAttempts } from '@/lib/quizAttempts';
@@ -140,17 +138,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const [voiceSurface, setVoiceSurface] = useState<VoiceSurface>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // WebGPU is required for the in-browser Whisper pipeline (transformers.js).
-  // Where it's unavailable (Safari, older browsers), fall back to the
-  // browser's built-in SpeechRecognition — worse VAD control, but zero setup.
-  const hasWebGpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
-
-  // Warm the Whisper pipeline as soon as the app mounts, not on first mic
-  // use — so the multi-hundred-MB model is already downloaded/compiled by
-  // the time the user actually presses the mic button.
   useEffect(() => {
-    if (hasWebGpu) getWhisperPipeline().catch((err) => console.error('whisper warm-up failed', err));
-    // Console handles to review ASR turns and mine dictionary candidates.
     (window as unknown as Record<string, unknown>).asrLog = getAsrLog;
     (window as unknown as Record<string, unknown>).asrMisses = getAsrCorrections;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,16 +161,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
     setIsSpeaking(false);
   };
 
-  const { modelLoading: whisperLoading } = useWhisperMic(
-    micActive && hasWebGpu,
-    isSpeaking,
-    onTranscript,
-    onBargeIn
-  );
-  // No raw audio access via SpeechRecognition, so it can't tell a barge-in
-  // from TTS bleed — keep the hard mute for this fallback path.
-  useContinuousMic(micActive && !isSpeaking && !hasWebGpu, onTranscript);
-  const micModelLoading = hasWebGpu && whisperLoading;
+  useWhisperMic(micActive, isSpeaking, onTranscript, onBargeIn);
 
   return (
     <CleaAgentContext.Provider
@@ -191,7 +170,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
         sendMessage: queuedSendMessage,
         micActive,
         toggleMic,
-        micModelLoading,
+        micModelLoading: false,
         voiceSurface,
         setVoiceSurface,
         isSpeaking,

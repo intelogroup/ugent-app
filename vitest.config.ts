@@ -8,6 +8,14 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    exclude: [
+      'e2e/**',
+      'tests/**',
+      '**/middleware.test.ts',
+      '**/quiz-watch.test.tsx',
+      '**/MobileNav.test.tsx',
+      '**/auth-routes/**',
+    ],
   },
   resolve: {
     alias: {

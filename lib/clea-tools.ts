@@ -8,6 +8,10 @@ import { analyzeQuestions, getSystemDiseaseMap } from '@/lib/curriculum/analyzer
 import { generateCurriculum } from '@/lib/curriculum/generator';
 import { createClient } from '@/lib/supabase/server';
 import type { QuizAttempt } from '@/lib/quizAttempts';
+import { levenshtein } from '@/lib/asr-correct';
+import commonEnglishWords from '@/lib/common-english.json';
+
+const COMMON_ENGLISH = new Set(commonEnglishWords as string[]);
 
 
 type TextPage = { page: number; text: string };
@@ -39,12 +43,43 @@ const STOPWORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'over', 'un
   'and', 'or', 'but', 'with', 'without', 'for', 'from', 'by', 'at', 'as', 'this', 'that', 'these', 'those',
   'its', 'it', 'his', 'her', 'their', 'one', 'low', 'high', 'due', 'per', 'into', 'onto', 'not']);
 
-function searchByWordOverlap(file: string, query: string, limit: number) {
-  const lines = readFileSync(path.join(process.cwd(), 'data', file), 'utf8')
+// Substring matching let short words match inside unrelated longer words
+// ("car" inside "cardiac"/"carcinoma") — whole-word boundary check instead.
+const wordReCache = new Map<string, RegExp>();
+function containsWord(lower: string, w: string): boolean {
+  let re = wordReCache.get(w);
+  if (!re) {
+    re = new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    wordReCache.set(w, re);
+  }
+  return re.test(lower);
+}
+
+function readPages(file: string): TextPage[] {
+  return readFileSync(path.join(process.cwd(), 'data', file), 'utf8')
     .split('\n')
-    .filter(Boolean);
-  const words = query.toLowerCase().split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
-  const pages = lines.map((line) => JSON.parse(line) as TextPage);
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as TextPage);
+}
+
+// Junk tokens in a noisy/ASR-garbled query (e.g. "debu", "kIt's", "best.eep")
+// dilute the embedding's semantic signal enough to drop cosine similarity
+// below threshold even when the real question inside the noise is on-topic.
+// Word-overlap already ignores words with zero page hits; reuse that same
+// "does this word appear anywhere in the book" signal to build a cleaned
+// query for the embedding leg too, instead of embedding the raw sentence.
+function cleanQueryForBook(pages: TextPage[], query: string): string {
+  const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
+  if (words.length === 0) return query;
+  const lowerPages = pages.map(({ text }) => text.toLowerCase());
+  const meaningful = words.filter((w) => lowerPages.some((lower) => containsWord(lower, w)));
+  return meaningful.length > 0 ? meaningful.join(' ') : query;
+}
+
+function searchByWordOverlap(file: string, query: string, limit: number) {
+  // Strip punctuation so trailing "?"/"!" don't get glued onto the word ("wvf?").
+  const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
+  const pages = readPages(file);
 
   // Count how many pages contain each word — words that appear in 0 pages
   // are junk (garbled ASR, gibberish, misspellings) and shouldn't inflate
@@ -53,15 +88,44 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
   for (const { text } of pages) {
     const lower = text.toLowerCase();
     for (const w of words) {
-      if (lower.includes(w)) wordPageCount.set(w, (wordPageCount.get(w) ?? 0) + 1);
+      if (containsWord(lower, w)) wordPageCount.set(w, (wordPageCount.get(w) ?? 0) + 1);
     }
   }
   const meaningfulWords = words.filter((w) => (wordPageCount.get(w) ?? 0) > 0);
+
+  // Long/technical words (medical acronyms like "adamts13", "vwf") with zero
+  // exact hits are the classic ASR-mangled-typo case ("adamsts13", "wvf" —
+  // transposed letters). Fuzzy-match these against real page tokens instead
+  // of dropping them outright; short/common words skip this since Levenshtein
+  // over a whole corpus is too permissive for 3-4 letter words.
+  const fuzzyWords = words.filter((w) => w.length > 5 && (wordPageCount.get(w) ?? 0) === 0);
+  const pageFuzzyMatches = new Map<number, Set<string>>(); // page index -> matched fuzzy words
+  if (fuzzyWords.length > 0) {
+    const pageTokenCache = pages.map(({ text }) => new Set(text.toLowerCase().match(/[a-z0-9]+/g) ?? []));
+    for (const w of fuzzyWords) {
+      let pageCount = 0;
+      pageTokenCache.forEach((tokens, idx) => {
+        for (const t of tokens) {
+          if (t.length > 5 && Math.abs(t.length - w.length) <= 2 && levenshtein(w, t) <= 2) {
+            pageCount++;
+            if (!pageFuzzyMatches.has(idx)) pageFuzzyMatches.set(idx, new Set());
+            pageFuzzyMatches.get(idx)!.add(w);
+            break;
+          }
+        }
+      });
+      if (pageCount > 0) {
+        wordPageCount.set(w, pageCount);
+        meaningfulWords.push(w);
+      }
+    }
+  }
   if (meaningfulWords.length === 0) return [];
 
-  const scored = pages.map(({ page, text }) => {
+  const scored = pages.map(({ page, text }, idx) => {
     const lower = text.toLowerCase();
-    const matched = meaningfulWords.filter((w) => lower.includes(w));
+    const fuzzyHere = pageFuzzyMatches.get(idx);
+    const matched = meaningfulWords.filter((w) => containsWord(lower, w) || fuzzyHere?.has(w));
     return { page, text, matched };
   });
 
@@ -73,8 +137,26 @@ function searchByWordOverlap(file: string, query: string, limit: number) {
   const thresholds = [Math.ceil(meaningfulWords.length * 0.6), Math.ceil(meaningfulWords.length * 0.3), 3];
   const threshold = thresholds.find((t) => t <= maxScore) ?? 3;
 
+  // Rare/distinctive terms (e.g. "ADAMTS13", "Schilling") appear on only a
+  // handful of pages corpus-wide — a match on one of these is not coincidence
+  // the way a generic word match is, so it clears the bar on its own even
+  // when a verbose/full-sentence query dilutes the overall word count below
+  // `threshold`. Fixes rare proper-noun/acronym queries getting dropped by
+  // the ratio-based threshold above.
+  // Gated on NOT being in the general-English dictionary — an off-topic query
+  // ("chocolate chip cookies") is corpus-rare for the same structural reason
+  // (this is a medical book), so raw page-count rarity alone would false-
+  // ground on any off-topic word that happens to also appear coincidentally
+  // (verified: matched a Pathoma page on "chocolate"/"chip"/"cookies" before
+  // this gate — the exact false-grounding failure mode the floor-3 threshold
+  // above was already built to prevent).
+  const RARE_PAGE_COUNT = 3;
+  const rareWords = new Set(
+    meaningfulWords.filter((w) => w.length > 3 && !COMMON_ENGLISH.has(w) && (wordPageCount.get(w) ?? 0) <= RARE_PAGE_COUNT)
+  );
+
   return scored
-    .filter((s) => s.matched.length >= threshold)
+    .filter((s) => s.matched.length >= threshold || s.matched.some((w) => rareWords.has(w)))
     .sort((a, b) => b.matched.length - a.matched.length)
     .slice(0, limit)
     .map(({ page, text }) => ({ page, excerpt: buildExcerpt(query, text) }));
@@ -120,15 +202,20 @@ async function searchByEmbedding(book: 'pathoma' | 'firstaid', query: string, li
 
 async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query: string, limit: number) {
   try {
-    const semanticHits = await searchByEmbedding(book, query, limit);
+    const cleanedQuery = cleanQueryForBook(readPages(file), query);
+    const semanticHits = await searchByEmbedding(book, cleanedQuery, limit);
     if (semanticHits) return semanticHits;
+    console.log(`[clea-tools] stage=fallback book=${book} reason=no-hits-above-threshold query="${query}"`);
   } catch (error) {
     // Supabase/OpenAI outage, bad key, or rate limit shouldn't take down the
     // whole tool call — degrade to local word-overlap rather than surfacing
     // an error to Clea.
+    console.log(`[clea-tools] stage=fallback book=${book} reason=embed-error query="${query}"`);
     console.error('searchByEmbedding failed, falling back to word overlap', error);
   }
-  return searchByWordOverlap(file, query, limit);
+  const overlapHits = searchByWordOverlap(file, query, limit);
+  console.log(`[clea-tools] stage=word-overlap-result book=${book} hits=${overlapHits.length} pages=${overlapHits.map((h) => h.page).join(',')}`);
+  return overlapHits;
 }
 
 // Server-side prefetch used by the chat route to inject grounding excerpts

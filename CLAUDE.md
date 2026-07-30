@@ -4,17 +4,16 @@ No markdown in chat replies: no asterisks/bold, no bullet lists, no headers. Pla
 # Ugent — USMLE Study Platform
 
 ## Overview
-Next.js 16 (App Router) + Convex backend (disabled) + Supabase Auth. Data-driven USMLE Step 1 study platform: ingests, enriches, classifies medical questions and generates personalized study curricula.
+Next.js 16 (App Router) + Supabase (Auth + Postgres). Data-driven USMLE Step 1 study platform: ingests, enriches, classifies medical questions and generates personalized study curricula.
 
 ## Stack
 - Frontend: Next.js 16 (React 19), Tailwind v4, Recharts, Heroicons
-- Backend: Convex (disabled — free plan limit exceeded; local JSONL is the real data source)
-- Auth: Supabase (`@supabase/ssr`, `@supabase/supabase-js`) — email/password + magic link, session cookies via `middleware.ts`, RLS-backed `quiz_attempts`/`quiz_answers` (`supabase/migration.sql`)
+- Backend: Supabase Postgres + local JSONL in `data/` (curriculum source); no separate app backend
+- Auth: Supabase (`@supabase/ssr`, `@supabase/supabase-js`) — email/password + magic link, session cookies + route protection via `proxy.ts` (Next 16's renamed middleware), RLS-backed `quiz_attempts`/`quiz_answers` (`supabase/migration.sql`)
 - Testing: Jest + Vitest + Playwright
 
 ## Key Directories
 ```
-convex/          — Convex backend (kept as future migration reference only, not live)
 data/            — Question bank JSONL files (primary data source)
 lib/curriculum/  — Curriculum generator (data-driven study plan engine)
 app/curriculum/  — Curriculum page (interactive 19-week study timeline)
@@ -54,7 +53,6 @@ Adding new questions: raw → `medicospira-questions.jsonl` (needs text, correct
 - Tailwind v4 theme vars in `globals.css` (`--color-primary-600`, `--color-neutral-*`); component classes `.card`, `.stat-card`, `.btn-primary`, `.btn-secondary`
 - Dashboard pages wrap in `<DashboardLayout>`; nav links added via `lib/navigation.ts` (auto-propagates to Sidebar + MobileNav)
 - No emojis unless requested
-- Legacy Convex server modules use `// @ts-nocheck`; new code doesn't. `convex/schema.ts` is the canonical (but currently inert) data model.
 
 ## Voice / ASR pipeline
 Mic capture: `useWhisperMic` (`lib/use-whisper-mic.ts`, WebGPU + energy VAD) or `useContinuousMic` (browser `SpeechRecognition` fallback) — both feed `onTranscript` in `lib/clea-agent-context.tsx`.
@@ -70,7 +68,7 @@ Every voice turn (raw + corrected, including dropped/noise) logs to `data/asr-lo
 Gotcha: a full dev-server restart kills the HMR socket — open tabs run the stale bundle until manually refreshed.
 
 ## Clea agent, TTS, and avatar (brief)
-`lib/clea-agent-context.tsx` wires the voice/chat loop; tools in `lib/clea-tools.ts` (`searchPathoma`, `searchFirstAid`, `queryQbank`, `queryCurriculum`). TTS/lipsync chain: Kokoro (:8767) / Piper (:8768, dev-only, gated behind `!process.env.VERCEL`) → ElevenLabs `/stream` (`app/api/tts-audio`, `app/api/elevenlabs-tts`) as the cloud fallback that's the only path in prod. All three return WAV/16-bit PCM, streamed sentence by sentence — see the WAV/PCM and latency notes below. Avatar UI: `components/FloatingAvatar.tsx`, `Avatar.tsx`, `CleaLiveOrb.tsx`. `lib/watch-context.tsx` = watch-mode toggle (`clea-watch-enabled`). `lib/agent-error-logger.ts` logs AI SDK `APICallError`s to disk.
+`lib/clea-agent-context.tsx` wires the voice/chat loop; tools in `lib/clea-tools.ts` (`searchPathoma`, `searchFirstAid`, `queryQbank`, `queryCurriculum`, `searchPubMed`). TTS/lipsync chain: Kokoro (:8767) / Piper (:8768, dev-only, gated behind `!process.env.VERCEL`) → ElevenLabs `/stream` (`app/api/tts-audio`, `app/api/elevenlabs-tts`) as the cloud fallback that's the only path in prod. All three return WAV/16-bit PCM, streamed sentence by sentence — see the WAV/PCM and latency notes below. Avatar UI: `components/FloatingAvatar.tsx`, `Avatar.tsx`, `CleaLiveOrb.tsx`. `lib/watch-context.tsx` = watch-mode toggle (`clea-watch-enabled`). `lib/agent-error-logger.ts` logs AI SDK `APICallError`s to disk.
 
 ASR (`app/api/whisper-transcribe/route.ts`): OpenAI `gpt-4o-mini-transcribe` primary (cloud, works in prod) → local whisper.cpp fallback gated to dev only (`if (process.env.VERCEL) return 500` before attempting it) → in-browser Whisper as the client-side last resort.
 
@@ -101,6 +99,7 @@ Wav2Lip is non-commercial-licensed — the current `com.ugent.wav2lip-cloud` Mac
 - `lib/qbank.ts` — question bank reader (local JSONL). `lib/quizAttempts.ts` — quiz attempt read/write via Supabase `quiz_attempts` (`app/api/quiz-activity/route.ts` inserts, RLS-scoped to `user.id`); no localStorage attempt storage remains
 - `app/api/disease-reference` → `lib/curriculum/disease-reference.ts` — Strategy Hub per-disease data (`app/strategy/[disease]`, `app/strategy/clue-training`)
 - `lib/zod-schemas.ts` — shared Zod schemas for agent tool I/O
+- `lib/topic-router.ts` — deterministic specialty router ("Brain 1"). Maps an utterance to a USMLE system in-process, sub-ms, no LLM. Two-tier: exact disease-name phrase match → stopworded token vote, with a fuzzy tier (reuses `levenshtein` from `asr-correct.ts`) gated to short utterances (`FUZZY_MAX_WORDS=6`) between them. Index (`enriched.diseaseName → enriched.system`) is lazily built + cached from `medicospira-enriched.jsonl`. `canonicalizeSystem()` collapses the enriched data's 197 self-inconsistent `system` labels to canonical forms aligned with the qbank vocab. Wired into `app/api/clea-chat/route.ts` — `routeTopic(queryText)` rides the existing `Promise.all` behind `searchBooks` (zero added wall time, per-leg `leg=routeTopic ms` / `leg=searchBooks ms` logs prove it), feeding `predictedSystem` as a soft grounding hint and scoping qbank via `makeQueryQbank` (`clea-tools.ts`, bridged through `ENRICHED_SYSTEM_TO_QBANK`; unmapped/null → base tool, never zero-filters). Eval `scripts/eval-topic-router.ts` (replays enriched rows, RAW+CANON accuracy, macro-F1, per-tier, ablation), microbench `scripts/bench-topic-router.ts` (cold build ~139ms, warm short-query p50 ~0.004ms). Canon ceiling ~87.5%, macro-F1 0.72; residual is genuine multi-system disease ambiguity. Vignette routing stays a soft hint (~33%). Fuzzy is net-harmful on long text — hence the word-count gate.
 - `app/analytics`, `leaderboard`, `settings` — thin pages. `app/auth/login`, `app/auth/signup`, `app/auth/callback`, `app/auth/confirm` — Supabase auth flow (`lib/supabase/client.ts`, `lib/supabase/server.ts`); root `middleware.ts` gates protected routes via `supabase.auth.getUser()`
 
 ## Top tested diseases (current bank)
@@ -108,7 +107,7 @@ Pulmonary Embolism (3x), Tetralogy of Fallot (3x), Asthma (3x), TB (3x), Anaphyl
 
 <!-- forge-learnings:start -->
 ## Learnings (auto-maintained by /um — human edits go ABOVE this block)
-- Convex fully disconnected from the live app (2026-07-08) — no `convex/react`/`convex/nextjs` imports under `app/`. `convex/` kept only as migration reference.
+- Convex + WorkOS fully removed (2026-07-24) — `convex/` dir, `lib/convex-client.ts`, the `convex` npm dep, and 13 convex-coupled scripts deleted; @workos-inc was only a transitive of convex. App is Supabase-only for auth + data.
 - Billing/Stripe removed entirely (no `/pricing`, no `app/api/stripe/*`, no `lib/stripe.ts`).
 - Quiz questions come from Supabase `questions` table (`lib/qbank.ts`, migrated 2026-07-21 from `data/classified-questions.jsonl`, which stays as pipeline source of truth) via `app/api/quiz-data/route.ts`; quiz attempts are DB-backed via Supabase `quiz_attempts` (insert: `app/api/quiz-activity/route.ts`, read: `lib/quizAttempts.ts`/`app/api/clea-chat/route.ts`) — no localStorage attempt path remains (stale note corrected 2026-07-22).
 - Before deleting an `app/api/*` route, confirm zero callers with `grep -rl '/api/x' app --include='*.tsx'` — ~35 routes were orphaned dead code from a removed Prisma backend.
@@ -117,4 +116,6 @@ Pulmonary Embolism (3x), Tetralogy of Fallot (3x), Asthma (3x), TB (3x), Anaphyl
 - `lib/asr-dictionary.json` contains non-medical English words from scraping (`shaving`, `refused`, `non`, `dad`, `mine`, `rob`...) that caused false-positive corrections at edit-distance 1. Fixed via `ENGLISH_STOPLIST` in `lib/asr-correct.ts` — extend the stoplist as new collisions surface, don't prune the dictionary wholesale.
 - `lib/prisma.ts` deleted (2026-07-21) — zero callers, leftover from the already-removed Prisma backend.
 - `components/FloatingAvatar.tsx` idle video is `public/clea_avatar_loop.mp4` (2026-07-22, regenerated from source `public/clea_avatar.mp4`), not a raw native `<video loop>` of the source — plain looping cut abruptly since the source's bg pans and end-frame != start-frame. Fixed via a Python/MediaPipe pass (`SelfieSegmentation`, isolated venv to avoid downgrading global mediapipe/protobuf — see script pattern, not checked into repo) that builds a static bg plate from the per-pixel median of frames where each pixel is uncovered by the person, composites the moving foreground back over it, then ffmpeg ping-pongs (forward+reverse concat) the result so the loop seam is always frame0-to-frame0 regardless of clip length. Current loop is the full 10s source, frozen+ping-ponged to 20s. Regenerate by re-running that pipeline against `clea_avatar.mp4` if the source video changes.
+- `searchPubMed` tool added (2026-07-25, `lib/clea-tools.ts`) — E-utilities `esearch`+`esummary`, restricted to `2020:3000[pdat]` + `Journal Article[pt] NOT Preprint[pt]` (lazy peer-review proxy, no dedicated flag in E-utilities). Wired only into `chatTools` (general chat) in `app/api/clea-chat/route.ts`, not the quiz-explain branch. Second-intention + ask-first behavior is prompt-level only (system prompt tells the model to check Pathoma/First Aid/qbank first and get explicit user confirmation before calling it) — no code-level gate.
+- Grounding-enforcement override (buffered `generateText` + admission-regex check, replaces reply with a disclaimer if the model doesn't admit its own lack of coverage) previously existed only in the quiz-explain branch of `app/api/clea-chat/route.ts` — general chat's `streamText` path had no equivalent, which let ungrounded answers (e.g. "standard USMLE content" citations) stream straight through. Fixed 2026-07-25: same override pattern added to general chat, gated on `!groundingHits && !quizFire` so the common grounded case still streams normally (no buffering cost). Known residual gap (marked `ponytail:` in the code): the check only looks at upfront book-search `groundingHits`, not whether a mid-generation tool call (`queryQbank`/`searchPubMed`) produced legitimately grounded content — narrow to tool-call presence if that starts misfiring. The new buffered branch's `generateText` also got `onError`→`logAgentError` wiring (2026-07-25) to match the adjacent `streamText` call — it was previously silent on thrown errors.
 <!-- forge-learnings:end -->

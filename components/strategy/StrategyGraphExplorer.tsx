@@ -445,7 +445,8 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
         displayGraph.neighbors(selectedNodeId).forEach((id) => neighborIds.add(id));
       }
 
-      renderer = new Sigma(displayGraph, containerRef.current, {
+      try {
+        renderer = new Sigma(displayGraph, containerRef.current, {
         allowInvalidContainer: false,
         defaultNodeColor: "#64748B",
         defaultEdgeColor: "#CBD5E1",
@@ -484,7 +485,16 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
             zIndex: active ? 2 : 1,
           };
         },
-      });
+        });
+      } catch (err) {
+        // ponytail: WebGL context creation can fail when the browser hits its
+        // live-context limit (typically dev HMR churn). Degrade instead of
+        // white-screening; a hard refresh frees contexts and re-renders.
+        console.warn("[StrategyGraph] Sigma init failed (WebGL context unavailable):", err);
+        renderer?.kill();
+        renderer = null;
+        return;
+      }
 
       renderer.on("clickNode", ({ node }) => {
         setSelectedNodeId(node);

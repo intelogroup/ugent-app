@@ -1,7 +1,7 @@
 // Persists every voice turn so ASR corrections can be verified after the fact
 // and the dictionary/aliases grown from real Whisper output. Client-side
 // localStorage ring buffer — same no-DB pattern as `quiz-attempts` and
-// `curriculum-completed-blocks` (Convex is down).
+// `curriculum-completed-blocks` (Supabase-backed, no separate log DB).
 
 const KEY = 'asr-turn-log';
 const MAX = 500; // ponytail: ring buffer; bump if you need deeper history

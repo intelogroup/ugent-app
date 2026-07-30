@@ -20,7 +20,10 @@ export async function getQuizAttempts(): Promise<QuizAttempt[]> {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error || !data) return []
+    if (error || !data) {
+      if (error) console.error('[quizAttempts] fetch failed', error)
+      return []
+    }
 
     return data.map((row: any) => ({
       id: row.id,
@@ -31,7 +34,8 @@ export async function getQuizAttempts(): Promise<QuizAttempt[]> {
       correct: row.correct_answers,
       timeSpentSeconds: row.time_spent_seconds,
     }))
-  } catch {
+  } catch (e) {
+    console.error('[quizAttempts] fetch threw', e)
     return []
   }
 }

@@ -1,3 +1,6 @@
+vi.mock('@/lib/qbank');
+jest.mock('@/lib/qbank');
+
 import {
   searchPathoma,
   searchFirstAid,

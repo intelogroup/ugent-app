@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { SerialQueue } from './serial-queue';
-import { getWhisperPipeline, resampleTo16kMono } from './whisper-pipeline';
 
 // Empirical energy floor separating "silence" from "speech" on a typical mic —
 // tune per-device if false triggers show up in practice.
@@ -53,7 +52,6 @@ export function useWhisperMic(
   // down and recreate the mic stream mid-conversation.
   const suppressedRef = useRef(suppressed);
   suppressedRef.current = suppressed;
-  const [modelLoading, setModelLoading] = useState(false);
 
   useEffect(() => {
     if (!active) return;
@@ -132,7 +130,6 @@ export function useWhisperMic(
           .push(async () => {
             const t0 = performance.now();
             let text: string | undefined;
-            let via: 'openai' | 'local' = 'openai';
             try {
               const form = new FormData();
               form.append('audio', blob, `audio.${extension}`);
@@ -140,23 +137,15 @@ export function useWhisperMic(
               if (!res.ok) throw new Error(`whisper-transcribe returned ${res.status}`);
               text = ((await res.json()) as { text: string }).text?.trim();
             } catch (err) {
-              console.error('OpenAI transcription failed, falling back to local Whisper', err);
-              via = 'local';
-              const pcm = await resampleTo16kMono(blob);
-              setModelLoading(true);
-              const asr = await getWhisperPipeline();
-              setModelLoading(false);
-              const result: any = await asr(pcm);
-              text = (Array.isArray(result) ? result[0]?.text : result?.text)?.trim();
+              console.error('OpenAI transcription failed', err);
             }
             const t1 = performance.now();
             console.log(
-              `[whisper] via=${via} total=${(t1 - t0).toFixed(0)}ms totalSinceSilenceEnd=${(t1 - finalizedAt).toFixed(0)}ms`
+              `[whisper] total=${(t1 - t0).toFixed(0)}ms totalSinceSilenceEnd=${(t1 - finalizedAt).toFixed(0)}ms`
             );
             if (text && !stopped) onTranscriptRef.current(text);
           })
           .catch((err) => {
-            setModelLoading(false);
             console.error('whisper transcription failed', err);
           });
       };
@@ -322,5 +311,5 @@ export function useWhisperMic(
     };
   }, [active]);
 
-  return { modelLoading };
+  return {};
 }

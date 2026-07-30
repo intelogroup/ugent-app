@@ -14,7 +14,7 @@ type Discriminator = {
   ruleOutFact: string;
 };
 
-type DiseaseProfile = {
+export type DiseaseProfile = {
   diseaseName: string;
   topicType?: string;
   questionCount: number;

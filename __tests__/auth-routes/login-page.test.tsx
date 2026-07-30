@@ -54,7 +54,7 @@ describe('LoginPage', () => {
     fireEvent.change(document.querySelector('input[type="password"]')!, { target: { value: 'wrongpass' } })
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
 
-    expect(await screen.findByText('Invalid login credentials')).toBeInTheDocument()
+    expect(await screen.findByText('Incorrect email or password.')).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
   })
 })

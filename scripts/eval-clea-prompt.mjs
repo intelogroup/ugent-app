@@ -423,6 +423,41 @@ const cases = [
       return null;
     },
   },
+  // Regression cases for the 2026-07-29 book_pages anon-RLS bug: with no
+  // SELECT policy for the anon role, match_book_pages() silently returned
+  // zero rows for every request (chat route uses the anon-key client), so
+  // semantic search always fell through to weak word-overlap and the model
+  // refused well-covered top-tested diseases as "not covered".
+  {
+    name: 'grounding — asthma first-line treatment is answered, not refused',
+    input: { text: 'What is the first-line treatment for asthma?' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? `false refusal: ${r.reply}` : null),
+  },
+  {
+    name: 'grounding — Turner syndrome features answered, not refused',
+    input: { text: 'Tell me about Turner syndrome features' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? `false refusal: ${r.reply}` : null),
+  },
+  {
+    name: 'grounding — pulmonary embolism answered, not refused',
+    input: { text: 'What are the classic signs of pulmonary embolism?' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? `false refusal: ${r.reply}` : null),
+  },
+  {
+    name: 'grounding — tetralogy of Fallot answered, not refused',
+    input: { text: 'What are the four defects in tetralogy of Fallot?' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? `false refusal: ${r.reply}` : null),
+  },
+  {
+    name: 'grounding — anaphylaxis answered, not refused',
+    input: { text: 'What is the emergency treatment for anaphylaxis?' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? `false refusal: ${r.reply}` : null),
+  },
+  {
+    name: 'grounding — genuinely off-topic query still refuses (no over-correction)',
+    input: { text: 'What is the best recipe for chocolate chip cookies?' },
+    check: (r) => (/do not cover|no relevant|not in your/i.test(r.reply) ? null : `expected refusal, got: ${r.reply}`),
+  },
 ];
 
 async function main() {

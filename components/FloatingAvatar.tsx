@@ -11,7 +11,7 @@ const STREAM_WS_URL = process.env.NEXT_PUBLIC_WAV2LIP_WS_URL || 'ws://localhost:
 const PREBUFFER_FRAMES = 2;
 // Both clea1 sources (idle loop + Wav2Lip face clip) are the same 250-frame
 // clip — breaks if either is swapped for a different-length clip.
-const CLIP_FRAME_COUNT = 250;
+const CLIP_FRAME_COUNT = 240;
 const ENABLE_LIPSYNC = process.env.NODE_ENV === 'development' || !!process.env.NEXT_PUBLIC_WAV2LIP_WS_URL;
 
 // Spoken instantly while the real reply is still computing (RAG + LLM
@@ -28,11 +28,12 @@ export default function FloatingAvatar() {
     y: 24,
   }));
   const THUMB_SIZE = 64;
-  const [thumbPos, setThumbPos] = useState(() => ({
-    x: typeof window === 'undefined' ? 300 : window.innerWidth - THUMB_SIZE - 48,
-    y: 48,
-  }));
-  const videoSrc = '/clea1-avatar-480p.mp4';
+  const [thumbPos, setThumbPos] = useState({ x: 300, y: 48 });
+
+  useEffect(() => {
+    setThumbPos({ x: window.innerWidth - THUMB_SIZE - 48, y: 48 });
+  }, []);
+  const videoSrc = '/clea1-avatar-720p.mp4';
   // Prefetch /api/tts-audio while LLM streams. On each text tick, abort
   // old request and restart with accumulated text. When LLM finishes, the
   // last prefetched response (if resolved) is handed directly to Wav2Lip —
@@ -65,18 +66,41 @@ export default function FloatingAvatar() {
   // exact transition. Waiting for 'seeked' means the video shows the matched
   // frame before it ever becomes visible. Canvas holds its last frame (opaque)
   // during the short wait, so nothing flickers.
+  // Transition tracer — off by default, enable with localStorage.clea-avatar-trace='1'.
+  // Logs a monotonic timestamp + label at every talk<->idle edge so a "flick"
+  // can be traced to real state thrash instead of guessed at. See the seeked/
+  // fallback split below: if 'fallback' fires often, the seek is racing.
+  const trace = (label: string, extra?: Record<string, number>) => {
+    if (typeof window === 'undefined' || window.localStorage?.getItem('clea-avatar-trace') !== '1') return;
+    const parts = extra ? ' ' + Object.entries(extra).map(([k, v]) => `${k}=${v.toFixed(3)}`).join(' ') : '';
+    console.log(`[avatar-trace] +${performance.now().toFixed(1)}ms ${label}${parts}`);
+  };
+
   const resumeIdleVideo = (onReady: () => void) => {
     const video = idleVideoRef.current;
-    if (!video) { onReady(); return; }
+    if (!video) { trace('idle-resume:no-video'); onReady(); return; }
+    if (!video.paused) {
+      trace('idle-resume:already-playing', { at: video.currentTime });
+      onReady();
+      return;
+    }
     const start = () => { video.play().catch(() => {}); onReady(); };
     const target = lastFrameTimeRef.current;
     if (target > 0 && Math.abs(video.currentTime - target) > 0.02) {
+      trace('idle-resume:seek-start', { target, from: video.currentTime });
       let done = false;
-      const fire = () => { if (done) return; done = true; video.removeEventListener('seeked', fire); start(); };
-      video.addEventListener('seeked', fire);
+      const fire = (via: string) => () => {
+        if (done) return; done = true;
+        video.removeEventListener('seeked', seeked);
+        trace(`idle-resume:crossfade(${via})`, { at: video.currentTime });
+        start();
+      };
+      const seeked = fire('seeked');
+      video.addEventListener('seeked', seeked);
       video.currentTime = target;
-      setTimeout(fire, 120); // fallback if 'seeked' never fires
+      setTimeout(fire('fallback'), 120); // fallback if 'seeked' never fires
     } else {
+      trace('idle-resume:no-seek', { target, from: video.currentTime });
       start();
     }
   };
@@ -84,7 +108,7 @@ export default function FloatingAvatar() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Guards against overlapping speak() calls (e.g. a fast second reply while
   // the first is still streaming) stacking multiple audio/WS flows at once.
-  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket | null; endAudio?: () => void } | null>(null);
+  const activeSpeechRef = useRef<{ audio: HTMLAudioElement; ws: WebSocket | null; endAudio?: () => void; finish?: () => void } | null>(null);
   const orphanAudiosRef = useRef<Set<HTMLAudioElement>>(new Set());
   const lastSpokenTextRef = useRef<string | null>(null);
   const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,6 +124,96 @@ export default function FloatingAvatar() {
   // its own audio on top of the reply that replaced it.
   const speechGenRef = useRef(0);
 
+  // Persistent Wav2Lip socket. Opened once when the avatar owns the voice
+  // surface and kept warm across utterances — each reply is delimited by a
+  // {reset,epoch} control message rather than a fresh connect/disconnect, so
+  // there's no per-reply handshake (biggest jitter source over the prod
+  // tunnel). See plan: this-is-actually-the-toasty-bird.md.
+  const persistentWsRef = useRef<WebSocket | null>(null);
+  const wsEpochRef = useRef(0);           // bumped per utterance + per barge-in
+  const wsFpsRef = useRef(25);            // fps announced once on connect
+  const wsPendingRef = useRef<(string | Uint8Array)[]>([]); // queued until OPEN
+  // Set by the active speak() so the single persistent onmessage handler can
+  // route binary frames to it without being reassigned (which would drop the
+  // one-time fps text message).
+  const frameHandlerRef = useRef<((buf: ArrayBuffer) => void) | null>(null);
+  const wsReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wsKeepaliveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wsReconnectDelayRef = useRef(500);
+  // True while the avatar does NOT own the voice surface / is unmounting —
+  // suppresses auto-reconnect so leaving the surface actually closes the socket.
+  const wsTeardownRef = useRef(true);
+
+  const wsSend = (data: string | Uint8Array) => {
+    const ws = persistentWsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+    else { wsPendingRef.current.push(data); ensureWs(); }
+  };
+
+  const connectWs = () => {
+    if (wsTeardownRef.current) return;
+    const existing = persistentWsRef.current;
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return;
+    let ws: WebSocket;
+    try { ws = new WebSocket(STREAM_WS_URL); }
+    catch { scheduleReconnect(); return; }
+    ws.binaryType = 'arraybuffer';
+    persistentWsRef.current = ws;
+    ws.onopen = () => {
+      wsReconnectDelayRef.current = 500;
+      for (const d of wsPendingRef.current) ws.send(d);
+      wsPendingRef.current = [];
+      if (wsKeepaliveTimerRef.current) clearInterval(wsKeepaliveTimerRef.current);
+      // Cloudflare idles WS ~100s; a ping every 30s keeps the prod tunnel warm
+      // between replies so the connect-cost win isn't silently lost.
+      wsKeepaliveTimerRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ ping: 1 }));
+      }, 30000);
+    };
+    ws.onmessage = (ev) => {
+      if (typeof ev.data === 'string') {
+        try { const j = JSON.parse(ev.data); if (j.fps) wsFpsRef.current = j.fps; } catch { /* ignore */ }
+        return;
+      }
+      frameHandlerRef.current?.(ev.data as ArrayBuffer);
+    };
+    const drop = () => {
+      if (wsKeepaliveTimerRef.current) { clearInterval(wsKeepaliveTimerRef.current); wsKeepaliveTimerRef.current = null; }
+      if (persistentWsRef.current === ws) persistentWsRef.current = null;
+      scheduleReconnect();
+    };
+    ws.onclose = drop;
+    ws.onerror = drop;
+  };
+
+  const scheduleReconnect = () => {
+    if (wsTeardownRef.current || wsReconnectTimerRef.current) return;
+    const delay = wsReconnectDelayRef.current;
+    wsReconnectDelayRef.current = Math.min(delay * 2, 10000); // ponytail: capped exp backoff
+    wsReconnectTimerRef.current = setTimeout(() => {
+      wsReconnectTimerRef.current = null;
+      connectWs();
+    }, delay);
+  };
+
+  const ensureWs = () => {
+    if (wsTeardownRef.current) return null;
+    const ws = persistentWsRef.current;
+    if (!ws || (ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CONNECTING)) connectWs();
+    return persistentWsRef.current;
+  };
+
+  const teardownWs = () => {
+    wsTeardownRef.current = true;
+    frameHandlerRef.current = null;
+    wsPendingRef.current = [];
+    if (wsReconnectTimerRef.current) { clearTimeout(wsReconnectTimerRef.current); wsReconnectTimerRef.current = null; }
+    if (wsKeepaliveTimerRef.current) { clearInterval(wsKeepaliveTimerRef.current); wsKeepaliveTimerRef.current = null; }
+    const ws = persistentWsRef.current;
+    persistentWsRef.current = null;
+    if (ws) { ws.onclose = null; ws.onerror = null; try { ws.close(); } catch { /* noop */ } }
+  };
+
   // Called at the top of every speak() too (cancels a stray previous clip),
   // so it must NOT clear queueRef. Callers that want a full interrupt
   // (barge-in, surface switch, manual replay) clear queueRef themselves first.
@@ -113,10 +227,14 @@ export default function FloatingAvatar() {
     const active = activeSpeechRef.current;
     if (!active) return;
     activeSpeechRef.current = null;
-    active.ws?.close();
+    // Persistent socket stays open across the barge-in — advance the epoch so
+    // any in-flight frames from this utterance are discarded by the frame
+    // handler, but never close the connection.
+    wsEpochRef.current++;
     active.audio.pause();
     active.audio.src = '';
     active.endAudio?.();
+    active.finish?.();
     resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
   };
 
@@ -235,6 +353,7 @@ export default function FloatingAvatar() {
       let audioSampleRate: number | null = null;
       let wavEndedResolve: (() => void) | null = null;
       const wavEndedPromise = new Promise<void>((resolve) => { wavEndedResolve = resolve; });
+      const pcmQueue: { pcm: Uint8Array; sampleRate: number }[] = [];
       const endWavPlayback = () => {
         if (webAudioEnded) return;
         webAudioEnded = true;
@@ -250,6 +369,24 @@ export default function FloatingAvatar() {
       const scheduleWavChunk = (pcm: Uint8Array, sampleRate: number) => {
         const sampleCount = Math.floor(pcm.length / 2);
         if (sampleCount === 0) return;
+        // Hold audio until Wav2Lip video frames are ready — otherwise audio
+        // starts on chunk 1 (~470ms) while Wav2Lip needs 130-1485ms to infer
+        // and return the first frames, making mouth movement trail the voice
+        // for the entire reply instead of just the pre-buffer window.
+        if (ws && !videoStarted) {
+          if (pcmQueue.length === 0) {
+            setTimeout(() => {
+              if (!videoStarted) {
+                videoStarted = true;
+                for (const q of pcmQueue) scheduleWavChunk(q.pcm, q.sampleRate);
+                pcmQueue.length = 0;
+                startAudioPlayback();
+              }
+            }, 2000);
+          }
+          pcmQueue.push({ pcm, sampleRate });
+          return;
+        }
         if (!webAudioCtxBox.current) webAudioCtxBox.current = new AudioContext();
         const ctx = webAudioCtxBox.current;
         const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, sampleCount);
@@ -268,9 +405,24 @@ export default function FloatingAvatar() {
         if (!audioStarted) startAudioPlayback();
       };
 
-      const ws = ENABLE_LIPSYNC ? new WebSocket(STREAM_WS_URL) : null;
-      if (ws) ws.binaryType = 'arraybuffer';
-      activeSpeechRef.current = { audio, ws, endAudio: isWav ? endWavPlayback : undefined };
+      // One utterance on the persistent socket: bump the epoch, ensure the
+      // socket is up, and delimit this reply with a reset control message.
+      const myEpoch = ++wsEpochRef.current;
+      let utteranceFinished = false;
+      let doneResolve: () => void = () => {};
+      const utteranceDone = new Promise<void>((r) => { doneResolve = r; });
+      const finishUtterance = () => {
+        if (utteranceFinished) return;
+        utteranceFinished = true;
+        frameHandlerRef.current = null;
+        activeSpeechRef.current = null;
+        orphanAudiosRef.current.delete(audio);
+        resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
+        doneResolve();
+      };
+      const ws = ENABLE_LIPSYNC ? ensureWs() : null;
+      if (ws) wsSend(JSON.stringify({ reset: true, epoch: myEpoch }));
+      activeSpeechRef.current = { audio, ws, endAudio: isWav ? endWavPlayback : undefined, finish: finishUtterance };
 
       // Strip WAV header from first chunk — Wav2Lip expects raw PCM.
       // Search for "data" marker to handle any ffmpeg-produced variant.
@@ -291,7 +443,6 @@ export default function FloatingAvatar() {
 
       const reader = audioRes.body!.getReader();
       let wavHeaderStripped = false;
-      const pcmBuffer: Uint8Array[] = [];
       let pendingSampleRate: number | null = null;
 
       const processChunk = (value: Uint8Array) => {
@@ -308,15 +459,11 @@ export default function FloatingAvatar() {
         }
         if (pcm.length === 0) return;
         if (ws) {
-          if (ws.readyState === WebSocket.OPEN) {
-            if (pendingSampleRate) {
-              ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
-              pendingSampleRate = null;
-            }
-            ws.send(pcm);
-          } else {
-            pcmBuffer.push(pcm);
+          if (pendingSampleRate) {
+            wsSend(JSON.stringify({ sampleRate: pendingSampleRate }));
+            pendingSampleRate = null;
           }
+          wsSend(pcm);
         }
         if (!stale() && audioSampleRate) scheduleWavChunk(pcm, audioSampleRate);
       };
@@ -396,15 +543,8 @@ export default function FloatingAvatar() {
             audioCtx.close();
             if (stale()) return;
 
-            const send = () => {
-              ws.send(JSON.stringify({ sampleRate: decoded.sampleRate }));
-              ws.send(pcmBytes);
-            };
-            if (ws.readyState === WebSocket.OPEN) {
-              send();
-            } else {
-              ws.addEventListener('open', send, { once: true });
-            }
+            wsSend(JSON.stringify({ sampleRate: decoded.sampleRate }));
+            wsSend(pcmBytes);
             console.log(`[tts] decoded MP3 -> PCM (${pcmBytes.byteLength} bytes @ ${decoded.sampleRate}Hz) for Wav2Lip`);
           }
         } catch (err) {
@@ -436,37 +576,36 @@ export default function FloatingAvatar() {
         return;
       }
 
-      await new Promise<void>((resolve, reject) => {
-        ws.onclose = () => resolve();
+      // Fallback completion for an utterance that yields no video frames
+      // (empty/near-silent reply): the paint loop is what normally finishes,
+      // but it never starts if no frame ever arrives.
+      audio.addEventListener('ended', () => { if (!videoStarted) finishUtterance(); }, { once: true });
+      wavEndedPromise.then(() => { if (!videoStarted) finishUtterance(); });
 
-        ws.onopen = () => {
-          console.log(`[tts] lipsync WS open at +${(performance.now() - t0).toFixed(0)}ms`);
-          if (pendingSampleRate) {
-            ws.send(JSON.stringify({ sampleRate: pendingSampleRate }));
-            pendingSampleRate = null;
-          }
-          // Flush buffered PCM chunks
-          for (const pcm of pcmBuffer) ws.send(pcm);
-          pcmBuffer.length = 0;
-        };
+      const onFrame = async (data: ArrayBuffer) => {
+        if (stale() || myEpoch !== wsEpochRef.current) return;
+        const buf = new Uint8Array(data);
+        const head = new DataView(buf.buffer, buf.byteOffset, 8);
+        if (head.getUint32(0, false) !== myEpoch) return; // straggler from a prior utterance
+        const idx = head.getUint32(4, false);
+        const bitmap = await createImageBitmap(new Blob([buf.slice(8)], { type: 'image/jpeg' }));
+        frames.set(idx, bitmap);
 
-        ws.onmessage = async (ev) => {
-          if (stale()) return;
-          if (typeof ev.data === 'string') {
-            fps = JSON.parse(ev.data).fps;
-            return;
-          }
-          const buf = new Uint8Array(ev.data as ArrayBuffer);
-          const idx = new DataView(buf.buffer, 0, 4).getUint32(0, false);
-          const bitmap = await createImageBitmap(new Blob([buf.slice(4)], { type: 'image/jpeg' }));
-          frames.set(idx, bitmap);
-
+        {
           if (!videoStarted && frames.size >= PREBUFFER_FRAMES) {
             videoStarted = true;
+            fps = wsFpsRef.current;
             videoStartedAt = performance.now() - t0;
             console.log(`[tts] VIDEO STARTED (${PREBUFFER_FRAMES} frames prebuffered) at +${videoStartedAt.toFixed(0)}ms`);
+            // WAV path: flush queued PCM now that video is ready
+            if (isWav && pcmQueue.length > 0) {
+              for (const q of pcmQueue) scheduleWavChunk(q.pcm, q.sampleRate);
+              pcmQueue.length = 0;
+              if (!audioStarted) startAudioPlayback();
+            }
             if (!isWav) startAudioPlayback(); // MP3 path: sync audio start to video readiness
             logSyncGap();
+            trace('talk-on:streaming=true', { idleAt: idleVideoRef.current?.currentTime ?? 0 });
             idleVideoRef.current?.pause();
             setStreaming(true);
 
@@ -491,10 +630,22 @@ export default function FloatingAvatar() {
               const sy = (idleVideo.videoHeight - sh) / 2;
               ctx.drawImage(idleVideo, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
             }
+            let paintCount = 0;
+            let paintMiss = 0;
+            let maxQueueDepth = 0;
+            let queueDepthSum = 0;
+
             const paint = () => {
               const currentTime = isWav ? getWavElapsed() : audio.currentTime;
               const wantIdx = Math.floor(currentTime * fps);
-              const bitmap = frames.get(wantIdx) ?? frames.get(lastDrawnIdx);
+              paintCount++;
+              if (!frames.has(wantIdx)) paintMiss++;
+              const qd = frames.size - Math.max(0, wantIdx);
+              if (qd > maxQueueDepth) maxQueueDepth = qd;
+              queueDepthSum += qd;
+
+              const clampIdx = Math.min(wantIdx, Math.max(0, frames.size - 1));
+              const bitmap = frames.get(clampIdx) ?? frames.get(lastDrawnIdx);
               if (bitmap && ctx && canvas) {
                 const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
                 const sw = canvas.width / scale;
@@ -502,24 +653,24 @@ export default function FloatingAvatar() {
                 const sx = (bitmap.width - sw) / 2;
                 const sy = (bitmap.height - sh) / 2;
                 ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-                lastDrawnIdx = frames.has(wantIdx) ? wantIdx : lastDrawnIdx;
+                if (frames.has(clampIdx)) lastDrawnIdx = clampIdx;
                 lastFrameTimeRef.current = (lastDrawnIdx % CLIP_FRAME_COUNT) / fps;
               }
               if (!(isWav ? webAudioEnded : audio.ended)) requestAnimationFrame(paint);
               else {
+                const missRate = paintCount > 0 ? (paintMiss / paintCount * 100) : 0;
+                const avgQd = paintCount > 0 ? (queueDepthSum / paintCount) : 0;
+                console.log(`[perf] utterance: wantIdx=${wantIdx} miss=${paintMiss}/${paintCount} missRate=${missRate.toFixed(1)}% frames=${frames.size} avgQd=${avgQd.toFixed(1)} maxQd=${maxQueueDepth} elapsed=${currentTime.toFixed(2)}s`);
                 console.log(`[tts] DONE at +${(performance.now() - t0).toFixed(0)}ms`);
-                activeSpeechRef.current = null;
-                orphanAudiosRef.current.delete(audio);
-                resumeIdleVideo(() => { setStreaming(false); setIsSpeaking(false); });
-                resolve();
+                finishUtterance();
               }
             };
             requestAnimationFrame(paint);
           }
-        };
-
-        ws.onerror = () => reject(new Error('stream websocket error — is the Wav2Lip server up on :8765?'));
-      });
+        }
+      };
+      frameHandlerRef.current = onFrame;
+      await utteranceDone;
     } catch (err) {
       console.error('tts stream failed', err);
       setLatencyMs(-1);
@@ -684,15 +835,24 @@ export default function FloatingAvatar() {
   };
 
   useEffect(() => {
-    if (voiceSurface !== 'avatar') {
+    if (voiceSurface === 'avatar') {
+      // Open the persistent Wav2Lip socket the moment the avatar takes the
+      // voice surface so it's warm before the first reply. No explicit /health
+      // gate — a not-yet-ready server 1011s the WS and the backoff reconnect
+      // reconnects once it's up.
+      wsTeardownRef.current = false;
+      ensureWs();
+    } else {
       if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
       cancelFillerTimer();
       interruptSpeech();
+      teardownWs();
     }
     return () => {
       if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
       cancelFillerTimer();
       interruptSpeech();
+      teardownWs();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceSurface]);
@@ -844,7 +1004,7 @@ export default function FloatingAvatar() {
         style={{ left: thumbPos.x, top: thumbPos.y }}
         className="fixed z-50 hidden h-16 w-16 cursor-grab touch-none select-none overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 active:cursor-grabbing lg:block"
       >
-        <img src="/clea2-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" draggable={false} />
+        <img src="/clea1-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" draggable={false} />
       </button>
     );
   }
@@ -860,14 +1020,16 @@ export default function FloatingAvatar() {
         {/* Circular clip lives on its own layer — corner-positioned buttons below sit
             outside this mask so they aren't clipped by the rounded-full circle. */}
         <div className="absolute inset-0 overflow-hidden rounded-full border-2 border-white shadow-2xl bg-neutral-800">
-          {/* Simultaneous crossfade — a staggered/sequential fade leaves a
-              gap where both layers sit near-zero opacity at once, exposing
-              this div's background as a bright flash. Overlapping them
-              instead means there's always at least one layer near full
-              opacity. The outgoing layer is paused (see idleVideoRef effect
-              above) so the overlap blends a static frame, not two live
-              motions — two videos playing at once during the crossfade
-              read as a smear. */}
+          {/* Idle video is the always-opaque BOTTOM layer; only the canvas on
+              top fades. Fading both at once (idle 0->1, canvas 1->0) made each
+              pass through ~0.5 opacity mid-transition, and 0.5-over-0.5 alpha
+              compositing sums to less than full opacity against this div's bg —
+              a visible brightness dip that read as a "light change". Keeping the
+              bottom opaque removes the dip. It works because resumeIdleVideo()
+              seeks idle to the canvas's last frame first, so revealing idle as
+              the canvas fades shows a matched pose, not a jump. Idle is paused
+              during talk (hidden under the opaque canvas) and resumed on
+              talk-off. */}
           <video
             ref={idleVideoRef}
             key={videoSrc}
@@ -876,8 +1038,8 @@ export default function FloatingAvatar() {
             loop
             muted
             playsInline
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-in-out"
-            style={{ opacity: streaming ? 0 : 1 }}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ opacity: 1 }}
           />
           <canvas
             ref={canvasRef}

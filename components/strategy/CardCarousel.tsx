@@ -27,7 +27,6 @@ export default function CardCarousel<T>({
 
   useEffect(() => {
     setCardIndex(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
   if (items.length === 0) return null;
@@ -87,6 +86,7 @@ export default function CardCarousel<T>({
           onClick={handleClick}
           style={{
             transform: `translateX(${dragX}px) rotate(${dragX / 20}deg)`,
+            // eslint-disable-next-line react-hooks/rules-of-hooks
             transition: dragStartX.current === null ? undefined : 'none',
           }}
           className="flex-1 cursor-grab active:cursor-grabbing select-none transition-transform duration-150"

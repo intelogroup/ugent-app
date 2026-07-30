@@ -2,9 +2,18 @@
 
 import { use, useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import DiseaseProfileTabs from "@/components/strategy/DiseaseProfileTabs";
+import DiseaseProfileTabs, { type DiseaseProfile } from "@/components/strategy/DiseaseProfileTabs";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+
+type QuestionData = {
+  pattern?: { mechanism?: string };
+  question?: {
+    difficulty?: string;
+    successRate?: number;
+    text?: string;
+  };
+};
 
 const TOPIC_TYPE_COLORS: Record<string, string> = {
   DISEASE:   "bg-blue-50 text-blue-600 border-blue-200",
@@ -21,8 +30,8 @@ export default function DiseaseMasteryPage({ params }: Props) {
   const { disease } = use(params);
   const diseaseName = decodeURIComponent(disease);
 
-  const [profile, setProfile] = useState<any>(null);
-  const [questionsData, setQuestionsData] = useState<any[]>([]);
+  const [profile, setProfile] = useState<DiseaseProfile | null>(null);
+  const [questionsData, setQuestionsData] = useState<QuestionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -101,23 +110,23 @@ export default function DiseaseMasteryPage({ params }: Props) {
                   {questionsData.map(({ pattern, question }, i) => (
                     <div key={i} className="p-4 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {question.difficulty && (
+                        {question?.difficulty && (
                           <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${difficultyColor(question.difficulty)}`}>
                             {question.difficulty}
                           </span>
                         )}
-                        {question.successRate != null && (
+                        {question?.successRate != null && (
                           <span className="text-xs text-neutral-400">
-                            {Math.round(question.successRate)}% success rate
+                            {Math.round(question.successRate!)}% success rate
                           </span>
                         )}
                       </div>
-                      {pattern.mechanism && pattern.mechanism !== "Pending further analysis" && (
+                      {pattern?.mechanism && pattern.mechanism !== "Pending further analysis" && (
                         <p className="text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded inline-block">
                           Tests: {pattern.mechanism}
                         </p>
                       )}
-                      <p className="text-sm text-neutral-700 line-clamp-3">{question.text}</p>
+                      <p className="text-sm text-neutral-700 line-clamp-3">{question?.text}</p>
                     </div>
                   ))}
                 </div>

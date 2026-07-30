@@ -6,11 +6,15 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+const DEEPSEEK_MODEL = 'deepseek-v4-flash';
 
 const OR_KEY = process.env.OPENROUTER_API_KEY;
 const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OR_MODEL = process.env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free';
+
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 const BATCH_SIZE = 5;    // concurrent requests
 const BLOB_FILE = path.join(process.cwd(), 'data', 'medicospira-blobs.jsonl');
@@ -56,13 +60,18 @@ Analyze the question using this process:
 3. Derive mechanism, prerequisites, and knowledge dependencies.
 4. Classify the topicType and extract the diseaseName.`;
 
-async function callLLM(blobText, useOpenRouter = false) {
-  const url = useOpenRouter ? OR_URL : DEEPSEEK_URL;
-  const model = useOpenRouter ? OR_MODEL : DEEPSEEK_MODEL;
-  const key = useOpenRouter ? OR_KEY : DEEPSEEK_KEY;
+const PROVIDERS = {
+  deepseek: { url: DEEPSEEK_URL, model: DEEPSEEK_MODEL, key: DEEPSEEK_KEY, label: 'DeepSeek' },
+  openrouter: { url: OR_URL, model: OR_MODEL, key: OR_KEY, label: 'OpenRouter' },
+  openai: { url: OPENAI_URL, model: OPENAI_MODEL, key: OPENAI_KEY, label: 'OpenAI' },
+};
+
+async function callLLM(blobText, providerName = 'deepseek') {
+  const p = PROVIDERS[providerName];
+  if (!p.key) throw new Error(`${p.label} API key not configured`);
 
   const body = {
-    model,
+    model: p.model,
     messages: [
       { role: "system", content: EXTRACTION_PROMPT },
       { role: "user", content: blobText },
@@ -74,14 +83,14 @@ async function callLLM(blobText, useOpenRouter = false) {
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${key}`,
+    'Authorization': `Bearer ${p.key}`,
   };
-  if (useOpenRouter) {
+  if (providerName === 'openrouter') {
     headers['HTTP-Referer'] = 'http://localhost:3000';
     headers['X-Title'] = 'ugent-app';
   }
 
-  const resp = await fetch(url, {
+  const resp = await fetch(p.url, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
@@ -89,12 +98,12 @@ async function callLLM(blobText, useOpenRouter = false) {
 
   if (!resp.ok) {
     const err = await resp.text();
-    throw new Error(`${useOpenRouter ? 'OpenRouter' : 'DeepSeek'} ${resp.status}: ${err.slice(0, 200)}`);
+    throw new Error(`${p.label} ${resp.status}: ${err.slice(0, 200)}`);
   }
 
   const data = await resp.json();
   const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error(`Empty response from ${useOpenRouter ? 'OpenRouter' : 'DeepSeek'}`);
+  if (!content) throw new Error(`Empty response from ${p.label}`);
 
   const raw = JSON.parse(content);
 
@@ -129,39 +138,48 @@ async function callLLM(blobText, useOpenRouter = false) {
   return normalized;
 }
 
-async function callDeepSeek(blobText) {
-  return callLLM(blobText, false);
-}
-
-async function callOpenRouter(blobText) {
-  return callLLM(blobText, true);
+async function callProvider(blobText, name) {
+  return callLLM(blobText, name);
 }
 
 async function enrichWithFallback(blobText) {
-  // Try DeepSeek
-  try {
-    return await callDeepSeek(blobText);
-  } catch (err) {
-    if (!err.message.includes('401') && !err.message.includes('invalid') && !err.message.includes('Authentication')) {
-      throw err; // not an auth error, don't fall back
+  const cascade = ['deepseek', 'openrouter', 'openai'].filter(n => PROVIDERS[n].key);
+  const errs = [];
+
+  for (let i = 0; i < cascade.length; i++) {
+    const name = cascade[i];
+    const label = PROVIDERS[name].label;
+    if (i > 0) console.log(`  \u2192 ${label} fallback (${i+1}/${cascade.length})...`);
+
+    if (name === 'openrouter') {
+      // OpenRouter with 429 retry
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try { return await callProvider(blobText, name); }
+        catch (err) {
+          const canRetry = err.message.includes('429') || err.message.includes('Rate limit');
+          if (!canRetry) { errs.push(err); break; }
+          if (attempt === 4) { errs.push(err); break; }
+          const delay = Math.pow(2, attempt) * 2000 + Math.random() * 1000;
+          console.log(`  \u231B rate limited, retrying in ${Math.round(delay/1000)}s (attempt ${attempt+2}/5)...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
+      }
+    } else {
+      try { return await callProvider(blobText, name); }
+      catch (err) { errs.push(err); }
     }
-    if (!OR_KEY) throw err;
-    console.log(`  \u2192 DeepSeek failed, trying OpenRouter...`);
   }
 
-  // OpenRouter with retry on 429
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      return await callOpenRouter(blobText);
-    } catch (err2) {
-      const is429 = err2.message.includes('429') || err2.message.includes('Rate limit');
-      if (!is429) throw err2;
-      if (attempt === 4) throw err2; // give up after 5 attempts
-      const delay = Math.pow(2, attempt) * 2000 + Math.random() * 1000;
-      console.log(`  \u231B rate limited, retrying in ${Math.round(delay/1000)}s (attempt ${attempt+2}/5)...`);
-      await new Promise(r => setTimeout(r, delay));
+  // If first error was not auth-related and we have a deeper fallback, still throw it
+  if (!/401|invalid|Authentication/.test(errs[0]?.message)) {
+    const last = errs[errs.length - 1];
+    if (last && cascade.length > 1) {
+      // Only rethrow non-auth if all providers also failed
+      throw last;
     }
   }
+
+  throw new Error(errs.map(e => e.message).join(' | '));
 }
 
 async function processBatch(items) {
@@ -197,11 +215,12 @@ async function processBatch(items) {
 }
 
 async function main() {
-  if (!DEEPSEEK_KEY && !OR_KEY) {
-    console.error('Neither DEEPSEEK_API_KEY nor OPENROUTER_API_KEY found in .env.local');
+  const configured = ['deepseek', 'openrouter', 'openai'].filter(n => PROVIDERS[n].key);
+  if (configured.length === 0) {
+    console.error('No API keys found (DEEPSEEK_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY) in .env.local');
     process.exit(1);
   }
-  if (!DEEPSEEK_KEY) console.log('[WARN] DEEPSEEK_API_KEY missing, will use OpenRouter directly');
+  if (!PROVIDERS.deepseek.key) console.log(`[WARN] DEEPSEEK_API_KEY missing, will use ${configured.join('/')}`);
 
   // Read existing enriched to resume if interrupted
   const seenHashes = new Set();

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles, ArrowRight, Lock, Mail } from 'lucide-react'
@@ -13,6 +13,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 }
 
 export default function LoginPage() {
+  return <Suspense><LoginForm /></Suspense>
+}
+
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const searchParams = useSearchParams()
@@ -33,7 +37,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError(error.message)
+      setError('Incorrect email or password.')
       setLoading(false)
       return
     }
@@ -164,7 +168,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-white/5 text-center text-xs text-slate-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/signup" className="text-cyan-400 font-semibold hover:underline">
               Sign up free
             </Link>

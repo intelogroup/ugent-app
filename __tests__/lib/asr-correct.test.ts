@@ -94,6 +94,24 @@ describe('correctText', () => {
   it('fixes "hairpaste" -> "herpes" via alias (too far for distance match)', () => {
     expect(correctText("let's study hairpaste viruses")).toBe("let's study herpes viruses");
   });
+
+  it('normalizes garbled terms via double metaphone', () => {
+    expect(correctText('Pheocromositoma')).toBe('pheochromocytoma');
+    expect(correctText('Sawmonilla')).toBe('salmonella');
+    expect(correctText('salmanela')).toBe('salmonella');
+  });
+
+  it('never flips confusable minimal pairs', () => {
+    // ilium (pelvis) must NOT become ileum (gut), and vice-versa. Both are now
+    // in-dict and CONFUSABLE-guarded.
+    expect(correctText('ilium')).toBe('ilium');
+    expect(correctText('ileum')).toBe('ileum');
+    expect(correctText('afferent')).toBe('afferent');
+    expect(correctText('efferent')).toBe('efferent');
+    expect(correctText('hypokalemia')).toBe('hypokalemia');
+    expect(correctText('hyperkalemia')).toBe('hyperkalemia');
+    expect(correctText('the ilium and the sacrum')).toBe('the ilium and the sacrum');
+  });
 });
 
 describe('stripTranscriptNoise', () => {

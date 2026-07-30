@@ -27,28 +27,42 @@ A comprehensive USMLE study platform with AI-powered analytics, personalized cur
 
 ### Backend
 - **Supabase Auth** - Login/session management
-- **Local JSONL** - Question bank (Convex disabled, kept as migration ref)
-- **Clea chat** - AI assistant via DeepSeek/OpenAI
+- **Supabase DB** - `questions` + `quiz_attempts` tables (RLS-scoped); curriculum reads local JSONL
+- **Clea chat** - AI assistant via DeepSeek/OpenAI, RAG over book embeddings + deterministic topic router
 - **ASR pipeline** - OpenAI Whisper -> local whisper.cpp -> in-browser fallback
-- **TTS + Wav2Lip** - Kokoro TTS + Wav2Lip avatar (local GPU servers)
+- **TTS + Avatar** - Kokoro/Piper (dev) -> ElevenLabs (prod) TTS, Wav2Lip lipsync (WAV/PCM end to end)
 
 ## Architecture & Data Flow
 
-All study data reads from local JSONL files. Convex backend is disabled (free-plan limit). Auth via Supabase. Voice/TTS/Wav2Lip run as local Python servers.
+Auth + quiz data via Supabase (questions/attempts tables, RLS); curriculum reads local JSONL. Clea grounds answers on Supabase book embeddings (RAG) and a sub-ms in-process specialty router. Voice servers run as macOS launchd agents; prod reaches Wav2Lip over a persistent Cloudflare tunnel, with ElevenLabs as the cloud TTS.
 
 ```
-[Next.js 16 (Vercel)]
-  │
-  ├──► [Supabase Auth] ───── login/session
-  │
-  ├──► [data/*.jsonl] ────── question bank + curriculum
-  │
-  ├──► [/api/clea-chat] ──── DeepSeek/OpenAI AI assistant
-  │
-  └──► Local warm servers (macOS): ─── optional for prod via tunnel
-        ├── Kokoro TTS  :8767
-        ├── Piper TTS   :8768  (fallback)
-        └── Wav2Lip     :8765  (env-var-ified, tunnel to Vercel)
+                         ┌──────────────────────────┐
+                         │   Next.js 16 (Vercel)     │
+                         └────────────┬─────────────┘
+                                      │
+        ┌───────────────┬─────────────┼──────────────┬────────────────┐
+        ▼               ▼             ▼              ▼                ▼
+  [Supabase Auth]  [Supabase DB]  [data/*.jsonl]  [/api/clea-chat]  [/api/whisper-
+   login/session   questions +     curriculum      DeepSeek/OpenAI    transcribe]
+                   quiz_attempts    source           │                 OpenAI ASR →
+                                                     │                 whisper.cpp →
+                     Promise.all (parallel, no added latency):         in-browser
+                        ├─ searchBooks  → Supabase book embeddings (RAG grounding)
+                        └─ routeTopic   → lib/topic-router (in-proc, sub-ms) → predictedSystem
+                                      │
+                                      ▼
+                         [/api/tts-audio]  WAV/PCM end to end
+                        ┌───────────┴────────────┐
+                    dev │                        │ prod
+                        ▼                        ▼
+         Kokoro :8767 / Piper :8768       ElevenLabs /stream (cloud)
+                        │                        │
+                        └───────────┬────────────┘
+                                    ▼
+              Wav2Lip lipsync (launchd, self-restart)
+              ├─ :8765  wav2lip-server  (local dev)
+              └─ :8770  wav2lip-cloud   → Cloudflare tunnel → lipsync.clixen.app (prod)
 ```
 
 ## Project Structure
@@ -58,15 +72,20 @@ ugent-app/
 ├── app/                     # Next.js 16 App Router
 │   ├── analytics/           # Performance charts
 │   ├── api/                 # API routes
-│   │   ├── clea-chat/       # AI assistant chat
+│   │   ├── clea-chat/       # AI assistant chat (RAG + topic router)
 │   │   ├── curriculum/      # Curriculum generator
-│   │   ├── quiz-data/       # Question bank access
-│   │   ├── tts-audio/       # Kokoro TTS proxy
-│   │   ├── whisper-transcribe/ # ASR
+│   │   ├── curriculum-progress/ # Block check-off (Supabase)
+│   │   ├── quiz-data/       # Question bank access (Supabase questions)
+│   │   ├── quiz-activity/   # Attempt insert (Supabase quiz_attempts, RLS)
+│   │   ├── disease-reference/  # Strategy Hub per-disease data
+│   │   ├── strategy/        # Strategy hub data
+│   │   ├── tts-audio/       # TTS proxy (Kokoro/Piper → ElevenLabs), WAV/PCM
+│   │   ├── elevenlabs-tts/  # ElevenLabs cloud TTS
+│   │   ├── whisper-transcribe/ # ASR (OpenAI → whisper.cpp → in-browser)
 │   │   ├── lipsync-test/    # Wav2Lip proxy (env-var-ified)
 │   │   ├── lipsync-tts/     # ElevenLabs + Wav2Lip
-│   │   └── ...
-│   ├── auth/                # Supabase Auth pages
+│   │   └── asr-log/         # Voice-turn logging
+│   ├── auth/                # Supabase Auth pages (login/signup/callback/confirm)
 │   ├── create-test/         # Quiz creation
 │   ├── curriculum/          # 19-week study timeline UI
 │   ├── dashboard/           # Main dashboard
@@ -74,41 +93,48 @@ ugent-app/
 │   ├── leaderboard/         # Peer comparison
 │   ├── quiz/                # Quiz runner
 │   ├── settings/            # User settings
-│   ├── strategy/            # Strategy hub
+│   ├── strategy/            # Strategy hub (disease priority, clue training)
 │   └── tests/               # Test history
 ├── components/
 │   ├── CleaChat.tsx         # Chat sidebar
 │   ├── CleaLiveOrb.tsx      # Live orb UI
-│   ├── FloatingAvatar.tsx   # Wav2Lip avatar canvas
+│   ├── FloatingAvatar.tsx   # Wav2Lip avatar canvas (scheduleWavChunk)
+│   ├── Avatar.tsx           # Avatar element
 │   ├── DashboardLayout.tsx  # Layout shell
 │   ├── Sidebar.tsx          # Nav sidebar
 │   └── MobileNav.tsx        # Mobile nav
-├── convex/                  # Kept as migration reference (not live)
-├── data/                    # Question bank JSONL files
-│   ├── classified-questions.jsonl
-│   ├── medicospira-enriched.jsonl
-│   ├── medicospira-questions.jsonl
-│   └── medicospira-blobs.jsonl
+├── data/                    # Pipeline source JSONL (curriculum + enrichment)
+│   ├── classified-questions.jsonl   # classifier output (qbank source of truth)
+│   ├── medicospira-enriched.jsonl   # enrichment output (drives curriculum + router)
+│   ├── medicospira-questions.jsonl  # parsed Q&A
+│   ├── medicospira-blobs.jsonl      # raw scraped blobs
+│   └── asr-log.jsonl                # voice-turn log
 ├── lib/
 │   ├── clea-agent-context.tsx  # Voice/chat state machine
+│   ├── clea-tools.ts           # Agent tools (searchPathoma/FirstAid, queryQbank/Curriculum)
+│   ├── topic-router.ts         # Deterministic specialty router ("Brain 1", sub-ms)
 │   ├── asr-correct.ts          # ASR correction layer
 │   ├── asr-dictionary.json     # Medical term dictionary
+│   ├── qbank.ts / quizAttempts.ts  # Supabase question + attempt readers
 │   ├── whisper-pipeline.ts     # In-browser Whisper
 │   ├── use-whisper-mic.ts      # WebGPU mic hook
 │   ├── use-continuous-mic.ts   # SpeechRecognition fallback
-│   ├── navigation.ts           # Route config
-│   ├── curriculum/             # Generator engine
-│   └── supabase/               # Supabase client
+│   ├── zod-schemas.ts          # Shared agent tool I/O schemas
+│   ├── navigation.ts           # Route config (auto-propagates to nav)
+│   ├── curriculum/             # Generator engine (analyzer + generator)
+│   └── supabase/               # Supabase client (client + server)
 ├── scripts/                 # Python/JS utilities
 │   ├── local-kokoro-server.py # TTS server (:8767)
 │   ├── local-piper-server.py  # TTS fallback (:8768)
 │   ├── local-whisper-server.py# ASR fallback (:8766)
-│   ├── tts_stream_play.py     # Kokoro MPS player
 │   ├── classify-local.py      # Keyword classifier
 │   ├── deepseek-enrich.mjs    # AI enrichment
+│   ├── build-book-embeddings.mjs # RAG book embeddings → Supabase
+│   ├── eval-topic-router.ts   # Router eval harness
+│   ├── bench-topic-router.ts  # Router microbench
 │   ├── extract-vision.mjs     # Vision pipeline
 │   └── ...
-├── scratch/lipsync_test/Wav2Lip/  # Wav2Lip server (:8765)
+├── scratch/lipsync_test/Wav2Lip/  # Wav2Lip server (launchd :8765 dev, :8770 prod)
 ├── tests/
 └── __tests__/
 ```
@@ -147,11 +173,11 @@ npx playwright test  # E2E
 - **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
 - **Styling**: Tailwind CSS v4 + Recharts
 - **Auth**: Supabase Auth (`@supabase/ssr`)
-- **Data**: Local JSONL (Convex kept as migration ref, not live)
-- **AI Chat**: DeepSeek / OpenAI via Vercel AI SDK
-- **ASR**: OpenAI Whisper -> local whisper.cpp -> in-browser Whisper
-- **TTS**: Kokoro (primary) / Piper (fallback) — local Python servers
-- **Avatar**: Wav2Lip (PyTorch MPS/CUDA) — env-var-ified, tunnel to prod
+- **Data**: Supabase (`questions` + `quiz_attempts`, RLS) + local JSONL for curriculum
+- **AI Chat**: DeepSeek / OpenAI via Vercel AI SDK, RAG over Supabase book embeddings + in-proc topic router
+- **ASR**: OpenAI gpt-4o-transcribe
+- **TTS**: Kokoro / Piper (dev, local Python) -> ElevenLabs (prod cloud) — WAV/PCM end to end
+- **Avatar**: Wav2Lip (PyTorch MPS/CUDA), launchd dev :8765 / prod :8770 via Cloudflare tunnel
 - **Testing**: Jest + Vitest + Playwright
 
 ---

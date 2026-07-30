@@ -34,9 +34,6 @@ const nextConfig: NextConfig = {
     '@ai-sdk/provider-utils',
     '@workflow/serde',
   ],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   async headers() {
     return [
       {

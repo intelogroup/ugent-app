@@ -1,15 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CleaAgentProvider, useCleaAgent } from '@/lib/clea-agent-context';
+import { useWhisperMic } from '@/lib/use-whisper-mic';
 
+vi.mock('@/lib/use-whisper-mic', () => ({
+  useWhisperMic: vi.fn(() => ({ modelLoading: false })),
+}));
 jest.mock('@/lib/use-whisper-mic', () => ({
   useWhisperMic: jest.fn(() => ({ modelLoading: false })),
 }));
-jest.mock('@/lib/use-continuous-mic', () => ({
-  useContinuousMic: jest.fn(),
-}));
-jest.mock('@/lib/whisper-pipeline', () => ({
-  getWhisperPipeline: jest.fn(async () => ({})),
-}));
+
 
 // The provider issues a GET on mount to restore history — mock fetch so
 // tests don't hit a real server, and so we can assert both surfaces see
@@ -102,9 +101,6 @@ describe('CleaAgentProvider / useCleaAgent', () => {
 
   it('passes isSpeaking flag to mic hook for barge-in handling', async () => {
     (navigator as any).gpu = {};
-    const { useWhisperMic } = jest.requireMock('@/lib/use-whisper-mic') as {
-      useWhisperMic: jest.Mock;
-    };
 
     function SpeakingConsumer() {
       const { micActive, toggleMic, isSpeaking, setIsSpeaking } = useCleaAgent();
@@ -124,12 +120,12 @@ describe('CleaAgentProvider / useCleaAgent', () => {
 
     fireEvent.click(screen.getByText('toggle mic'));
     await waitFor(() => {
-      expect(useWhisperMic.mock.calls.at(-1)?.[0]).toBe(true);
+      expect(vi.mocked(useWhisperMic).mock.calls.at(-1)?.[0]).toBe(true);
     });
 
     fireEvent.click(screen.getByText('toggle speaking'));
     await waitFor(() => {
-      expect(useWhisperMic.mock.calls.at(-1)?.[1]).toBe(true);
+      expect(vi.mocked(useWhisperMic).mock.calls.at(-1)?.[1]).toBe(true);
     });
 
     delete (navigator as any).gpu;

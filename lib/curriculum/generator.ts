@@ -173,6 +173,12 @@ export function generateCurriculum(
   },
   systemDiseaseMap: Record<string, DiseaseEntry[]>,
 ): Curriculum {
+  // Reset so block ids are deterministic per run (same input -> same ids).
+  // Route is force-dynamic (regenerated every request); without this reset
+  // the counter kept climbing across requests, drifting block ids away from
+  // what curriculum_progress had persisted and silently breaking completion
+  // matching.
+  blockCounter = 0;
   const weeks: StudyWeek[] = [];
 
   // Group nodes by system
@@ -207,8 +213,6 @@ export function generateCurriculum(
     for (let d = 0; d < 6; d++) {
       skipRestDays();
       const date = nextDay();
-      const isRestDay = date.getDay() === REST_DAY_INDEX;
-      if (isRestDay) { d--; continue; }
 
       days.push({
         date: formatDate(date),
@@ -411,13 +415,15 @@ export function generateCurriculum(
       if (FIRST_AID_MAP[part]) return part;
     }
 
-    // Partial substring match against FA map keys
-    for (const key of Object.keys(FIRST_AID_MAP)) {
-      if (raw.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(raw.toLowerCase())) {
-        return key;
-      }
-    }
+    // Partial substring match against FA map keys — longest key first so the
+    // most specific match wins regardless of object-iteration order.
+    const rawLower = raw.toLowerCase();
+    const candidates = Object.keys(FIRST_AID_MAP)
+      .filter(key => rawLower.includes(key.toLowerCase()) || key.toLowerCase().includes(rawLower))
+      .sort((a, b) => b.length - a.length);
+    if (candidates.length > 0) return candidates[0];
 
+    console.warn(`[curriculum] normalizeSystem: unmapped system "${raw}" -> General`);
     return 'General';
   }
 
@@ -448,28 +454,47 @@ export function generateCurriculum(
     }
   }
 
+  if (systemScores.length === 0) {
+    throw new Error('[curriculum] systemDiseaseMap produced zero systems with question data — enriched dataset missing/empty, refusing to silently generate a truncated curriculum');
+  }
+
   // Sort systems by total questions (descending), then allocate weeks proportionally
   systemScores.sort((a, b) => b.totalQuestions - a.totalQuestions);
   const grandTotal = systemScores.reduce((s, sys) => s + sys.totalQuestions, 0);
 
-  const allocatedWeeks: { system: string; diseasePairs: string[][]; weekCount: number }[] = [];
-  let weeksRemaining = MAX_ORGAN_SYSTEM_WEEKS;
+  // Largest-remainder (Hamilton) apportionment: tiered weight decides each
+  // system's *share* of the budget, floor gives the guaranteed base, then
+  // leftover weeks go to the systems with the biggest fractional remainder
+  // until the budget is exactly spent. Replaces the old round+forced-min-1
+  // loop, which let an early system's rounding-up plus every later tiny
+  // system's forced 1-week floor exhaust weeksRemaining, silently dropping
+  // every system sorted after that point via a hard `break` — a system with
+  // real question data could vanish from the curriculum entirely depending
+  // on sort order, not its actual share.
+  const tierWeights = { high: 1.5, medium: 1.0, low: 0.5 };
+  const weighted = systemScores.map((sys) => {
+    const tier = sys.diseases[0].count >= 6 ? 'high' :
+                 sys.diseases[0].count >= 3 ? 'medium' : 'low';
+    return { sys, weight: (sys.totalQuestions / grandTotal) * tierWeights[tier] };
+  });
+  const weightTotal = weighted.reduce((s, w) => s + w.weight, 0);
+  const shares = weighted.map((w) => {
+    const exact = weightTotal > 0 ? (w.weight / weightTotal) * MAX_ORGAN_SYSTEM_WEEKS : 0;
+    const base = Math.floor(exact);
+    return { sys: w.sys, wks: base, remainder: exact - base };
+  });
+  let leftover = MAX_ORGAN_SYSTEM_WEEKS - shares.reduce((s, sh) => s + sh.wks, 0);
+  shares.sort((a, b) => b.remainder - a.remainder);
+  for (const sh of shares) {
+    if (leftover <= 0) break;
+    sh.wks += 1;
+    leftover -= 1;
+  }
 
-    for (const sys of systemScores) {
-      if (weeksRemaining <= 0) break;
-      
-      // Tier diseases by frequency to prevent over-weighting rare diseases
-      // With 764 diseases and max count ~10, linear scaling over-emphasizes noise
-      const tier = sys.diseases[0].count >= 6 ? 'high' : 
-                   sys.diseases[0].count >= 3 ? 'medium' : 'low';
-      const tierWeights = { high: 1.5, medium: 1.0, low: 0.5 };
-      
-      const baseProportion = sys.totalQuestions / grandTotal;
-      const tieredProportion = baseProportion * tierWeights[tier];
-      
-      let wks = Math.round(tieredProportion * MAX_ORGAN_SYSTEM_WEEKS);
-      if (wks < 1) wks = 1;
-      if (wks > weeksRemaining) wks = weeksRemaining;
+  const allocatedWeeks: { system: string; diseasePairs: string[][]; weekCount: number }[] = [];
+
+    for (const { sys, wks } of shares) {
+      if (wks < 1) continue;
 
     // Pair adjacent diseases from frequency list
     const diseases = sys.diseases.sort((a, b) => b.count - a.count);
@@ -491,7 +516,6 @@ export function generateCurriculum(
     }
 
     allocatedWeeks.push({ system: sys.system, diseasePairs: pairs, weekCount: wks });
-    weeksRemaining -= wks;
   }
 
   // Generate organ system weeks from allocated plan

@@ -29,6 +29,12 @@ function makeQuery(table: string) {
   return q;
 }
 
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: async () => ({
+    from: (table: string) => makeQuery(table),
+    auth: { getUser: async () => ({ data: { user: currentUser } }) },
+  }),
+}));
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     from: (table: string) => makeQuery(table),

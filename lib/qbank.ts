@@ -1,5 +1,20 @@
 import { createClient } from './supabase/server';
 
+// Small local stopword list — a full-sentence ILIKE almost never matches a
+// conversational query verbatim ("what bacterias thrive with
+// hemochromatosis?" won't appear as a substring in any question row), so
+// tokenize into per-word ILIKE clauses instead. Capped at 6 words to keep
+// the .or() filter string bounded.
+const QBANK_STOPWORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'over', 'under', 'is', 'are', 'was', 'were',
+  'and', 'or', 'but', 'with', 'without', 'for', 'from', 'by', 'at', 'as', 'this', 'that', 'these', 'those',
+  'its', 'it', 'his', 'her', 'their', 'one', 'what', 'which', 'who', 'do', 'does', 'did', 'not']);
+
+function tokenizeSearchText(searchText: string): string[] {
+  return searchText.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+    .filter((w) => w && !QBANK_STOPWORDS.has(w))
+    .slice(0, 6);
+}
+
 export interface ClassifiedQuestion {
   text: string;
   correctAnswer: string;
@@ -44,10 +59,46 @@ export async function queryQuestions(opts: {
   subject?: string;
   system?: string;
   difficulty?: string;
+  query?: string;
   limit?: number;
 }) {
-  const { subject, system, difficulty, limit = 20 } = opts;
+  const { subject, system, difficulty, query: searchText, limit = 20 } = opts;
   const supabase = await createClient();
+
+  // Content search (e.g. "trigeminal neuralgia multiple sclerosis") wants the
+  // actual matches, not a random sample — ILIKE across text+explanation over
+  // the filtered set, ordered by relevance not a random offset.
+  if (searchText) {
+    const words = tokenizeSearchText(searchText);
+    const orFilter = words.length > 0
+      ? words.map((w) => `text.ilike.%${w}%,explanation.ilike.%${w}%`).join(',')
+      : `text.ilike.%${searchText}%,explanation.ilike.%${searchText}%`;
+    let contentQuery = supabase
+      .from('questions')
+      .select('*')
+      .or(orFilter);
+    if (subject) contentQuery = contentQuery.eq('subject', subject);
+    if (system) contentQuery = contentQuery.eq('system', system);
+    if (difficulty) contentQuery = contentQuery.eq('difficulty', difficulty);
+    const { data, error } = await contentQuery.limit(limit);
+    if (error) throw error;
+
+    const matched = data ?? [];
+    const selected = matched.map((row) => {
+      const q = fromRow(row);
+      return {
+        id: q.textHash,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        subject: q.subject,
+        system: q.system,
+        difficulty: q.difficulty,
+      };
+    });
+    return { questions: selected, matched: matched.length };
+  }
 
   // PostgREST enforces a server-side db.max_rows cap (1000 here) on every
   // request, so pulling the whole matched set to shuffle it in memory

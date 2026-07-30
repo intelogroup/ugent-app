@@ -1,11 +1,15 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWhisperMic } from '@/lib/use-whisper-mic';
 
-const asrMock = jest.fn(async () => ({ text: 'hello world' }));
-jest.mock('@/lib/whisper-pipeline', () => ({
-  getWhisperPipeline: jest.fn(async () => asrMock),
-  resampleTo16kMono: jest.fn(async () => new Float32Array([0])),
-}));
+let fetchOk = true;
+let fetchMock: jest.Mock;
+beforeAll(() => {
+  fetchMock = jest.fn(async () => {
+    if (!fetchOk) throw new Error('fetch failed');
+    return { ok: true, json: async () => ({ text: 'hello world' }) } as Response;
+  });
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
+});
 
 // jsdom has no MediaRecorder/getUserMedia/AudioContext — stub the minimum surface
 // use-whisper-mic.ts touches. `currentRms`/`mockNow` and the manual `tick()` helper
@@ -25,7 +29,8 @@ function tick() {
 }
 
 beforeEach(() => {
-  asrMock.mockClear();
+  fetchMock.mockClear();
+  fetchOk = true;
   recorderDataHandler = null;
   pendingTick = null;
   currentRms = 0;
@@ -107,7 +112,7 @@ describe('useWhisperMic', () => {
     mockNow = 1500;
     tick();
 
-    await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('hello world'));
   });
 
@@ -127,15 +132,15 @@ describe('useWhisperMic', () => {
     tick();
 
     expect(recorderDataHandler).toBeNull();
-    expect(asrMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('keeps recording the next utterance while the previous one is still transcribing', async () => {
-    let resolveFirst!: (value: { text: string }) => void;
-    asrMock.mockImplementationOnce(
+    let resolveFirst!: (value: unknown) => void;
+    (fetchMock as jest.Mock).mockImplementationOnce(
       () =>
-        new Promise((resolve) => {
-          resolveFirst = resolve;
+        new Promise<Response>((resolve) => {
+          resolveFirst = (v: unknown) => resolve({ ok: true, json: async () => v } as Response);
         })
     );
 
@@ -159,7 +164,7 @@ describe('useWhisperMic', () => {
     tick();
     mockNow = 1500;
     tick();
-    await waitFor(() => expect(asrMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
     // second utterance arrives and finalizes while first still pending —
     // recording/VAD must not block on in-flight transcription
@@ -183,6 +188,6 @@ describe('useWhisperMic', () => {
 
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('first'));
     await waitFor(() => expect(onTranscript).toHaveBeenCalledWith('hello world'));
-    expect(asrMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
