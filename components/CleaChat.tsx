@@ -46,7 +46,7 @@ export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
   const {
     messages, sendMessage, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface,
-    setMessages, id: chatId,
+    setMessages, id: chatId, quickCorrect,
   } = useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [draft, setDraft] = useState('');
@@ -136,12 +136,13 @@ export default function CleaChat() {
     document.addEventListener('touchend', onEnd);
   };
 
-  const handleSend = (event: FormEvent<HTMLFormElement>) => {
+  const handleSend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = draft.trim();
     if (!text) return;
     setDraft('');
-    sendMessage({ text });
+    const corrected = await quickCorrect(text);
+    sendMessage({ text: corrected });
   };
 
   function getMessageText(message: (typeof messages)[number]): string {

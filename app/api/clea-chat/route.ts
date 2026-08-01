@@ -11,8 +11,7 @@ import {
   TypeValidationError,
   type UIMessage,
 } from 'ai';
-import { deepseek } from '@ai-sdk/deepseek';
-import { openai } from '@ai-sdk/openai';
+import { generateTextWithFallback } from '@/lib/llm-fallback';
 import type { ActivitySnapshot } from '@/lib/watch-context';
 import type { QuizAttempt } from '@/lib/quizAttempts';
 import { queryQbank, queryCurriculum, searchPathoma, searchFirstAid, searchPubMed, makeQueryMyAttempts, makeQueryCurriculumProgress, searchBooks, makeQueryQbank } from '@/lib/clea-tools';
@@ -34,27 +33,6 @@ export const dynamic = 'force-dynamic';
 // newest-first accumulating estimated tokens; anything that doesn't fit gets
 // folded into the summary in one call, same batching-over-per-turn tradeoff
 // as before (still snaps `upTo` forward in one jump, never a context gap).
-const FALLBACK_MODEL = 'gpt-4o-mini';
-// Once deepseek fails, every other call in the process skips straight to
-// openai — no auto-retry timer. Stays down until the process restarts
-// (manual redeploy/restart = the "manual" reset).
-// ponytail: process-lifetime in-memory flag, not persisted — fine for this
-// single-instance deployment; a multi-instance/serverless deploy would need
-// this in Supabase/Redis instead.
-let deepseekDown = false;
-
-async function generateTextWithFallback(opts: Record<string, unknown>) {
-  if (deepseekDown) {
-    return await generateText({ ...opts, model: openai(FALLBACK_MODEL) } as any);
-  }
-  try {
-    return await generateText({ ...opts, model: deepseek('deepseek-v4-flash') } as any);
-  } catch (e) {
-    console.warn('[clea-chat] deepseek failed, disabling it for rest of process — falling back to openai until manual restart', e);
-    deepseekDown = true;
-    return await generateText({ ...opts, model: openai(FALLBACK_MODEL) } as any);
-  }
-}
 const TARGET_CONTEXT_TOKENS = 24_000;
 const RESERVE_ANSWER_TOKENS = 8_000;
 const RESERVE_DOCS_TOKENS = 2_000;
@@ -509,6 +487,19 @@ export async function POST(request: NextRequest) {
     // tool call to ground the answer in Supabase data -> refuse.
     if (quizFire && !groundingHits && !activity?.questionText && res.toolCalls.length === 0 && !/do not cover|no relevant|not in your/i.test(responseText)) {
       responseText = 'Your reference materials do not cover this topic.';
+    }
+    // Book excerpts can match tangentially (e.g. "pneumonia" organisms/types)
+    // without covering what was actually asked (treatment) — the model then
+    // refuses instead of falling back to queryQbank, which it never tried.
+    // One forced retry closes that gap without a code-level qbank pre-fetch.
+    if (/do not cover|no relevant|not in your/i.test(responseText) && res.toolCalls.length === 0) {
+      const retry = await generateTextWithFallback({
+        system: `${chatSystem}\n\nYour previous draft refused without calling queryQbank. Before refusing, you MUST call queryQbank to check for relevant practice questions on this topic — only refuse if that also comes up empty.`,
+        messages: modelMessages,
+        tools: chatTools,
+        stopWhen: stepCountIs(8),
+      }) as Awaited<ReturnType<typeof generateText>>;
+      responseText = retry.text;
     }
   } catch (error) {
     void logAgentError({ chatId: id, route: 'clea-chat/streamText' }, error);

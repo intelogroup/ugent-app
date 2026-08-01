@@ -43,7 +43,14 @@ type CleaAgentValue = ReturnType<typeof useChat> & {
   // its stop function here so a mic-detected barge-in can kill that playback
   // immediately, regardless of which component owns the audio element.
   registerSpeechInterrupt: (handler: (() => void) | null) => void;
+  // Context-aware LLM typo fixer for typed input (voice already gets the
+  // dictionary-based correctText path via onTranscript). Fails open — always
+  // resolves, worst case with the original text unchanged.
+  quickCorrect: (text: string) => Promise<string>;
 };
+
+const QUICK_CORRECT_TIMEOUT_MS = 1200;
+const QUICK_CORRECT_CONTEXT_TURNS = 3;
 
 const CleaAgentContext = createContext<CleaAgentValue | null>(null);
 
@@ -152,6 +159,39 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
     queuedSendMessage({ text: corrected });
   };
 
+  function messageText(message: UIMessage): string {
+    return message.parts
+      .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+      .map((part) => part.text)
+      .join(' ');
+  }
+
+  const quickCorrect = async (text: string): Promise<string> => {
+    const recentMessages = messagesRef.current
+      .slice(-QUICK_CORRECT_CONTEXT_TURNS)
+      .map((m) => `${m.role}: ${messageText(m)}`)
+      .filter((line) => line.trim().length > 0);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), QUICK_CORRECT_TIMEOUT_MS);
+    try {
+      const res = await fetch('/api/quick-correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, recentMessages }),
+        signal: controller.signal,
+      });
+      if (!res.ok) return text;
+      const { corrected } = (await res.json()) as { corrected?: string };
+      logAsrTurn(text, corrected || text);
+      return corrected || text;
+    } catch {
+      return text; // fail open — timeout, abort, or network error never blocks sending
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
   const speechInterruptRef = useRef<(() => void) | null>(null);
   const registerSpeechInterrupt = (handler: (() => void) | null) => {
     speechInterruptRef.current = handler;
@@ -176,6 +216,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
         isSpeaking,
         setIsSpeaking,
         registerSpeechInterrupt,
+        quickCorrect,
       }}
     >
       {children}
