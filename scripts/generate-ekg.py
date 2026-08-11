@@ -135,19 +135,20 @@ def generate_ecg_signal(t, rhythm):
         sig += np.random.normal(0, 0.015, len(t))
 
     elif rhythm in ('av_block_first', 'av_block_mobitz1', 'av_block_mobitz2', 'av_block_third'):
+        hr = 65
+        pr = 0.16
+        skip_pattern = []
         if rhythm == 'av_block_first':
-            pr = 0.28  # prolonged PR
+            pr = 0.28
             hr = 65
         elif rhythm == 'av_block_mobitz1':
             pr_values = [0.18, 0.24, 0.32, 0.18, 0.20, 0.26, 0.34, 0.18]
             hr = 68
         elif rhythm == 'av_block_mobitz2':
-            # Regular dropped beats (every 3rd)
+            skip_pattern = [3]  # every 3rd beat dropped
             hr = 72
         else:  # av_block_third
-            # Complete dissociation: P waves at 75, QRS at 35
-            hr_atrial = 75
-            hr_vent = 35
+            hr = 40  # ventricular escape rate
 
         for i in range(int(DURATION_SEC * 1.5) + 2):
             offset = i * 60 / hr
@@ -156,7 +157,7 @@ def generate_ecg_signal(t, rhythm):
             pr_delay = pr if rhythm == 'av_block_first' else (
                 pr_values[i % len(pr_values)] if rhythm == 'av_block_mobitz1' else 0.16
             )
-            if rhythm == 'av_block_mobitz2' and i % 3 == 2:
+            if rhythm == 'av_block_mobitz2' and (i + 1) % 4 == 0:
                 continue
             sig += 0.12 * np.exp(-((phase - 0.1) ** 2) / (2 * 0.005 ** 2))
             sig += 0.55 * np.exp(-((phase - 0.22 + pr_delay - 0.16) ** 2) / (2 * 0.01 ** 2))
