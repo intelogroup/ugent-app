@@ -1,0 +1,44 @@
+graph TD
+    START["Child with hepatomegaly<br/>+ hypoglycemia?"]
+    
+    START -->|"NO (adult / exercise intolerance)"| MUSCLE["Exercise-induced<br/>cramps + myoglobinuria?"]
+    
+    MUSCLE -->|"YES"| LACTATE["Venous lactate rises<br/>with exercise?"]
+    LACTATE -->|"YES"| GSD7["GSD VII (Tarui)<br/>PFK-1 deficiency<br/>hemolytic anemia too"]
+    LACTATE -->|"NO"| URINE["Myoglobinuria<br/>after exercise?"]
+    URINE -->|"YES"| GSD5["GSD V (McArdle)<br/>muscle glycogen phosphorylase<br/>second wind phenomenon"]
+    URINE -->|"NO / rare"| OTHER["Consider: CPT-II deficiency<br/>VLCAD / other FAO disorders"]
+    
+    MUSCLE -->|"NO"| CARDIAC["Cardiomegaly + hypotonia<br/>+ normal glucose?"]
+    CARDIAC -->|"YES"| POMPE["GSD II (Pompe)<br/>acid α-glucosidase<br/>LYSOSOMAL — PAS+ inclusions<br/>CR: enzyme replacement"]
+    CARDIAC -->|"NO"| UNLIKELY["Unlikely GSD<br/>consider other myopathies"]
+    
+    START -->|"YES"| AGEOF["Age of onset?"]
+    
+    AGEOF -->|"Infant &lt;1yr"| INFANT["Severe hypoglycemia<br/>+ lactic acidosis + hyperuricemia<br/>+ hypertriglyceridemia?"]
+    
+    INFANT -->|"YES"| VONGIERKE["GSD I (von Gierke)<br/>Glucose-6-phosphatase<br/>BOTH glycogenolysis AND<br/>gluconeogenesis blocked<br/>Normal muscle"]
+    INFANT -->|"NO"| INFANT2["Hypoglycemia + ketosis<br/>NO lactic acidosis<br/>+ muscle weakness?"]
+    INFANT2 -->|"YES<br/>+ abnormal glycogen on biopsy"| GSD4["GSD IV (Andersen)<br/>Branching enzyme<br/>amylopectin-like glycogen<br/>cirrhosis → death &lt;5yr"]
+    INFANT2 -->|"YES<br/>+ mild hypoglycemia<br/>+ normal lactate/uric acid"| CORI["GSD III (Cori)<br/>Debranching enzyme<br/>limit dextrin accumulates<br/>muscle + liver affected"]
+    INFANT2 -->|"NO"| INFANT3["Hypoglycemia + NO hepatomegaly<br/>+ ketosis (fasting)?"]
+    INFANT3 -->|"YES"| GSD0["GSD 0<br/>Glycogen synthase<br/>paradoxical: hypo but NO<br/>glycogen = NO hepatomegaly"]
+    INFANT3 -->|"NO"| OTHER_GSD["GSD VI (Hers) / GSD IX<br/>Phosphorylase kinase<br/>mild, X-linked form common"]
+
+    AGEOF -->|"Child / adult"| CHILDMILD["Mild hypoglycemia<br/>+ hepatomegaly<br/>exercise intolerance?"]
+    CHILDMILD -->|"YES<br/>+ ketosis"| CORI2["GSD III (Cori)<br/>debrancher — milder in<br/>childhood/adult forms"]
+    CHILDMILD -->|"YES<br/>+ mild symptoms only"| HERSPK["GSD VI / IX<br/>Phosphorylase / kinase<br/>often X-linked<br/>mild, improves with age"]
+
+    style START fill:#2d3748,color:#fff,stroke:#4a5568
+    style VONGIERKE fill:#c53030,color:#fff,stroke:#9b2c2c
+    style POMPE fill:#c53030,color:#fff,stroke:#9b2c2c
+    style GSD5 fill:#c53030,color:#fff,stroke:#9b2c2c
+    style GSD4 fill:#c53030,color:#fff,stroke:#9b2c2c
+    style CORI fill:#dd6b20,color:#fff,stroke:#c05621
+    style CORI2 fill:#dd6b20,color:#fff,stroke:#c05621
+    style GSD0 fill:#d69e2e,color:#1a202c,stroke:#b7791f
+    style GSD7 fill:#d69e2e,color:#1a202c,stroke:#b7791f
+    style HERSPK fill:#38a169,color:#fff,stroke:#2f855a
+    style OTHER fill:#718096,color:#fff,stroke:#4a5568
+    style UNLIKELY fill:#718096,color:#fff,stroke:#4a5568
+    style OTHER_GSD fill:#718096,color:#fff,stroke:#4a5568

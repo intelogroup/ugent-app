@@ -27,9 +27,9 @@ A comprehensive USMLE study platform with AI-powered analytics, personalized cur
 
 ### Backend
 - **Supabase Auth** - Login/session management
-- **Supabase DB** - `questions` + `quiz_attempts` tables (RLS-scoped); curriculum reads local JSONL
+- **Supabase DB** - `questions` + `quiz_attempts` + `curriculum_progress` tables (RLS-scoped); curriculum reads local JSONL
 - **Clea chat** - AI assistant via DeepSeek/OpenAI, RAG over book embeddings + deterministic topic router
-- **ASR pipeline** - OpenAI Whisper -> local whisper.cpp -> in-browser fallback
+- **ASR pipeline** - OpenAI gpt-4o-transcribe (only path)
 - **TTS + Avatar** - Kokoro/Piper (dev) -> ElevenLabs (prod) TTS, Wav2Lip lipsync (WAV/PCM end to end)
 
 ## Architecture & Data Flow
@@ -45,9 +45,9 @@ Auth + quiz data via Supabase (questions/attempts tables, RLS); curriculum reads
         ▼               ▼             ▼              ▼                ▼
   [Supabase Auth]  [Supabase DB]  [data/*.jsonl]  [/api/clea-chat]  [/api/whisper-
    login/session   questions +     curriculum      DeepSeek/OpenAI    transcribe]
-                   quiz_attempts    source           │                 OpenAI ASR →
-                                                     │                 whisper.cpp →
-                     Promise.all (parallel, no added latency):         in-browser
+                   quiz_attempts    source           │                 OpenAI ASR
+                                                     │
+                     Promise.all (parallel, no added latency):
                         ├─ searchBooks  → Supabase book embeddings (RAG grounding)
                         └─ routeTopic   → lib/topic-router (in-proc, sub-ms) → predictedSystem
                                       │
@@ -56,7 +56,7 @@ Auth + quiz data via Supabase (questions/attempts tables, RLS); curriculum reads
                         ┌───────────┴────────────┐
                     dev │                        │ prod
                         ▼                        ▼
-         Kokoro :8767 / Piper :8768       ElevenLabs /stream (cloud)
+          Kokoro :8767 (local Python)      ElevenLabs /stream (cloud)
                         │                        │
                         └───────────┬────────────┘
                                     ▼
@@ -81,9 +81,11 @@ ugent-app/
 │   │   ├── strategy/        # Strategy hub data
 │   │   ├── tts-audio/       # TTS proxy (Kokoro/Piper → ElevenLabs), WAV/PCM
 │   │   ├── elevenlabs-tts/  # ElevenLabs cloud TTS
-│   │   ├── whisper-transcribe/ # ASR (OpenAI → whisper.cpp → in-browser)
+│   │   ├── whisper-transcribe/ # ASR (OpenAI gpt-4o-transcribe)
 │   │   ├── lipsync-test/    # Wav2Lip proxy (env-var-ified)
 │   │   ├── lipsync-tts/     # ElevenLabs + Wav2Lip
+│   │   ├── user-count/      # Registered-user count (service role, cached)
+│   │   ├── health/          # Zero-dep liveness check
 │   │   └── asr-log/         # Voice-turn logging
 │   ├── auth/                # Supabase Auth pages (login/signup/callback/confirm)
 │   ├── create-test/         # Quiz creation
@@ -91,6 +93,7 @@ ugent-app/
 │   ├── dashboard/           # Main dashboard
 │   ├── diseases/            # Disease reference
 │   ├── leaderboard/         # Peer comparison
+│   ├── privacy/ terms/      # Legal pages
 │   ├── quiz/                # Quiz runner
 │   ├── settings/            # User settings
 │   ├── strategy/            # Strategy hub (disease priority, clue training)
@@ -102,7 +105,9 @@ ugent-app/
 │   ├── Avatar.tsx           # Avatar element
 │   ├── DashboardLayout.tsx  # Layout shell
 │   ├── Sidebar.tsx          # Nav sidebar
-│   └── MobileNav.tsx        # Mobile nav
+│   ├── MobileNav.tsx        # Mobile nav
+│   ├── ConsentBanner.tsx    # Privacy/voice consent (localStorage ugent-consent)
+│   └── SocialProof.tsx      # Real registered-user count on landing
 ├── data/                    # Pipeline source JSONL (curriculum + enrichment)
 │   ├── classified-questions.jsonl   # classifier output (qbank source of truth)
 │   ├── medicospira-enriched.jsonl   # enrichment output (drives curriculum + router)
@@ -116,17 +121,14 @@ ugent-app/
 │   ├── asr-correct.ts          # ASR correction layer
 │   ├── asr-dictionary.json     # Medical term dictionary
 │   ├── qbank.ts / quizAttempts.ts  # Supabase question + attempt readers
-│   ├── whisper-pipeline.ts     # In-browser Whisper
-│   ├── use-whisper-mic.ts      # WebGPU mic hook
-│   ├── use-continuous-mic.ts   # SpeechRecognition fallback
+│   ├── quiz-lifecycle.ts       # Pure quiz scoring (keyed by question id)
+│   ├── use-whisper-mic.ts      # Energy-based VAD mic hook (cloud ASR)
 │   ├── zod-schemas.ts          # Shared agent tool I/O schemas
 │   ├── navigation.ts           # Route config (auto-propagates to nav)
 │   ├── curriculum/             # Generator engine (analyzer + generator)
 │   └── supabase/               # Supabase client (client + server)
 ├── scripts/                 # Python/JS utilities
 │   ├── local-kokoro-server.py # TTS server (:8767)
-│   ├── local-piper-server.py  # TTS fallback (:8768)
-│   ├── local-whisper-server.py# ASR fallback (:8766)
 │   ├── classify-local.py      # Keyword classifier
 │   ├── deepseek-enrich.mjs    # AI enrichment
 │   ├── build-book-embeddings.mjs # RAG book embeddings → Supabase
@@ -152,8 +154,6 @@ For voice/avatar features, start local servers (separate terminals):
 ```bash
 cd scratch/lipsync_test/Wav2Lip && ./venv/bin/python3 server.py --face inputs/clea_480p.mp4  # :8765
 python3 scripts/local-kokoro-server.py   # :8767
-python3 scripts/local-piper-server.py    # :8768
-python3 scripts/local-whisper-server.py  # :8766
 ```
 
 To use avatar from Vercel prod, tunnel Wav2Lip via cloudflared:
@@ -164,8 +164,10 @@ cloudflared tunnel --url http://localhost:8765
 
 ### Tests
 ```bash
-npm run test       # Vitest
-npx playwright test  # E2E
+npm run test          # Jest unit tests (132)
+npm run test:ai       # Vitest: ai-sdk suites (fail under Jest/Node 24 ESM)
+npx vitest run __tests__/api/quiz-activity.test.ts __tests__/lib/supabase/queries.test.ts
+npx playwright test   # E2E (set E2E_USER_EMAIL/E2E_USER_PASSWORD to a live user)
 ```
 
 ## Tech Stack
@@ -175,9 +177,9 @@ npx playwright test  # E2E
 - **Auth**: Supabase Auth (`@supabase/ssr`)
 - **Data**: Supabase (`questions` + `quiz_attempts`, RLS) + local JSONL for curriculum
 - **AI Chat**: DeepSeek / OpenAI via Vercel AI SDK, RAG over Supabase book embeddings + in-proc topic router
-- **ASR**: OpenAI gpt-4o-transcribe
-- **TTS**: Kokoro / Piper (dev, local Python) -> ElevenLabs (prod cloud) — WAV/PCM end to end
+- **ASR**: OpenAI gpt-4o-transcribe (only path; local whisper.cpp fallback removed)
+- **TTS**: Kokoro (dev, local Python) -> ElevenLabs (prod cloud) — WAV/PCM end to end
 - **Avatar**: Wav2Lip (PyTorch MPS/CUDA), launchd dev :8765 / prod :8770 via Cloudflare tunnel
-- **Testing**: Jest + Vitest + Playwright
+- **Testing**: Jest + Vitest + Playwright; CI via GitHub Actions (`.github/workflows/ci.yml`)
 
 ---
