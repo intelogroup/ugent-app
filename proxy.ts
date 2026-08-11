@@ -10,6 +10,7 @@ const protectedPaths = [
   '/leaderboard',
   '/curriculum',
   '/strategy',
+  '/settings',
 ]
 
 export async function proxy(request: NextRequest) {

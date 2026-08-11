@@ -23,6 +23,12 @@ const customJestConfig = {
     // vitest-authored tests (use vi.mock/vi.fn) — run these via `npx vitest run <path>`, not jest
     '<rootDir>/__tests__/api/quiz-activity.test.ts',
     '<rootDir>/__tests__/lib/supabase/queries.test.ts',
+    // ai-sdk ESM fails to load under Jest (Node 24 CJS interop) — 0 tests run.
+    // Pass under vitest; run via `npm run test:ai`.
+    '<rootDir>/__tests__/components/CleaChat.test.tsx',
+    '<rootDir>/__tests__/lib/clea-agent-context.test.tsx',
+    '<rootDir>/__tests__/lib/clea-tools.test.ts',
+    '<rootDir>/__tests__/lib/agent-error-logger.test.ts',
     '<rootDir>/e2e/',
     '<rootDir>/tests/',
     '<rootDir>/.claude/worktrees/',

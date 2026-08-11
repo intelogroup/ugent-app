@@ -8,12 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "test:auth": "vitest run __tests__/auth",
-    "test:auth:watch": "vitest __tests__/auth",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug"
+    "test:auth": "vitest run __tests__/api/quiz-activity.test.ts __tests__/lib/supabase/queries.test.ts",
+    "test:auth:watch": "vitest __tests__/api/quiz-activity.test.ts __tests__/lib/supabase/queries.test.ts",
+    "test:e2e:debug": "playwright test --debug",
+    "test:ai": "vitest run __tests__/components/CleaChat.test.tsx __tests__/lib/clea-agent-context.test.tsx __tests__/lib/clea-tools.test.ts __tests__/lib/agent-error-logger.test.ts"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^3.0.12",

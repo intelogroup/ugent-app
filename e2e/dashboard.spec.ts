@@ -6,8 +6,8 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const TEST_USER = {
-  email: 'jbean@jovidoc.com',
-  password: 'test123',
+  email: process.env.E2E_USER_EMAIL || 'jbean@jovidoc.com',
+  password: process.env.E2E_USER_PASSWORD || 'test123',
 };
 
 async function loginUser(page: Page) {
