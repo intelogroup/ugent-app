@@ -24,6 +24,7 @@ export interface ClassifiedQuestion {
   system: string;
   subject: string;
   difficulty: string;
+  source: string;
 }
 
 function fromRow(row: any): ClassifiedQuestion {
@@ -36,6 +37,7 @@ function fromRow(row: any): ClassifiedQuestion {
     system: row.system,
     subject: row.subject,
     difficulty: row.difficulty,
+    source: row.source ?? 'medicospira',
   };
 }
 
