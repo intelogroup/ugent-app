@@ -160,7 +160,7 @@
 .footer { width: min(1180px, calc(100% - 48px)); margin: 72px auto 0; padding: 58px 0 30px; border-top: 1px solid var(--line); }
 .footerMain { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 96px; }
 .footerBrand p { max-width: 390px; margin-top: 18px; color: #6d7f8e; font-size: 14px; line-height: 1.65; }
-.footerNav { display: grid; grid-template-columns: repeat(2,minmax(120px,1fr)); gap: 72px; }
+.footerNav { display: grid; grid-template-columns: repeat(3,minmax(120px,1fr)); gap: 48px; }
 .footerNav > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .footerNav strong { margin-bottom: 4px; color: var(--ink); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .footerNav a { color: #596e7f; font-size: 13px; font-weight: 550; transition: color 180ms ease; }

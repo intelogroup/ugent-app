@@ -8,6 +8,7 @@ import {
   Mic2,
 } from 'lucide-react'
 import UgentLogo from '@/components/UgentLogo'
+import SocialProof from '@/components/SocialProof'
 import styles from './landing.module.css'
 
 const jakarta = Plus_Jakarta_Sans({
@@ -69,15 +70,7 @@ export default function Home() {
             Ugent turns the question bank into a focused 19-week plan, with clear study blocks, contextual tutoring, and progress you can see.
           </p>
           <div className={styles.heroSocialProof}>
-            <div className={styles.userStack} aria-hidden="true">
-              <Image src="/clea2-avatar-photo.png" alt="" width={40} height={40} />
-              <Image src="/clea-avatar-photo.png" alt="" width={40} height={40} />
-              <Image src="/images/landing/hero-med-student.webp" alt="" width={40} height={40} />
-            </div>
-            <div>
-              <strong>4K+</strong>
-              <span>Trusted by thousands</span>
-            </div>
+            <SocialProof />
           </div>
         </div>
 
@@ -208,6 +201,11 @@ export default function Home() {
               <strong>Account</strong>
               <Link href="/auth/signup">Create account</Link>
               <Link href="/auth/login">Sign in</Link>
+            </div>
+            <div>
+              <strong>Legal</strong>
+              <Link href="/terms">Terms</Link>
+              <Link href="/privacy">Privacy</Link>
             </div>
           </nav>
         </div>

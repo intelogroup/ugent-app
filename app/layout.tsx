@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConditionalProviders } from "@/components/ConditionalProviders";
+import ConsentBanner from "@/components/ConsentBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,6 +22,7 @@ export default function RootLayout({
         <ConditionalProviders>
           {children}
         </ConditionalProviders>
+        <ConsentBanner />
       </body>
     </html>
   );
