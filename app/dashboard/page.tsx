@@ -18,53 +18,74 @@ import {
 } from '@heroicons/react/24/outline';
 import DashboardLayout from '@/components/DashboardLayout';
 import {
-  getCompletedCurriculumBlocks,
   getQuizAttempts,
   QuizAttempt,
 } from '@/lib/quizAttempts';
 
-const systemFocus = [
-  {
-    name: 'Renal & Urinary Systems',
-    detail: 'Nephritic vs nephrotic syndrome discriminators',
-    progress: 82,
-  },
-  {
-    name: 'Cardiovascular System',
-    detail: 'Valvular lesions and murmur mechanics',
-    progress: 64,
-  },
-  {
-    name: 'Endocrine Physiology',
-    detail: 'Thyroid axis, MEN syndromes and adrenal pathology',
-    progress: 45,
-  },
-];
-
 function buildPerformanceData(attempts: QuizAttempt[]) {
-  return attempts.slice(-7).map((attempt) => ({
+  // attempts are newest-first (ordered by created_at desc); reverse so the
+  // chart reads left-to-right over time, taking the most recent 7.
+  return attempts.slice(0, 7).reverse().map((attempt) => ({
     date: new Date(attempt.timestamp).toLocaleDateString('en-US', { weekday: 'short' }),
     score: attempt.total > 0 ? Math.round((attempt.correct / attempt.total) * 100) : 0,
   }));
 }
 
+function buildSystemFocus(attempts: QuizAttempt[]) {
+  const bySystem = new Map<string, { correct: number; total: number }>();
+  for (const attempt of attempts) {
+    const key = attempt.system || attempt.subject || 'Mixed';
+    const entry = bySystem.get(key) ?? { correct: 0, total: 0 };
+    entry.correct += attempt.correct;
+    entry.total += attempt.total;
+    bySystem.set(key, entry);
+  }
+  return [...bySystem.entries()]
+    .filter(([, { total }]) => total >= 3)
+    .map(([name, { correct, total }]) => ({
+      name,
+      detail: `${total} questions`,
+      progress: Math.round((correct / total) * 100),
+    }))
+    .sort((a, b) => a.progress - b.progress)
+    .slice(0, 3);
+}
+
 export default function Home() {
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [blocksCompleted, setBlocksCompleted] = useState(0);
+  const [totalBlocks, setTotalBlocks] = useState(0);
 
   useEffect(() => {
     let active = true;
-    const frame = requestAnimationFrame(() => {
-      if (active) setBlocksCompleted(getCompletedCurriculumBlocks().length);
-    });
 
     getQuizAttempts().then((nextAttempts) => {
       if (active) setAttempts(nextAttempts);
     });
 
+    fetch('/api/curriculum-progress')
+      .then((r) => r.json())
+      .then((json) => {
+        if (active && Array.isArray(json.blockIds)) setBlocksCompleted(json.blockIds.length);
+      })
+      .catch(() => {});
+
+    fetch('/api/curriculum')
+      .then((r) => r.json())
+      .then((json) => {
+        if (!active || !json.curriculum?.weeks) return;
+        let total = 0;
+        for (const week of json.curriculum.weeks) {
+          for (const day of week.days ?? []) {
+            total += (day.blocks ?? []).length;
+          }
+        }
+        setTotalBlocks(total);
+      })
+      .catch(() => {});
+
     return () => {
       active = false;
-      cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -72,7 +93,8 @@ export default function Home() {
   const totalCorrect = attempts.reduce((sum, attempt) => sum + attempt.correct, 0);
   const avgScore = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const performanceData = buildPerformanceData(attempts);
-  const curriculumProgress = Math.min(Math.round((blocksCompleted / 57) * 100), 100);
+  const systemFocus = buildSystemFocus(attempts);
+  const curriculumProgress = totalBlocks > 0 ? Math.min(Math.round((blocksCompleted / totalBlocks) * 100), 100) : 0;
 
   const metrics = [
     { label: 'Average accuracy', value: `${avgScore}%`, detail: 'Across all completed tests' },
@@ -149,7 +171,7 @@ export default function Home() {
                 <p className="text-xs font-medium text-neutral-500">Curriculum blocks</p>
                 <span className="text-[11px] font-medium text-neutral-400">{curriculumProgress}%</span>
               </div>
-              <p className="mt-2 text-2xl font-bold text-neutral-900">{blocksCompleted}<span className="ml-1 text-sm font-medium text-neutral-400">/ 57</span></p>
+              <p className="mt-2 text-2xl font-bold text-neutral-900">{blocksCompleted}{totalBlocks > 0 && <span className="ml-1 text-sm font-medium text-neutral-400">/ {totalBlocks}</span>}</p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
                 <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${curriculumProgress}%` }} />
               </div>
@@ -212,23 +234,29 @@ export default function Home() {
           <div className="rounded-xl border border-neutral-200 bg-white p-5">
             <div>
               <h2 className="text-base! font-semibold text-neutral-900">Current focus</h2>
-              <p className="mt-0.5 text-xs text-neutral-400">USMLE Step 1 systems</p>
+              <p className="mt-0.5 text-xs text-neutral-400">Your weakest systems by accuracy</p>
             </div>
 
-            <div className="mt-3 divide-y divide-neutral-100">
-              {systemFocus.map((system) => (
-                <div key={system.name} className="py-3.5 first:pt-2 last:pb-0">
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="truncate text-sm font-medium text-neutral-800">{system.name}</p>
-                    <span className="shrink-0 text-xs font-medium text-neutral-400">{system.progress}%</span>
+            {systemFocus.length === 0 ? (
+              <p className="mt-3 text-sm text-neutral-400">
+                Complete a few tests to see where to focus.
+              </p>
+            ) : (
+              <div className="mt-3 divide-y divide-neutral-100">
+                {systemFocus.map((system) => (
+                  <div key={system.name} className="py-3.5 first:pt-2 last:pb-0">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="truncate text-sm font-medium text-neutral-800">{system.name}</p>
+                      <span className="shrink-0 text-xs font-medium text-neutral-400">{system.progress}%</span>
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-neutral-400">{system.detail}</p>
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100">
+                      <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${system.progress}%` }} />
+                    </div>
                   </div>
-                  <p className="mt-1 truncate text-[11px] text-neutral-400">{system.detail}</p>
-                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100">
-                    <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${system.progress}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>

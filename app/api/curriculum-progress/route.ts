@@ -11,7 +11,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { blockId } = (await request.json()) as { blockId: string };
+  let body: { blockId?: unknown }
+  try {
+    body = (await request.json()) as { blockId?: unknown }
+  } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400 });
+  }
+  const blockId = typeof body.blockId === 'string' ? body.blockId : null;
   if (!blockId) return NextResponse.json({ error: 'blockId is required' }, { status: 400 });
 
   const supabase = await createClient();
@@ -26,7 +32,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const { blockId } = (await request.json()) as { blockId: string };
+  let body: { blockId?: unknown }
+  try {
+    body = (await request.json()) as { blockId?: unknown }
+  } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400 });
+  }
+  const blockId = typeof body.blockId === 'string' ? body.blockId : null;
   if (!blockId) return NextResponse.json({ error: 'blockId is required' }, { status: 400 });
 
   const supabase = await createClient();

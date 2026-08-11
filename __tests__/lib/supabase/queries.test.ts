@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockFrom = vi.fn()
 const mockSelect = vi.fn()
 const mockOrder = vi.fn()
+const mockRange = vi.fn()
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn(() => ({
@@ -11,7 +12,8 @@ vi.mock('@/lib/supabase/client', () => ({
 }))
 
 const mockSupabaseQuery = (returnValue: any) => {
-  mockOrder.mockResolvedValue(returnValue)
+  mockRange.mockResolvedValue(returnValue)
+  mockOrder.mockReturnValue({ range: mockRange })
   mockSelect.mockReturnValue({ order: mockOrder })
   mockFrom.mockReturnValue({ select: mockSelect })
 }

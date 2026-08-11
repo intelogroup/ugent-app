@@ -15,17 +15,27 @@ export async function getQuizAttempts(): Promise<QuizAttempt[]> {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
 
-    const { data, error } = await supabase
-      .from('quiz_attempts')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error || !data) {
-      if (error) console.error('[quizAttempts] fetch failed', error)
-      return []
+    // PostgREST caps a single select at db.max_rows (1000); walk range windows
+    // so a heavy user's full history is counted (dashboard averages/focus
+    // depend on the complete set, not a truncated slice).
+    const all: any[] = []
+    const windowSize = 1000
+    for (let start = 0; ; start += windowSize) {
+      const { data, error } = await supabase
+        .from('quiz_attempts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(start, start + windowSize - 1)
+      if (error) {
+        console.error('[quizAttempts] fetch failed', error)
+        return []
+      }
+      const batch = data ?? []
+      all.push(...batch)
+      if (batch.length < windowSize) break
     }
 
-    return data.map((row: any) => ({
+    return all.map((row: any) => ({
       id: row.id,
       timestamp: new Date(row.created_at).getTime(),
       subject: row.subject,
@@ -36,15 +46,6 @@ export async function getQuizAttempts(): Promise<QuizAttempt[]> {
     }))
   } catch (e) {
     console.error('[quizAttempts] fetch threw', e)
-    return []
-  }
-}
-
-export function getCompletedCurriculumBlocks(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    return JSON.parse(localStorage.getItem('curriculum-completed-blocks') || '[]')
-  } catch {
     return []
   }
 }

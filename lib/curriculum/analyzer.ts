@@ -629,7 +629,7 @@ function parsePrerequisites(prereqTexts: string[], _system: string): string[] {
   return [...new Set(ids)];
 }
 
-export async function analyzeQuestions(): Promise<{
+type AnalysisResult = {
   graph: DependencyGraph;
   topicMap: Map<string, TopicNode>;
   allNodes: TopicNode[];
@@ -643,7 +643,18 @@ export async function analyzeQuestions(): Promise<{
     dependencyDepth: number;
   };
   systemDiseaseMap: Record<string, DiseaseEntry[]>;
-}> {
+};
+
+// Module-level cache: /api/curriculum and /api/strategy both call
+// analyzeQuestions() per request (force-dynamic), and each full parse + graph
+// build was re-running on every dashboard/strategy/curriculum load.
+// readDataFile freezes the JSONL content for the process lifetime, so a plain
+// once-cache is correct — content cannot change mid-process. Fresh deploys /
+// dev restarts get a fresh module and a fresh cache.
+let analysisCache: AnalysisResult | null = null;
+
+export async function analyzeQuestions(): Promise<AnalysisResult> {
+  if (analysisCache) return analysisCache;
   const questionHashes = new Set<string>();
   const topicMap = new Map<string, TopicNode>();
   const systemCount: Record<string, number> = {};
@@ -852,7 +863,15 @@ export async function analyzeQuestions(): Promise<{
     dependencyDepth: maxDepth,
   };
 
-  return { graph, topicMap, allNodes: nodes, frequencyStats, systemDiseaseMap: await getSystemDiseaseMap() };
+  const result: AnalysisResult = {
+    graph,
+    topicMap,
+    allNodes: nodes,
+    frequencyStats,
+    systemDiseaseMap: await getSystemDiseaseMap(),
+  };
+  analysisCache = result;
+  return result;
 }
 
 export interface DiseaseEntry {
