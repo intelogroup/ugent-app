@@ -35,6 +35,7 @@ interface Question {
   subject: string;
   system: string;
   difficulty: string;
+  images?: { url: string; caption?: string }[];
 }
 
 interface QuizAttempt {
@@ -319,6 +320,23 @@ export function QuizContent() {
                   </span>
                 </div>
                 <p className="text-lg text-neutral-900 leading-relaxed">{currentQuestion.text}</p>
+
+                {(currentQuestion.images && currentQuestion.images.length > 0) && (
+                  <div className="mt-4 space-y-3">
+                    {currentQuestion.images.map((img, i) => (
+                      <div key={i} className="rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50">
+                        <img
+                          src={img.url}
+                          alt={img.caption || `Question image ${i + 1}`}
+                          className="w-full max-h-80 object-contain"
+                        />
+                        {img.caption && (
+                          <p className="px-3 py-2 text-xs text-neutral-500 border-t border-neutral-200">{img.caption}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 onClick={toggleFlag}

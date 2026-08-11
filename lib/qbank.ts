@@ -25,6 +25,7 @@ export interface ClassifiedQuestion {
   subject: string;
   difficulty: string;
   source: string;
+  images: { url: string; caption?: string; type?: string }[];
 }
 
 function fromRow(row: any): ClassifiedQuestion {
@@ -38,6 +39,7 @@ function fromRow(row: any): ClassifiedQuestion {
     subject: row.subject,
     difficulty: row.difficulty,
     source: row.source ?? 'medicospira',
+    images: row.images ?? [],
   };
 }
 
@@ -89,6 +91,7 @@ export async function queryQuestions(opts: {
         subject: q.subject,
         system: q.system,
         difficulty: q.difficulty,
+        images: q.images,
       };
     });
     return { questions: selected, matched: matched.length };
@@ -130,6 +133,7 @@ export async function queryQuestions(opts: {
         subject: q.subject,
         system: q.system,
         difficulty: q.difficulty,
+        images: q.images,
       };
     });
 
