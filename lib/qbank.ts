@@ -39,13 +39,6 @@ function fromRow(row: any): ClassifiedQuestion {
   };
 }
 
-export async function loadQuestions(): Promise<ClassifiedQuestion[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from('questions').select('*');
-  if (error) throw error;
-  return (data ?? []).map(fromRow);
-}
-
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -90,7 +83,6 @@ export async function queryQuestions(opts: {
         id: q.textHash,
         text: q.text,
         options: q.options,
-        correctAnswer: q.correctAnswer,
         explanation: q.explanation,
         subject: q.subject,
         system: q.system,
@@ -132,7 +124,6 @@ export async function queryQuestions(opts: {
         id: q.textHash,
         text: q.text,
         options: q.options,
-        correctAnswer: q.correctAnswer,
         explanation: q.explanation,
         subject: q.subject,
         system: q.system,

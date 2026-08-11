@@ -14,6 +14,13 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/solid';
 import { useWatch, buildQuizSnapshot } from '@/lib/watch-context';
+import {
+  createQuizProgress,
+  recordAnswer,
+  countCorrect,
+  countIncorrect,
+  countAnswered,
+} from '@/lib/quiz-lifecycle';
 
 interface AnswerOption {
   text: string;
@@ -24,7 +31,6 @@ interface Question {
   id: string;
   text: string;
   options: AnswerOption[];
-  correctAnswer: string;
   explanation: string;
   subject: string;
   system: string;
@@ -40,12 +46,14 @@ interface QuizAttempt {
   timeSpentSeconds: number;
 }
 
-function postQuizActivity(body: { activity?: unknown; attempt?: QuizAttempt }) {
-  fetch('/api/quiz-activity', {
+function postQuizActivity(body: { activity?: unknown; attempt?: QuizAttempt }): Promise<boolean> {
+  return fetch('/api/quiz-activity', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  }).catch(() => {});
+  })
+    .then((res) => res.ok)
+    .catch(() => false);
 }
 
 // Renders inside DashboardLayout so useWatch() resolves against the
@@ -57,6 +65,7 @@ function QuizActivitySync({
   isSubmitted,
   selectedIndex,
   correctCount,
+  answeredCount,
 }: {
   questions: Question[];
   currentQuestion: Question | undefined;
@@ -64,6 +73,7 @@ function QuizActivitySync({
   isSubmitted: boolean;
   selectedIndex: number | null;
   correctCount: number;
+  answeredCount: number;
 }) {
   const { watchEnabled, setActivity } = useWatch();
 
@@ -77,13 +87,13 @@ function QuizActivitySync({
       selectedIndex !== null,
       isSubmitted ? (currentQuestion.options[selectedIndex!]?.isCorrect ?? null) : null,
       correctCount,
-      currentIndex + (isSubmitted ? 1 : 0),
+      answeredCount,
       selectedIndex
     );
     setActivity(snapshot);
     postQuizActivity({ activity: snapshot });
     return () => setActivity(null);
-  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, setActivity]);
+  }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, answeredCount, setActivity]);
 
   return null;
 }
@@ -99,10 +109,11 @@ export function QuizContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
+  const [progress, setProgress] = useState(createQuizProgress());
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [attemptError, setAttemptError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -132,25 +143,43 @@ export function QuizContent() {
   const currentQuestion = questions?.[currentIndex];
   const isLastQuestion = questions ? currentIndex === questions.length - 1 : false;
 
+  const correctCount = countCorrect(progress);
+  const incorrectCount = countIncorrect(progress);
+  const answeredCount = countAnswered(progress);
+
   const handleSubmit = () => {
     if (selectedIndex === null || !currentQuestion) return;
     const isCorrect = currentQuestion.options[selectedIndex]?.isCorrect ?? false;
-    if (isCorrect) setCorrectCount((c) => c + 1);
+    setProgress((p) => recordAnswer(p, currentQuestion.id, isCorrect, selectedIndex));
     setIsSubmitted(true);
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const finishQuiz = () => {
-    if (!questions) return;
+    if (!questions || isSaving) return;
+    setIsSaving(true);
     const attempt = {
       timestamp: Date.now(),
       subject,
       system,
-      total: questions.length,
-      correct: correctCount,
+      total: countAnswered(progress),
+      correct: countCorrect(progress),
       timeSpentSeconds: elapsedTime,
     };
-    postQuizActivity({ attempt });
-    router.push('/dashboard');
+    postQuizActivity({ attempt })
+      .then((ok) => {
+        if (!ok) {
+          setAttemptError('Could not save this attempt. Your score may not be recorded.');
+          setIsSaving(false);
+          return;
+        }
+        router.push('/dashboard');
+      })
+      .catch(() => {
+        setAttemptError('Could not save this attempt. Your score may not be recorded.');
+        setIsSaving(false);
+      });
   };
 
   const handleNext = () => {
@@ -220,6 +249,7 @@ export function QuizContent() {
         isSubmitted={isSubmitted}
         selectedIndex={selectedIndex}
         correctCount={correctCount}
+        answeredCount={answeredCount}
       />
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="card">
@@ -273,7 +303,7 @@ export function QuizContent() {
               <XCircleIcon className="w-5 h-5 text-neutral-400" />
               <div>
                 <p className="text-xs text-neutral-500">Incorrect</p>
-                <p className="text-sm font-semibold text-neutral-900">{currentIndex + (isSubmitted ? 1 : 0) - correctCount}</p>
+                <p className="text-sm font-semibold text-neutral-900">{incorrectCount}</p>
               </div>
             </div>
           </div>
@@ -400,11 +430,14 @@ export function QuizContent() {
                     <ArrowLeftIcon className="w-4 h-4" />
                     Previous
                   </button>
-                  <button onClick={handleNext} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  <button onClick={handleNext} disabled={isSaving} className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50">
                     {isLastQuestion ? 'Complete Quiz' : 'Next Question'}
                     <ArrowRightIcon className="w-4 h-4" />
                   </button>
                 </div>
+                {attemptError && (
+                  <p className="text-sm text-rose-600 bg-rose-50 rounded-lg p-3 mt-3">{attemptError}</p>
+                )}
               </div>
             )}
           </div>
