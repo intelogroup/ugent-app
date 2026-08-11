@@ -29,64 +29,52 @@ const OUTPUT_FILE = path.join(process.cwd(), 'data', 'authored-questions.jsonl')
 // ── Topic lists (from lib/curriculum/analyzer.ts FIRST_AID_MAP + PATHOMA_MAP) ──
 const SYSTEM_TOPICS = {
   Cardiovascular: [
-    // Embryology & Anatomy
     'Heart development and looping',
     'Fetal circulation and shunt closure (ductus arteriosus, foramen ovale, ductus venosus)',
     'Coronary artery anatomy and dominance patterns',
-    // Physiology
     'Cardiac cycle, pressure-volume loops, and Wiggers diagram',
     'EKG interpretation and arrhythmia mechanisms',
     'Hemodynamics: cardiac output, stroke volume, total peripheral resistance, mean arterial pressure',
     'Starling forces and capillary fluid exchange',
-    // Pathology — Congenital
     'Atrial septal defect (ASD)',
     'Ventricular septal defect (VSD)',
     'Patent ductus arteriosus',
     'Tetralogy of Fallot',
     'Transposition of the great vessels',
     'Coarctation of the aorta',
-    // Pathology — Ischemic
     'Stable angina: pathophysiology and diagnosis',
     'Unstable angina and NSTEMI',
     'STEMI: ECG localization and management',
     'Myocardial infarction complications (papillary muscle rupture, free wall rupture, ventricular septal rupture, Dressler syndrome)',
-    // Pathology — Heart Failure
     'Systolic vs diastolic heart failure',
     'Cardiogenic shock',
-    // Pathology — Hypertension & Vascular
     'Essential hypertension and hypertensive emergency',
     'Atherosclerosis pathogenesis',
     'Aortic dissection (Stanford A vs B)',
     'Aortic aneurysm (thoracic vs abdominal)',
-    // Pathology — Arrhythmias
     'Atrial fibrillation: mechanism, complications, and management',
     'AV blocks (first, second Mobitz I/II, third degree)',
     'Ventricular tachycardia and ventricular fibrillation',
     'Wolff-Parkinson-White syndrome',
-    // Pathology — Valvular
     'Mitral regurgitation',
     'Mitral stenosis',
     'Aortic regurgitation',
     'Aortic stenosis',
     'Mitral valve prolapse',
-    // Pathology — Cardiomyopathies
     'Dilated cardiomyopathy',
     'Hypertrophic cardiomyopathy',
     'Restrictive cardiomyopathy',
-    // Pathology — Infectious & Inflammatory
     'Infective endocarditis (acute vs subacute)',
     'Acute pericarditis',
     'Cardiac tamponade',
     'Constrictive pericarditis',
     'Rheumatic fever and rheumatic heart disease',
     'Myocarditis',
-    // Pathology — Vasculitis
     'Giant cell arteritis',
     'Takayasu arteritis',
     'Polyarteritis nodosa',
     'Kawasaki disease',
     'Granulomatosis with polyangiitis (Wegener)',
-    // Pharmacology
     'ACE inhibitors and ARBs: mechanism and side effects',
     'Beta-blockers: cardioselectivity and indications',
     'Calcium channel blockers: dihydropyridine vs non-dihydropyridine',
@@ -95,6 +83,179 @@ const SYSTEM_TOPICS = {
     'Digoxin: mechanism, toxicity, and ECG findings',
     'Nitrates in angina management',
     'Diuretics in heart failure management',
+  ],
+  Respiratory: [
+    'Lung development phases (Pseudoglandular, Canalicular, Saccular, Alveolar)',
+    'Bronchial tree structure and histology',
+    'Lung volumes and capacities (TLC, VC, RV, FRC, TV)',
+    'Oxygen-hemoglobin dissociation curve shifts (left vs right)',
+    'V/Q mismatches, shunt vs dead space',
+    'COPD (chronic bronchitis vs emphysema)',
+    'Asthma: pathophysiology, types, and management',
+    'Bronchiectasis',
+    'Idiopathic pulmonary fibrosis (IPF)',
+    'Pneumoconioses (silicosis, asbestosis, coal workers)',
+    'Sarcoidosis',
+    'Lobar pneumonia vs bronchopneumonia',
+    'Atypical pneumonia (Mycoplasma, Legionella, Chlamydia)',
+    'Lung abscess',
+    'Tuberculosis: primary vs reactivation',
+    'Pulmonary embolism: risk factors, diagnosis, management',
+    'Pulmonary hypertension',
+    'Pneumothorax (spontaneous vs tension)',
+    'Pleural effusions (transudate vs exudate)',
+    'Lung adenocarcinoma',
+    'Squamous cell carcinoma of the lung',
+    'Small cell lung cancer',
+    'Asthma controllers (steroids, leukotriene inhibitors)',
+    'Bronchodilators (beta-2 agonists, muscarinic antagonists)',
+    'ARDS: pathophysiology and management',
+  ],
+  Gastrointestinal: [
+    'Peritoneum and retroperitoneal structures',
+    'GI blood supply (Celiac, SMA, IMA) and portosystemic anastomoses',
+    'Hernia types (direct vs indirect inguinal, femoral)',
+    'GI secretory hormones (Gastrin, CCK, Secretin, Somatostatin)',
+    'Bilirubin metabolism and jaundice etiologies',
+    'Digestion and absorption of macronutrients',
+    'Achalasia',
+    'GERD and Barrett esophagus',
+    'Mallory-Weiss tear',
+    'Acute and chronic gastritis',
+    'Peptic ulcer disease (gastric vs duodenal)',
+    'Gastric cancer',
+    'Crohn disease vs ulcerative colitis (IBD)',
+    'Celiac disease',
+    'Irritable bowel syndrome',
+    'Appendicitis',
+    'Diverticulosis and diverticulitis',
+    'Colon polyps and colorectal cancer',
+    'Angiodysplasia',
+    'Cirrhosis and portal hypertension',
+    'Viral hepatitis (A, B, C, D, E)',
+    'Alcoholic liver disease',
+    'Non-alcoholic fatty liver disease (NAFLD)',
+    'Cholelithiasis and cholecystitis',
+    'H2 receptor blockers and proton pump inhibitors',
+    'Antiemetic agents (Ondansetron, Metoclopramide)',
+    'Acute and chronic pancreatitis',
+  ],
+  Neurology: [
+    'Neural tube development and defects (Anencephaly, Spina Bifida)',
+    'Ventricles, CSF flow, and hydrocephalus (normal pressure, non-communicating, communicating)',
+    'Spinal cord tracts and cortical homunculus',
+    'Action potentials and myelination',
+    'Synaptic transmission and neurotransmitter changes in disease',
+    'Ischemic stroke: pathophysiology and management',
+    'Epidural vs subdural hematomas',
+    'Subarachnoid hemorrhage',
+    'Wallenberg syndrome (lateral medullary syndrome)',
+    'Alzheimer disease: pathophysiology and diagnosis',
+    'Lewy body dementia',
+    'Frontotemporal dementia',
+    'Vascular dementia',
+    'Parkinson disease',
+    'Huntington disease',
+    'Multiple sclerosis',
+    'Guillain-Barre syndrome',
+    'Amyotrophic lateral sclerosis (ALS)',
+    'Myasthenia gravis',
+    'Seizure disorders and epilepsy',
+    'Status epilepticus',
+    'Glioblastoma multiforme',
+    'Meningioma',
+    'Schwannoma',
+    'Medulloblastoma and pilocytic astrocytoma',
+    'Visual pathway lesions',
+    'Anesthetics (local and inhaled)',
+    'Antiepileptics (Phenytoin, Valproate, Carbamazepine)',
+    'Parkinson therapeutics (Levodopa/Carbidopa, dopamine agonists)',
+  ],
+  Renal: [
+    'Kidney development (Pronephros, Mesonephros, Metanephros)',
+    'Nephron structure and glomerular filtration barrier',
+    'GFR, RPF, and renal clearance',
+    'Electrolyte and water handling along the nephron',
+    'Acid-base physiology and compensation',
+    'Post-streptococcal glomerulonephritis (PSGN)',
+    'IgA nephropathy (Berger disease)',
+    'Alport syndrome',
+    'Rapidly progressive glomerulonephritis (RPGN)',
+    'Membranoproliferative glomerulonephritis',
+    'Minimal change disease',
+    'Focal segmental glomerulosclerosis (FSGS)',
+    'Membranous nephropathy',
+    'Amyloidosis: renal involvement',
+    'Diabetic nephropathy',
+    'Prerenal, intrinsic, and postrenal acute kidney injury',
+    'Acute tubular necrosis (ATN)',
+    'Acute interstitial nephritis',
+    'Calcium oxalate kidney stones',
+    'Ammonium magnesium phosphate (struvite) stones',
+    'Uric acid stones',
+    'Cystine stones',
+    'Renal cell carcinoma',
+    'Wilms tumor (nephroblastoma)',
+    'Loop diuretics',
+    'Thiazide diuretics',
+    'Potassium-sparing diuretics',
+    'Carbonic anhydrase inhibitors',
+  ],
+  Endocrine: [
+    'Thyroid and adrenal gland anatomy',
+    'Hypothalamic-pituitary axes',
+    'Hormone feedback systems and receptor types',
+    'Prolactinoma',
+    'Acromegaly',
+    'Diabetes insipidus (central vs nephrogenic)',
+    'SIADH',
+    'Hashimoto thyroiditis',
+    'De Quervain (subacute) thyroiditis',
+    'Graves disease',
+    'Thyroid goiter and nodular disease',
+    'Papillary thyroid carcinoma',
+    'Follicular thyroid carcinoma',
+    'Medullary thyroid carcinoma',
+    'Cushing syndrome',
+    'Conn syndrome (primary hyperaldosteronism)',
+    'Addison disease (primary adrenal insufficiency)',
+    'Congenital adrenal hyperplasia',
+    'Diabetes mellitus type 1',
+    'Diabetes mellitus type 2',
+    'Diabetic ketoacidosis (DKA)',
+    'Hyperosmolar hyperglycemic state (HHS)',
+    'Multiple endocrine neoplasia (MEN 1, 2A, 2B)',
+    'Insulin regimens and oral hypoglycemics',
+    'Thyroid replacement and antithyroid drugs',
+  ],
+  'Hematology & Oncology': [
+    'Hematopoiesis and RBC lineage',
+    'Coagulation cascade (intrinsic, extrinsic, common pathways)',
+    'Iron deficiency anemia',
+    'Thalassemia (alpha and beta)',
+    'Sideroblastic anemia',
+    'Folate and vitamin B12 deficiency (megaloblastic anemia)',
+    'Hereditary spherocytosis',
+    'Sickle cell anemia',
+    'G6PD deficiency',
+    'Paroxysmal nocturnal hemoglobinuria',
+    'von Willebrand disease',
+    'Hemophilia A and B',
+    'Immune thrombocytopenia (ITP)',
+    'Thrombotic thrombocytopenic purpura (TTP)',
+    'Disseminated intravascular coagulation (DIC)',
+    'Acute lymphoblastic leukemia (ALL)',
+    'Acute myeloid leukemia (AML)',
+    'Chronic lymphocytic leukemia (CLL)',
+    'Chronic myeloid leukemia (CML)',
+    'Hodgkin lymphoma',
+    'Non-Hodgkin lymphoma',
+    'Multiple myeloma',
+    'MGUS (monoclonal gammopathy of undetermined significance)',
+    'Chemotherapeutic agents (alkylating, antimetabolites, microtubule inhibitors)',
+    'Heparin (unfractionated and LMWH)',
+    'Warfarin: mechanism and monitoring',
+    'Direct oral anticoagulants (DOACs)',
   ],
 };
 
@@ -169,8 +330,21 @@ async function callLLM(systemMsg, userMsg, { temperature = 0.1, maxTokens = 4096
   throw new Error(`All providers failed: ${errors.join(' | ')}`);
 }
 
+// ── System → subject mapping ──
+const SYSTEM_SUBJECT = {
+  Cardiovascular: 'Cardiology',
+  Respiratory: 'Pulmonology',
+  Gastrointestinal: 'Gastroenterology',
+  Neurology: 'Neurology',
+  Renal: 'Nephrology',
+  Endocrine: 'Endocrinology',
+  'Hematology & Oncology': 'Hematology & Oncology',
+};
+const SUBJECT = SYSTEM_SUBJECT[SYSTEM] || SYSTEM;
+
 // ── Prompts ──
-const AUTHOR_SYSTEM = `You are a senior USMLE question writer and board-certified physician. Create one high-quality USMLE Step 1-style multiple-choice question based on the topic provided. Follow these rules strictly:
+function authorSystemPrompt() {
+  return `You are a senior USMLE question writer and board-certified physician. Create one high-quality USMLE Step 1-style multiple-choice question based on the topic provided. Follow these rules strictly:
 
 1. Write a clinical vignette (3-8 sentences) with demographics, presenting symptoms, physical exam findings, and relevant labs/imaging.
 2. Provide 5 answer choices (A through E). One must be correct. The distractors should be plausible and target HIGH-YIELD differential diagnoses.
@@ -187,8 +361,8 @@ Return this exact JSON shape:
   ],
   "explanation": "step-by-step reasoning, why correct, why each distractor wrong",
   "educationalObjective": "one-line summary learning point",
-  "subject": "Cardiology",
-  "system": "Cardiovascular",
+  "subject": "${SUBJECT}",
+  "system": "${SYSTEM}",
   "diseaseName": "primary disease/concept tested",
   "topicType": "DISEASE",
   "mechanism": "core pathophysiology or mechanism",
@@ -206,6 +380,7 @@ Return this exact JSON shape:
 topicType must be: DISEASE, PATHOGEN, PRINCIPLE, DRUG, SYNDROME, or CONCEPT.
 NEVER return empty diseaseName or topicType.
 Vary clinical contexts — do not always use the same age/gender/onset pattern.`;
+}
 
 const VERIFY_SYSTEM = `You are a board-certified physician taking a USMLE Step 1 exam. Answer the following multiple-choice question by selecting the single best answer letter (A-E). Return ONLY valid JSON. No other text.
 
@@ -218,9 +393,9 @@ Return this shape:
 function authorPrompt(topic) {
   return `Create a USMLE Step 1 question testing: ${topic}.
 
-Relevant context — First Aid (Cardiovascular, pp. 256-297) and Pathoma (Ch. 7 Vascular, Ch. 8 Cardiac Pathology).
+Context — First Aid ${SYSTEM} chapter and Pathoma.
 
-Make the question realistic with a clinical vignette. Vary the presentation — not every question should be about a 65-year-old male with chest pain. Include EKG findings, lab values, imaging results, or physical exam maneuvers as appropriate for the topic.`;
+Make the question realistic with a clinical vignette. Vary the presentation — cover different age groups, genders, and clinical settings. Include relevant exam findings, lab values, imaging results, or physical exam maneuvers as appropriate for the topic.`;
 }
 
 // ── Normalize LLM output (same logic as deepseek-enrich.mjs) ──
@@ -240,8 +415,8 @@ function normalizeQuestion(raw) {
     }),
     explanation: raw.explanation || raw.Explanation || '',
     educationalObjective: raw.educationalObjective || raw.educationalobjective || raw.educational_objective || raw.objective || '',
-    subject: raw.subject || raw.Subject || 'Cardiology',
-    system: raw.system || raw.System || 'Cardiovascular',
+    subject: raw.subject || raw.Subject || SUBJECT,
+    system: raw.system || raw.System || SYSTEM,
     diseaseName: (raw.diseaseName || raw.diseasename || raw.disease_name || raw.Disease || '').charAt(0).toUpperCase() + (raw.diseaseName || raw.diseasename || raw.disease_name || raw.Disease || '').slice(1),
     topicType: (raw.topicType || raw.topictype || raw.topic_type || raw.TopicType || 'CONCEPT').toUpperCase(),
     mechanism: raw.mechanism || raw.Mechanism || '',
@@ -290,7 +465,7 @@ async function authorQuestion(topic, existingHashes) {
     // Step 1: Author
     let authorRaw;
     try {
-      const authorResp = await callLLM(AUTHOR_SYSTEM, authorPrompt(topic), { temperature: 0.8 });
+      const authorResp = await callLLM(authorSystemPrompt(), authorPrompt(topic), { temperature: 0.8 });
       const authorContent = authorResp.choices?.[0]?.message?.content;
       if (!authorContent) throw new Error('No content in author response');
       authorRaw = JSON.parse(authorContent);
