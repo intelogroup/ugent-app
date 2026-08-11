@@ -146,7 +146,7 @@ export default function FloatingAvatar() {
 
   const wsSend = (data: string | Uint8Array) => {
     const ws = persistentWsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(data as string | BufferSource);
     else { wsPendingRef.current.push(data); ensureWs(); }
   };
 
@@ -161,7 +161,7 @@ export default function FloatingAvatar() {
     persistentWsRef.current = ws;
     ws.onopen = () => {
       wsReconnectDelayRef.current = 500;
-      for (const d of wsPendingRef.current) ws.send(d);
+      for (const d of wsPendingRef.current) ws.send(d as string | BufferSource);
       wsPendingRef.current = [];
       if (wsKeepaliveTimerRef.current) clearInterval(wsKeepaliveTimerRef.current);
       // Cloudflare idles WS ~100s; a ping every 30s keeps the prod tunnel warm
