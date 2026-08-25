@@ -1,0 +1,1914 @@
+{
+  "generatedAt": "2026-08-25T20:31:12.120Z",
+  "totalRows": 4051,
+  "answerKeyMismatch": [
+    {
+      "id": "357c8c3d",
+      "subject": "Anatomy",
+      "system": "Renal",
+      "correctLetter": "A",
+      "correctText": "Common iliac artery   (12%)",
+      "matchedGroupText": "(Choices A, B, and F)"
+    },
+    {
+      "id": "a6f20826",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "E",
+      "correctText": "Sustained hand grip",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "86461a8f",
+      "subject": "Psychiatry",
+      "system": "Hematology & Oncology",
+      "correctLetter": "B",
+      "correctText": "Radiation mucositis",
+      "matchedGroupText": "(Choices B & D)"
+    },
+    {
+      "id": "4406d992",
+      "subject": "Immunology",
+      "system": "Cardiovascular",
+      "correctLetter": "C",
+      "correctText": "Paroxysmal supraventricular tachycardia",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "3c1dc03c",
+      "subject": "Pathology",
+      "system": "Musculoskeletal",
+      "correctLetter": "D",
+      "correctText": "Indomethacin   (11%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "7072f5c5",
+      "subject": "Physiology",
+      "system": "Cardiovascular",
+      "correctLetter": "E",
+      "correctText": "Flecainide   (5%)",
+      "matchedGroupText": "(Choices E, F, and G)"
+    },
+    {
+      "id": "e38f4e4c",
+      "subject": "Microbiology",
+      "system": "Infectious Disease",
+      "correctLetter": "C",
+      "correctText": "Klebsiella pneumoniae   (1%)",
+      "matchedGroupText": "(Choices C, D, E, and H)"
+    },
+    {
+      "id": "45af7a54",
+      "subject": "Behavioral Science",
+      "system": "Psychiatry",
+      "correctLetter": "F",
+      "correctText": "Social withdrawal   (4%)",
+      "matchedGroupText": "(Choices B, E, and F)"
+    },
+    {
+      "id": "a8f9a6a0",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "A",
+      "correctText": "Diffuse mesangial sclerosis   (7%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "cd000186",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "A",
+      "correctText": "Alprazolam   (3%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "b76c8996",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "Drug A requires treating fewer children to prevent 1 additional death compared to Drug B, so Drug A is less effective than Drug B   (2%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "9280ea13",
+      "subject": "Anatomy",
+      "system": "Hematology & Oncology",
+      "correctLetter": "F",
+      "correctText": "Vocal cord   (15%)",
+      "matchedGroupText": "(Choices A, D, and F)"
+    },
+    {
+      "id": "a630d867",
+      "subject": "Anatomy",
+      "system": "Pharmacology",
+      "correctLetter": "A",
+      "correctText": "Decreased bicarbonate formation in ciliary body   (2%)",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "c136890d",
+      "subject": "Pathology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "C",
+      "correctText": "Gray-white matter junction   (1%)",
+      "matchedGroupText": "(Choices B, C, and F)"
+    },
+    {
+      "id": "178dd1cf",
+      "subject": "Anatomy",
+      "system": "Hematology & Oncology",
+      "correctLetter": "B",
+      "correctText": "Proximal tubules due to impaired uric acid transport",
+      "matchedGroupText": "(Choices A, B and C)"
+    },
+    {
+      "id": "f080bdb3",
+      "subject": "Pathology",
+      "system": "Infectious Disease",
+      "correctLetter": "B",
+      "correctText": "Chymotrypsinogen   (4%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "3defc738",
+      "subject": "Psychiatry",
+      "system": "Hematology & Oncology",
+      "correctLetter": "B",
+      "correctText": "Fever and chills   (18%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "186e6270",
+      "subject": "Immunology",
+      "system": "Immunology",
+      "correctLetter": "E",
+      "correctText": "Serum IgM   (7%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "740af68c",
+      "subject": "Physiology",
+      "system": "Musculoskeletal",
+      "correctLetter": "D",
+      "correctText": "Red thrombus lodged in the pulmonary artery   (9%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "a36dded2",
+      "subject": "Physiology",
+      "system": "Cardiovascular",
+      "correctLetter": "F",
+      "correctText": "Systolic ventricular wall stress   (5%)",
+      "matchedGroupText": "(Choices A, E, and F)"
+    },
+    {
+      "id": "56141694",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "A",
+      "correctText": "Bupropion   (2%)",
+      "matchedGroupText": "(Choices A, D, and G)"
+    },
+    {
+      "id": "1b213d71",
+      "subject": "Pathology",
+      "system": "Gastrointestinal",
+      "correctLetter": "A",
+      "correctText": "Ascending colon   (11%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "7e0e7722",
+      "subject": "General",
+      "system": "Renal",
+      "correctLetter": "C",
+      "correctText": "The woman's child when it is born    (4%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "9f1732ef",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "A",
+      "correctText": "High High High",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "de9660d7",
+      "subject": "Physiology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "A",
+      "correctText": "Abrupt standing from the supine position   (6%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "5eac554b",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Infectious Disease",
+      "correctLetter": "E",
+      "correctText": "Relative risk is equal to 1   (24%)",
+      "matchedGroupText": "(Choices A, B, E, and F)"
+    },
+    {
+      "id": "f22356ff",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "C",
+      "correctText": "Left medial geniculate body   (6%)",
+      "matchedGroupText": "(Choices A, C, E and G)"
+    },
+    {
+      "id": "45809506",
+      "subject": "Physiology",
+      "system": "Cardiovascular",
+      "correctLetter": "C",
+      "correctText": "No changeNo changeNo changeNo change   (5%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "d92e6a20",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "A",
+      "correctText": "Alzheimer disease   (6%)",
+      "matchedGroupText": "(Choices A, E, and F)"
+    },
+    {
+      "id": "7ff5b96e",
+      "subject": "Immunology",
+      "system": "Cardiovascular",
+      "correctLetter": "E",
+      "correctText": "Viral myocarditis   (17%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "fe85742c",
+      "subject": "Pediatrics",
+      "system": "Pediatrics",
+      "correctLetter": "A",
+      "correctText": "Folic acid   (5%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "fe106f2a",
+      "subject": "Physiology",
+      "system": "Renal",
+      "correctLetter": "E",
+      "correctText": "Squamous epithelial cells of the thick ascending limb of the loop of Henle   (2%)",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "0eb95036",
+      "subject": "Endocrinology",
+      "system": "Musculoskeletal",
+      "correctLetter": "B",
+      "correctText": "Ependymal cells   (8%)",
+      "matchedGroupText": "(Choices A, B, and E)"
+    },
+    {
+      "id": "e33b19b4",
+      "subject": "Endocrinology",
+      "system": "Endocrine",
+      "correctLetter": "C",
+      "correctText": "Degradation in the rough endoplasmic reticulum   (8%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "827ef6e9",
+      "subject": "Microbiology",
+      "system": "Respiratory",
+      "correctLetter": "E",
+      "correctText": "Driving pressure for blood flow   (6%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "1625d8fd",
+      "subject": "Obstetrics",
+      "system": "Cardiovascular",
+      "correctLetter": "C",
+      "correctText": "Heart muscle   (2%)",
+      "matchedGroupText": "(Choices A, C, D & E)"
+    },
+    {
+      "id": "89f3ae79",
+      "subject": "Physiology",
+      "system": "Renal",
+      "correctLetter": "D",
+      "correctText": "90% lower   (4%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "c1a12224",
+      "subject": "Neurology",
+      "system": "Neurology",
+      "correctLetter": "B",
+      "correctText": "Increased sympathetic output to the sinoatrial node   (5%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "d4b9881a",
+      "subject": "Obstetrics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "C",
+      "correctText": "Increased serum cytokine levels   (7%)",
+      "matchedGroupText": "(Choices B, C, and E)"
+    },
+    {
+      "id": "c0aa66bb",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "C",
+      "correctText": "Superior portion of the posterior thigh   (1%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "7c697efe",
+      "subject": "Psychiatry",
+      "system": "Pharmacology",
+      "correctLetter": "D",
+      "correctText": "Frequent urination   (3%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "4bf22eeb",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Pharmacology",
+      "correctLetter": "A",
+      "correctText": "Acetazolamide   (2%)",
+      "matchedGroupText": "(Choices A, C, and F)"
+    },
+    {
+      "id": "dd3a3b08",
+      "subject": "General",
+      "system": "Pharmacology",
+      "correctLetter": "A",
+      "correctText": "Fast equilibration with the brain   (5%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "fcb284c0",
+      "subject": "Microbiology",
+      "system": "Respiratory",
+      "correctLetter": "C",
+      "correctText": "Forced expiratory volume in 1 second/forced vital capacity ratio   (10%)",
+      "matchedGroupText": "(Choices B, C, and D)"
+    },
+    {
+      "id": "baa467a4",
+      "subject": "Behavioral Science",
+      "system": "Psychiatry",
+      "correctLetter": "E",
+      "correctText": "Increased appetite and weight gain   (6%)",
+      "matchedGroupText": "(Choices A, E, and H)"
+    },
+    {
+      "id": "9a533403",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "D",
+      "correctText": "Loss of taste sensation on the anterior tongue   (8%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "21291868",
+      "subject": "Pharmacology",
+      "system": "Pharmacology",
+      "correctLetter": "E",
+      "correctText": "Tramadol   (27%)",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "e1f3a6d2",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "A",
+      "correctText": "Adipose tissue   (3%)",
+      "matchedGroupText": "(Choices A, B, and F)"
+    },
+    {
+      "id": "dd0bcea5",
+      "subject": "Anatomy",
+      "system": "Musculoskeletal",
+      "correctLetter": "E",
+      "correctText": "Thyroid cartilage   (7%)",
+      "matchedGroupText": "(Choices A, E, and F)"
+    },
+    {
+      "id": "4ff55f15",
+      "subject": "Psychiatry",
+      "system": "Pharmacology",
+      "correctLetter": "C",
+      "correctText": "Isoleucine   (2%)",
+      "matchedGroupText": "(Choices C, D, and F)"
+    },
+    {
+      "id": "98030e30",
+      "subject": "Microbiology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "E",
+      "correctText": "Nonenveloped positive-sense RNA virus   (7%)",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "a34055de",
+      "subject": "Pediatrics",
+      "system": "Pediatrics",
+      "correctLetter": "B",
+      "correctText": "Acid alpha-glucosidase   (3%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "e507347b",
+      "subject": "Pathology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "D",
+      "correctText": "Origin from an adenomatous polyp   (13%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "c4903b18",
+      "subject": "Genetics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "F",
+      "correctText": "Diffuse large B-cell lymphoma   (4%)",
+      "matchedGroupText": "(Choices C, F, and G)"
+    },
+    {
+      "id": "93b200a2",
+      "subject": "Endocrinology",
+      "system": "Endocrine",
+      "correctLetter": "F",
+      "correctText": "Lobular breast carcinoma   (1%)",
+      "matchedGroupText": "(Choices D, F, and G)"
+    },
+    {
+      "id": "1145a296",
+      "subject": "Pulmonology",
+      "system": "Neurology",
+      "correctLetter": "A",
+      "correctText": "Caudate nucleus   (5%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "814ec87f",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Musculoskeletal",
+      "correctLetter": "C",
+      "correctText": "Young athletes with a diagnosis of AIS irrespective of SIJ status   (4%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "63e8e21c",
+      "subject": "Obstetrics",
+      "system": "Pediatrics",
+      "correctLetter": "C",
+      "correctText": "Dura mater and periosteum   (20%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "e0355168",
+      "subject": "Physiology",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "Canagliflozin   (4%)",
+      "matchedGroupText": "(Choices B, E, and F)"
+    },
+    {
+      "id": "5dc6c87f",
+      "subject": "Obstetrics",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "Excessive patient caseload   (7%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "c73337b2",
+      "subject": "Psychiatry",
+      "system": "Pharmacology",
+      "correctLetter": "D",
+      "correctText": "Neuroleptic-induced parkinsonism   (6%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "80795810",
+      "subject": "Genetics",
+      "system": "Musculoskeletal",
+      "correctLetter": "A",
+      "correctText": "Cell surface receptors   (4%)",
+      "matchedGroupText": "(Choices A, B, C, D, and F)"
+    },
+    {
+      "id": "e4e511fb",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "E",
+      "correctText": "Systolic anterior motion of the mitral valve   (5%)",
+      "matchedGroupText": "(Choices A, B, D, and E)"
+    },
+    {
+      "id": "36a84ad9",
+      "subject": "Immunology",
+      "system": "Infectious Disease",
+      "correctLetter": "B",
+      "correctText": "Bacterial conjunctivitis   (1%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "4b592bd6",
+      "subject": "Microbiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "E",
+      "correctText": "Had unprotected sexual intercourse with a new partner   (3%)",
+      "matchedGroupText": "(Choices A, B, and E)"
+    },
+    {
+      "id": "0842f50e",
+      "subject": "General",
+      "system": "Neurology",
+      "correctLetter": "A",
+      "correctText": "Inferior oblique   (6%)",
+      "matchedGroupText": "(Choices A, B, D, E, and F)"
+    },
+    {
+      "id": "ef23894b",
+      "subject": "General",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "Diazepam   (16%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "faa27a90",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "D",
+      "correctText": "Minimal change disease   (6%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "3aff56af",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "C",
+      "correctText": "Lithium   (17%)",
+      "matchedGroupText": "(Choices A, C, and F)"
+    },
+    {
+      "id": "b172df86",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "C",
+      "correctText": "Clomipramine   (2%)",
+      "matchedGroupText": "(Choices C, D, and F)"
+    },
+    {
+      "id": "132694f0",
+      "subject": "Pharmacology",
+      "system": "Immunology",
+      "correctLetter": "B",
+      "correctText": "Diphenhydramine   (16%)",
+      "matchedGroupText": "(Choices A, B, C and E)"
+    },
+    {
+      "id": "da51ad17",
+      "subject": "Physiology",
+      "system": "Neurology",
+      "correctLetter": "A",
+      "correctText": "Niacin   (5%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "9ffc92f6",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "C",
+      "correctText": "Left ventricle   (8%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "7e3fd379",
+      "subject": "Physiology",
+      "system": "Musculoskeletal",
+      "correctLetter": "D",
+      "correctText": "D   (68%)",
+      "matchedGroupText": "(Choice D)"
+    },
+    {
+      "id": "d41d8cd9",
+      "subject": "General",
+      "system": "Hematology & Oncology",
+      "correctLetter": "C",
+      "correctText": "γ-globin   (84%)",
+      "matchedGroupText": "(Choice C)"
+    },
+    {
+      "id": "5051e94d",
+      "subject": "General",
+      "system": "Gastrointestinal",
+      "correctLetter": "D",
+      "correctText": "Citrate   (6%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "39f22614",
+      "subject": "Pathology",
+      "system": "Endocrine",
+      "correctLetter": "E",
+      "correctText": "Rapid weight loss   (3%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "a4a52334",
+      "subject": "General",
+      "system": "Hematology & Oncology",
+      "correctLetter": "A",
+      "correctText": "Endoplasmic reticulum   (15%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "250da0f2",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "F",
+      "correctText": "Superior division of middle cerebral artery   (16%)",
+      "matchedGroupText": "(Choices B, E, and F)"
+    },
+    {
+      "id": "0db8f564",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "D",
+      "correctText": "Increased intestinal absorption of calcium   (6%)",
+      "matchedGroupText": "(Choices C, D, and F)"
+    },
+    {
+      "id": "d58e27e9",
+      "subject": "Psychiatry",
+      "system": "Integumentary",
+      "correctLetter": "B",
+      "correctText": "Angle-closure glaucoma   (14%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "89d184c0",
+      "subject": "Psychiatry",
+      "system": "Endocrine",
+      "correctLetter": "B",
+      "correctText": "Growth hormone   (4%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "37db250f",
+      "subject": "Genetics",
+      "system": "Integumentary",
+      "correctLetter": "F",
+      "correctText": "Vascular endothelial cells   (14%)",
+      "matchedGroupText": "(Choices A, B, C, and F)"
+    },
+    {
+      "id": "7ab2830e",
+      "subject": "Endocrinology",
+      "system": "Endocrine",
+      "correctLetter": "F",
+      "correctText": "Squamous cell lung carcinoma   (17%)",
+      "matchedGroupText": "(Choices B, D, and F)"
+    },
+    {
+      "id": "b1986248",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "E",
+      "correctText": "Valsalva strain phase   (36%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "12dff03a",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "E",
+      "correctText": "Lower number of true positives   (9%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "cfd455f9",
+      "subject": "Psychiatry",
+      "system": "Renal",
+      "correctLetter": "D",
+      "correctText": "Diabetic autonomic neuropathy   (6%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "1c3d51bf",
+      "subject": "Pharmacology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "F",
+      "correctText": "Tissue plasminogen activator   (2%)",
+      "matchedGroupText": "(Choices A, E, and F)"
+    },
+    {
+      "id": "106b7ff6",
+      "subject": "Behavioral Science",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "\"I have the brain scan results and can discuss them with you later.\"   (18%)",
+      "matchedGroupText": "(Choices B, C, E, and F)"
+    },
+    {
+      "id": "707a33b8",
+      "subject": "Neurology",
+      "system": "Endocrine",
+      "correctLetter": "E",
+      "correctText": "Heat intolerance   (3%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "b9a2f797",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "Lipid-rich core   (6%)",
+      "matchedGroupText": "(Choices A, B, and F)"
+    },
+    {
+      "id": "7c184844",
+      "subject": "Pathology",
+      "system": "Integumentary",
+      "correctLetter": "C",
+      "correctText": "Loss of cell polarity   (5%)",
+      "matchedGroupText": "(Choices A, B, C, D, and E)"
+    },
+    {
+      "id": "b87e58d5",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "B",
+      "correctText": "Prolactin-induced sodium secretion into bile and estrogen-induced gallbladder hypomotility   (4%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "d99da3ae",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "D",
+      "correctText": "Elevated antistreptolysin titer   (6%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "e38e1531",
+      "subject": "Anatomy",
+      "system": "Respiratory",
+      "correctLetter": "A",
+      "correctText": "Left-to-right shunt via atrial septal defect   (0%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "6235e8db",
+      "subject": "Anatomy",
+      "system": "Reproductive",
+      "correctLetter": "C",
+      "correctText": "External urethral sphincter paralysis   (17%)",
+      "matchedGroupText": "(Choices C, D, and F)"
+    },
+    {
+      "id": "5d75af73",
+      "subject": "Pharmacology",
+      "system": "Infectious Disease",
+      "correctLetter": "A",
+      "correctText": "Ceftazidime   (13%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "5f2e4f41",
+      "subject": "Pathology",
+      "system": "Gastrointestinal",
+      "correctLetter": "C",
+      "correctText": "Distal jejunum   (17%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "aee4d868",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "Left anterior descending Right dominant (7%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "7688b6ca",
+      "subject": "Genetics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "B",
+      "correctText": "Pseudomonas aeruginosa   (9%)",
+      "matchedGroupText": "(Choices A, B, C, E, and F)"
+    },
+    {
+      "id": "e6910613",
+      "subject": "Anatomy",
+      "system": "Musculoskeletal",
+      "correctLetter": "B",
+      "correctText": "Non-REM sleep in the prone position   (6%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "bce82cdd",
+      "subject": "Microbiology",
+      "system": "Cardiovascular",
+      "correctLetter": "C",
+      "correctText": "C   (36%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "7f1d98f2",
+      "subject": "Microbiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "B",
+      "correctText": "Asymptomatic viral carrier state   (14%)",
+      "matchedGroupText": "(Choices B, C, and F)"
+    },
+    {
+      "id": "9c2dcdae",
+      "subject": "Anatomy",
+      "system": "Reproductive",
+      "correctLetter": "C",
+      "correctText": "External spermatic fascia   (2%)",
+      "matchedGroupText": "(Choices B, C, and D)"
+    },
+    {
+      "id": "4378c77d",
+      "subject": "Pathology",
+      "system": "Infectious Disease",
+      "correctLetter": "B",
+      "correctText": "Enveloped single-stranded RNA virus   (7%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "c671ae94",
+      "subject": "Pathology",
+      "system": "Cardiovascular",
+      "correctLetter": "D",
+      "correctText": "Nitroprusside   (15%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "4b542d89",
+      "subject": "Physiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "C",
+      "correctText": "Hydrolyzed dietary protein   (20%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "656036e9",
+      "subject": "Pathology",
+      "system": "Neurology",
+      "correctLetter": "C",
+      "correctText": "Hepatic flexure   (4%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "c255172e",
+      "subject": "Genetics",
+      "system": "Neurology",
+      "correctLetter": "F",
+      "correctText": "Valine   (3%)",
+      "matchedGroupText": "(Choices B, C, and F)"
+    },
+    {
+      "id": "da57e85f",
+      "subject": "Anatomy",
+      "system": "Integumentary",
+      "correctLetter": "F",
+      "correctText": "Great auricular nerve   (10%)",
+      "matchedGroupText": "(Choices A, B, and F)"
+    },
+    {
+      "id": "92fa78f1",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "C",
+      "correctText": "Assessing the patient’s current social situation   (1%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "147f54b0",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "A",
+      "correctText": "Dysmorphic red blood cells   (16%)",
+      "matchedGroupText": "(Choices A, D, and F)"
+    },
+    {
+      "id": "5edf3094",
+      "subject": "Anatomy",
+      "system": "Renal",
+      "correctLetter": "C",
+      "correctText": "Periumbilical venous distension   (7%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "5c4e9a76",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "A",
+      "correctText": "Excessive vitamin D intake   (7%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "8a9f76ac",
+      "subject": "Dermatology",
+      "system": "Gastrointestinal",
+      "correctLetter": "D",
+      "correctText": "Left gastroepiploic   (2%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "88e83614",
+      "subject": "Psychiatry",
+      "system": "Pharmacology",
+      "correctLetter": "C",
+      "correctText": "Increasing fecal loss of cholesterol derivatives   (16%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "9900f402",
+      "subject": "Physiology",
+      "system": "Pharmacology",
+      "correctLetter": "D",
+      "correctText": "Presynaptic selective dopamine uptake   (1%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "2d70d806",
+      "subject": "Pharmacology",
+      "system": "Pharmacology",
+      "correctLetter": "B",
+      "correctText": "Drug 2 has higher affinity for alpha-receptors than Drug 3   (76%)",
+      "matchedGroupText": "(Choice B)"
+    },
+    {
+      "id": "a66df290",
+      "subject": "Physiology",
+      "system": "Respiratory",
+      "correctLetter": "B",
+      "correctText": "Bronchial microvessels → Pulmonary parenchymal lymphatics (34%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "0395fe29",
+      "subject": "Pharmacology",
+      "system": "Pharmacology",
+      "correctLetter": "C",
+      "correctText": "Hydralazine   (7%)",
+      "matchedGroupText": "(Choices B, C, and E)"
+    },
+    {
+      "id": "ef5075ad",
+      "subject": "Anatomy",
+      "system": "Renal",
+      "correctLetter": "B",
+      "correctText": "External iliac artery   (8%)",
+      "matchedGroupText": "(Choices B, C, and E)"
+    },
+    {
+      "id": "5446d72c",
+      "subject": "Genetics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "E",
+      "correctText": "Pancreatic β cells   (8%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "ea8a79be",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "E",
+      "correctText": "Volume overload   (5%)",
+      "matchedGroupText": "(Choices A, C, and E)"
+    },
+    {
+      "id": "e740388f",
+      "subject": "Pathology",
+      "system": "Neurology",
+      "correctLetter": "B",
+      "correctText": "Putamen   (55%)",
+      "matchedGroupText": "(Choice B)"
+    },
+    {
+      "id": "59f3c54a",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Endocrine",
+      "correctLetter": "C",
+      "correctText": "140-220 mg/dL   (45%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "e390fc59",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "E",
+      "correctText": "Trabecular meshwork   (21%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "73fe3bf0",
+      "subject": "Genetics",
+      "system": "Infectious Disease",
+      "correctLetter": "A",
+      "correctText": "Bordetella pertussis–selective agar   (24%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "156ead2a",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "D",
+      "correctText": "Obtain serum testosterone level   (9%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "8d5be9bc",
+      "subject": "Pathology",
+      "system": "Immunology",
+      "correctLetter": "A",
+      "correctText": "Edema and punctate hemorrhages (12%)",
+      "matchedGroupText": "(Choices A & B)"
+    },
+    {
+      "id": "217170a2",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "D",
+      "correctText": "Muscle relaxant properties   (13%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "46b0e1f8",
+      "subject": "Physiology",
+      "system": "Renal",
+      "correctLetter": "A",
+      "correctText": "Decreased renal tubular reabsorption   (4%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "470ae1a3",
+      "subject": "Immunology",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "Left anterior descending artery   (35%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "ed8bc500",
+      "subject": "Anatomy",
+      "system": "Musculoskeletal",
+      "correctLetter": "E",
+      "correctText": "Superior gluteal   (12%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "3a1c0a6f",
+      "subject": "Microbiology",
+      "system": "Neurology",
+      "correctLetter": "A",
+      "correctText": "Bacterial cell wall synthesis   (5%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "e804e9e7",
+      "subject": "Microbiology",
+      "system": "Infectious Disease",
+      "correctLetter": "B",
+      "correctText": "Fulminant liver failure   (12%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "36d43498",
+      "subject": "Physiology",
+      "system": "Renal",
+      "correctLetter": "E",
+      "correctText": "Decreased Decreased Increased (2%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "587ebb1a",
+      "subject": "Behavioral Science",
+      "system": "Hematology & Oncology",
+      "correctLetter": "D",
+      "correctText": "\"She's had a pretty tough week and could benefit from some support.\"   (1%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "3cb57c3c",
+      "subject": "Microbiology",
+      "system": "Neurology",
+      "correctLetter": "B",
+      "correctText": "Herpes simplex virus   (2%)",
+      "matchedGroupText": "(Choices A, B, and E)"
+    },
+    {
+      "id": "565ab35e",
+      "subject": "Physiology",
+      "system": "Immunology",
+      "correctLetter": "D",
+      "correctText": "Mast cells   (1%)",
+      "matchedGroupText": "(Choices A, B, D, and E)"
+    },
+    {
+      "id": "f93be171",
+      "subject": "Anatomy",
+      "system": "Musculoskeletal",
+      "correctLetter": "C",
+      "correctText": "Midway between the iliac crest and the femoral artery   (2%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "5fb9913e",
+      "subject": "Neurology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "D",
+      "correctText": "Porphobilinogen deaminase   (13%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "39803d2d",
+      "subject": "General",
+      "system": "General",
+      "correctLetter": "A",
+      "correctText": "Different amounts of membrane surface area for diffusion   (4%)",
+      "matchedGroupText": "(Choices A, B, C, D)"
+    },
+    {
+      "id": "bae858aa",
+      "subject": "Pharmacology",
+      "system": "Infectious Disease",
+      "correctLetter": "D",
+      "correctText": "Trimethoprim-sulfamethoxazole   (2%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "58c690d8",
+      "subject": "Obstetrics",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "Closure of a ventricular right-to-left shunt   (3%)",
+      "matchedGroupText": "(Choices B, D, and F)"
+    },
+    {
+      "id": "61fd4505",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Musculoskeletal",
+      "correctLetter": "D",
+      "correctText": "Hypoglossal   (1%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "a8d8104d",
+      "subject": "Obstetrics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "C",
+      "correctText": "Hepatocytes   (8%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "2cf8ca4b",
+      "subject": "Pathology",
+      "system": "Musculoskeletal",
+      "correctLetter": "A",
+      "correctText": "Basement membrane   (8%)",
+      "matchedGroupText": "(Choices A, C, and D)"
+    },
+    {
+      "id": "c8de04a3",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "D",
+      "correctText": "Insulin glargine   (10%)",
+      "matchedGroupText": "(Choices B, C, and D)"
+    },
+    {
+      "id": "ab81f9e6",
+      "subject": "Physiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "A",
+      "correctText": "Extravasation of fluid from systemic capillaries   (16%)",
+      "matchedGroupText": "(Choices A, B, and E)"
+    },
+    {
+      "id": "13977f91",
+      "subject": "Psychiatry",
+      "system": "Psychiatry",
+      "correctLetter": "A",
+      "correctText": "Complete blood count   (3%)",
+      "matchedGroupText": "(Choices A, B, and F)"
+    },
+    {
+      "id": "6e98a95b",
+      "subject": "Physiology",
+      "system": "Endocrine",
+      "correctLetter": "C",
+      "correctText": "Distal convoluted tubule Secretion of hydrogen ions (10%)",
+      "matchedGroupText": "(Choices B, C, and F)"
+    },
+    {
+      "id": "36b087fe",
+      "subject": "Pharmacology",
+      "system": "Psychiatry",
+      "correctLetter": "F",
+      "correctText": "Tremors   (11%)",
+      "matchedGroupText": "(Choices D, E, and F)"
+    },
+    {
+      "id": "79896fc2",
+      "subject": "Pathology",
+      "system": "Renal",
+      "correctLetter": "C",
+      "correctText": "Urine fractional excretion of sodium >2%   (12%)",
+      "matchedGroupText": "(Choices B, C, and D)"
+    },
+    {
+      "id": "2132e74e",
+      "subject": "Anatomy",
+      "system": "Gastrointestinal",
+      "correctLetter": "C",
+      "correctText": "Rate of hepatic regeneration   (6%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "deff34e3",
+      "subject": "Obstetrics",
+      "system": "Pharmacology",
+      "correctLetter": "C",
+      "correctText": "Fluconazole   (9%)",
+      "matchedGroupText": "(Choices C, D and E)"
+    },
+    {
+      "id": "5d181ceb",
+      "subject": "Neurology",
+      "system": "Pharmacology",
+      "correctLetter": "C",
+      "correctText": "Drug-induced parkinsonism   (2%)",
+      "matchedGroupText": "(Choices A, B, and C)"
+    },
+    {
+      "id": "3ebad766",
+      "subject": "Physiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "F",
+      "correctText": "Transverse colon   (11%)",
+      "matchedGroupText": "(Choices B, C, D, E, and F)"
+    },
+    {
+      "id": "c463bc86",
+      "subject": "Pathology",
+      "system": "Endocrine",
+      "correctLetter": "E",
+      "correctText": "Nodular cortical hyperplasia   (2%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "3fb6ddcd",
+      "subject": "Genetics",
+      "system": "Infectious Disease",
+      "correctLetter": "C",
+      "correctText": "Measles virus   (10%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "63e7abfa",
+      "subject": "Physiology",
+      "system": "Respiratory",
+      "correctLetter": "B",
+      "correctText": "Left ventricular stroke volume   (1%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "75255f88",
+      "subject": "General",
+      "system": "Gastrointestinal",
+      "correctLetter": "B",
+      "correctText": "Laceration of the inferior border of the spleen   (42%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "33d8192e",
+      "subject": "Immunology",
+      "system": "Immunology",
+      "correctLetter": "A",
+      "correctText": "Cellular receptor inhibitor drug   (6%)",
+      "matchedGroupText": "(Choices A, C, and F)"
+    },
+    {
+      "id": "fd87d0ae",
+      "subject": "Microbiology",
+      "system": "Cardiovascular",
+      "correctLetter": "D",
+      "correctText": "Family history of cardiomyopathy   (20%)",
+      "matchedGroupText": "(Choices A, C, D, and E)"
+    },
+    {
+      "id": "9fcd70a5",
+      "subject": "Anatomy",
+      "system": "Neurology",
+      "correctLetter": "E",
+      "correctText": "Opposition of the thumb   (10%)",
+      "matchedGroupText": "(Choices A, B, D, and E)"
+    },
+    {
+      "id": "fd4fbe05",
+      "subject": "Pathology",
+      "system": "Endocrine",
+      "correctLetter": "D",
+      "correctText": "Hyperplasia of prostate with predominance of both collagen and smooth muscles   (28%)",
+      "matchedGroupText": "(Choice B, C & D)"
+    },
+    {
+      "id": "c50e6d51",
+      "subject": "Genetics",
+      "system": "Musculoskeletal",
+      "correctLetter": "C",
+      "correctText": "Intestinal epithelial cells   (10%)",
+      "matchedGroupText": "(Choices A, B, C, and E)"
+    },
+    {
+      "id": "767dd2d9",
+      "subject": "Neurology",
+      "system": "Pediatrics",
+      "correctLetter": "E",
+      "correctText": "Slow-wave sleep (delta EEG waves)   (26%)",
+      "matchedGroupText": "(Choices B, D, and E)"
+    },
+    {
+      "id": "a65f5123",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Neurology",
+      "correctLetter": "A",
+      "correctText": "Arterial thrombosis   (8%)",
+      "matchedGroupText": "(Choices A, B, and E)"
+    },
+    {
+      "id": "54ba5cd8",
+      "subject": "Anatomy",
+      "system": "Renal",
+      "correctLetter": "A",
+      "correctText": "Mesonephric duct   (13%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "cda5e1ec",
+      "subject": "Genetics",
+      "system": "Reproductive",
+      "correctLetter": "A",
+      "correctText": "Amniotic band sequence   (6%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "28f8da87",
+      "subject": "Obstetrics",
+      "system": "Hematology & Oncology",
+      "correctLetter": "A",
+      "correctText": "Bound fraction of oxygen in the arterial blood   (7%)",
+      "matchedGroupText": "(Choices A, B, C, and D)"
+    },
+    {
+      "id": "62b20241",
+      "subject": "Microbiology",
+      "system": "Gastrointestinal",
+      "correctLetter": "B",
+      "correctText": "Integration into host genome   (17%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "27bb17f9",
+      "subject": "Physiology",
+      "system": "Cardiovascular",
+      "correctLetter": "D",
+      "correctText": "Increased collecting duct free water excretion   (7%)",
+      "matchedGroupText": "(Choices A, B, and D)"
+    },
+    {
+      "id": "b85bc3fe",
+      "subject": "Dermatology",
+      "system": "Gastrointestinal",
+      "correctLetter": "E",
+      "correctText": "Secretory leiomyoma   (1%)",
+      "matchedGroupText": "(Choices A, D, and E)"
+    },
+    {
+      "id": "2e909665",
+      "subject": "Obstetrics",
+      "system": "Reproductive",
+      "correctLetter": "C",
+      "correctText": "Posterior urethral valves   (6%)",
+      "matchedGroupText": "(Choices C, D, and E)"
+    },
+    {
+      "id": "7085fa7a",
+      "subject": "Pharmacology",
+      "system": "Renal",
+      "correctLetter": "E",
+      "correctText": "Unchanged Decreased Increased (3%)",
+      "matchedGroupText": "(Choices B, C, D, and E)"
+    },
+    {
+      "id": "412de685",
+      "subject": "Immunology",
+      "system": "Immunology",
+      "correctLetter": "A",
+      "correctText": "Immature cortical T lymphocytes",
+      "matchedGroupText": "(Choice A)"
+    },
+    {
+      "id": "25dc8edd",
+      "subject": "General",
+      "system": "Hematology & Oncology",
+      "correctLetter": "C",
+      "correctText": "γ-globin",
+      "matchedGroupText": "(Choice C)"
+    },
+    {
+      "id": "08a16e0a",
+      "subject": "Cardiology",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "B. Hypertensive emergency",
+      "matchedGroupText": "(Choice B)"
+    },
+    {
+      "id": "4dbe5d55",
+      "subject": "Cardiology",
+      "system": "Cardiovascular",
+      "correctLetter": "B",
+      "correctText": "B. Restrictive cardiomyopathy",
+      "matchedGroupText": "(Choice B)"
+    },
+    {
+      "id": "f580c275",
+      "subject": "Hematology & Oncology",
+      "system": "Hematology & Oncology",
+      "correctLetter": "B",
+      "correctText": "B. Iron deficiency anemia",
+      "matchedGroupText": "(Choice B)"
+    },
+    {
+      "id": "f6567f0d",
+      "subject": "Reproductive Medicine",
+      "system": "Reproductive",
+      "correctLetter": "B",
+      "correctText": "B. Endometriosis",
+      "matchedGroupText": "(choice B)"
+    }
+  ],
+  "noCorrectFlagged": [
+    {
+      "id": "0e1b126b",
+      "subject": "General",
+      "system": "Endocrine"
+    },
+    {
+      "id": "0462d68a",
+      "subject": "Psychiatry",
+      "system": "Endocrine"
+    },
+    {
+      "id": "1fc14eb4",
+      "subject": "Obstetrics",
+      "system": "Renal"
+    },
+    {
+      "id": "1ed20be7",
+      "subject": "General",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "0c3b7a63",
+      "subject": "Genetics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "67663492",
+      "subject": "General",
+      "system": "Respiratory"
+    },
+    {
+      "id": "d341ccf7",
+      "subject": "Pharmacology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "b23c5ae3",
+      "subject": "Physiology",
+      "system": "Psychiatry"
+    },
+    {
+      "id": "760e0e55",
+      "subject": "Pharmacology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "f6540883",
+      "subject": "General",
+      "system": "General"
+    },
+    {
+      "id": "fd7b01b1",
+      "subject": "Physiology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "ab28c9c4",
+      "subject": "Pulmonology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "cc56a58d",
+      "subject": "Pathology",
+      "system": "Neurology"
+    },
+    {
+      "id": "7f376ceb",
+      "subject": "Pathology",
+      "system": "Renal"
+    },
+    {
+      "id": "c49a9181",
+      "subject": "Psychiatry",
+      "system": "Hematology & Oncology"
+    },
+    {
+      "id": "dd3651e9",
+      "subject": "Pulmonology",
+      "system": "Respiratory"
+    },
+    {
+      "id": "b9b127eb",
+      "subject": "Psychiatry",
+      "system": "Reproductive"
+    },
+    {
+      "id": "2719791f",
+      "subject": "Obstetrics",
+      "system": "Respiratory"
+    },
+    {
+      "id": "687cc386",
+      "subject": "General",
+      "system": "Pediatrics"
+    },
+    {
+      "id": "1fc50e88",
+      "subject": "Physiology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "bbfbdcf7",
+      "subject": "Obstetrics",
+      "system": "Endocrine"
+    },
+    {
+      "id": "ba0688ab",
+      "subject": "Obstetrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "b91592ec",
+      "subject": "Neurology",
+      "system": "Neurology"
+    },
+    {
+      "id": "5723786b",
+      "subject": "Physiology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "bc5cd5e0",
+      "subject": "General",
+      "system": "Renal"
+    },
+    {
+      "id": "951ccb89",
+      "subject": "General",
+      "system": "Reproductive"
+    },
+    {
+      "id": "d7ebddd6",
+      "subject": "Psychiatry",
+      "system": "Endocrine"
+    },
+    {
+      "id": "82f88c37",
+      "subject": "Physiology",
+      "system": "Renal"
+    },
+    {
+      "id": "be2941a7",
+      "subject": "Physiology",
+      "system": "Respiratory"
+    },
+    {
+      "id": "53c48565",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "4c9b853b",
+      "subject": "General",
+      "system": "Respiratory"
+    },
+    {
+      "id": "c03fe20f",
+      "subject": "Anatomy",
+      "system": "Immunology"
+    },
+    {
+      "id": "8af01308",
+      "subject": "General",
+      "system": "Respiratory"
+    },
+    {
+      "id": "62741aa1",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "0c5a30ab",
+      "subject": "Physiology",
+      "system": "Respiratory"
+    },
+    {
+      "id": "d4358db9",
+      "subject": "Behavioral Science",
+      "system": "Psychiatry"
+    },
+    {
+      "id": "202a5e11",
+      "subject": "Anatomy",
+      "system": "Hematology & Oncology"
+    },
+    {
+      "id": "147b92b8",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "de516ac6",
+      "subject": "Physiology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "0c42a75b",
+      "subject": "Psychiatry",
+      "system": "Endocrine"
+    },
+    {
+      "id": "5749264b",
+      "subject": "General",
+      "system": "Renal"
+    },
+    {
+      "id": "976ea0f8",
+      "subject": "Genetics",
+      "system": "Pediatrics"
+    },
+    {
+      "id": "2e265f25",
+      "subject": "Obstetrics",
+      "system": "Gastrointestinal"
+    },
+    {
+      "id": "9c2b2d62",
+      "subject": "Obstetrics",
+      "system": "Gastrointestinal"
+    },
+    {
+      "id": "d2e3ef8e",
+      "subject": "General",
+      "system": "Renal"
+    },
+    {
+      "id": "a72994f8",
+      "subject": "Physiology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "4c02e735",
+      "subject": "Physiology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "1edf45b4",
+      "subject": "Obstetrics",
+      "system": "Endocrine"
+    },
+    {
+      "id": "bbd5c19b",
+      "subject": "Pharmacology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "236caa6e",
+      "subject": "Neurology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "d241b128",
+      "subject": "Behavioral Science",
+      "system": "Pediatrics"
+    },
+    {
+      "id": "3d4a7593",
+      "subject": "Pulmonology",
+      "system": "Psychiatry"
+    },
+    {
+      "id": "762a1527",
+      "subject": "Pharmacology",
+      "system": "Reproductive"
+    },
+    {
+      "id": "0cef2b7b",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "2c9217f3",
+      "subject": "Pharmacology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "c45d5ee8",
+      "subject": "Obstetrics",
+      "system": "Respiratory"
+    },
+    {
+      "id": "8261398c",
+      "subject": "Pediatrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "6b7ae2e7",
+      "subject": "Obstetrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "3283980d",
+      "subject": "General",
+      "system": "Endocrine"
+    },
+    {
+      "id": "3cc888db",
+      "subject": "General",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "bc901436",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "14d5946e",
+      "subject": "Obstetrics",
+      "system": "Respiratory"
+    },
+    {
+      "id": "6b2b62cb",
+      "subject": "Pathology",
+      "system": "Immunology"
+    },
+    {
+      "id": "7da45aaf",
+      "subject": "Obstetrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "ca46403f",
+      "subject": "Genetics",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "9755c390",
+      "subject": "Physiology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "63ff0089",
+      "subject": "Physiology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "e1639dc3",
+      "subject": "Dermatology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "180b7663",
+      "subject": "Obstetrics",
+      "system": "Renal"
+    },
+    {
+      "id": "4e9345f3",
+      "subject": "Physiology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "9dd48266",
+      "subject": "Biostatistics & Epidemiology",
+      "system": "Renal"
+    },
+    {
+      "id": "46bfe421",
+      "subject": "Pharmacology",
+      "system": "Gastrointestinal"
+    },
+    {
+      "id": "6ad14ff9",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "51088de5",
+      "subject": "Obstetrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "38b0fb68",
+      "subject": "Pharmacology",
+      "system": "Pharmacology"
+    },
+    {
+      "id": "7653dda2",
+      "subject": "Genetics",
+      "system": "Psychiatry"
+    },
+    {
+      "id": "a25f2789",
+      "subject": "Pathology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "468ae27d",
+      "subject": "Pediatrics",
+      "system": "Reproductive"
+    },
+    {
+      "id": "c41d7461",
+      "subject": "Pulmonology",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "1674b4f2",
+      "subject": "Pathology",
+      "system": "Respiratory"
+    },
+    {
+      "id": "8306b93e",
+      "subject": "Obstetrics",
+      "system": "Renal"
+    },
+    {
+      "id": "4de50842",
+      "subject": "Neurology",
+      "system": "Neurology"
+    },
+    {
+      "id": "53974110",
+      "subject": "Pediatrics",
+      "system": "Immunology"
+    },
+    {
+      "id": "51f76e54",
+      "subject": "Immunology",
+      "system": "Endocrine"
+    },
+    {
+      "id": "5123d07c",
+      "subject": "Genetics",
+      "system": "Neurology"
+    },
+    {
+      "id": "586eb8ad",
+      "subject": "General",
+      "system": "Cardiovascular"
+    },
+    {
+      "id": "f2d78227",
+      "subject": "Obstetrics",
+      "system": "Renal"
+    },
+    {
+      "id": "04b057db",
+      "subject": "Anatomy",
+      "system": "Renal"
+    },
+    {
+      "id": "a0ac6f55",
+      "subject": "Obstetrics",
+      "system": "Endocrine"
+    },
+    {
+      "id": "60a13ef1",
+      "subject": "Microbiology",
+      "system": "Integumentary"
+    }
+  ]
+}

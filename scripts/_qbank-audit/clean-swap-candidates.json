@@ -1,0 +1,914 @@
+[
+  {
+    "id": "357c8c3d",
+    "oldCorrectText": "Common iliac artery   (12%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Renal artery   (50%)"
+  },
+  {
+    "id": "a6f20826",
+    "oldCorrectText": "Sustained hand grip",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Sudden standing"
+  },
+  {
+    "id": "86461a8f",
+    "oldCorrectText": "Radiation mucositis",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Fibrosis"
+  },
+  {
+    "id": "4406d992",
+    "oldCorrectText": "Paroxysmal supraventricular tachycardia",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Sinus pause"
+  },
+  {
+    "id": "3c1dc03c",
+    "oldCorrectText": "Indomethacin   (11%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Antibiotics   (72%)"
+  },
+  {
+    "id": "a8f9a6a0",
+    "oldCorrectText": "Diffuse mesangial sclerosis   (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Tubular re-epithelization   (77%)"
+  },
+  {
+    "id": "cd000186",
+    "oldCorrectText": "Alprazolam   (3%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Citalopram   (63%)"
+  },
+  {
+    "id": "b76c8996",
+    "oldCorrectText": "Drug A requires treating fewer children to prevent 1 additional death compared to Drug B, so Drug A is less effective than Drug B   (2%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Drug A requires treating more children to prevent 1 additional death compared to Drug B, so Drug A is less effective than Drug B   (85%)"
+  },
+  {
+    "id": "9280ea13",
+    "oldCorrectText": "Vocal cord   (15%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Nasopharynx   (43%)"
+  },
+  {
+    "id": "a630d867",
+    "oldCorrectText": "Decreased bicarbonate formation in ciliary body   (2%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Increased outflow of aqueous humor   (62%)"
+  },
+  {
+    "id": "c136890d",
+    "oldCorrectText": "Gray-white matter junction   (1%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Jugular lymph nodes   (57%)"
+  },
+  {
+    "id": "178dd1cf",
+    "oldCorrectText": "Proximal tubules due to impaired uric acid transport",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Collecting ducts due to low urine pH"
+  },
+  {
+    "id": "f080bdb3",
+    "oldCorrectText": "Chymotrypsinogen   (4%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Trypsinogen   (78%)"
+  },
+  {
+    "id": "3defc738",
+    "oldCorrectText": "Fever and chills   (18%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Purulence at catheter site   (66%)"
+  },
+  {
+    "id": "186e6270",
+    "oldCorrectText": "Serum IgM   (7%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Duodenal luminal IgA   (49%)"
+  },
+  {
+    "id": "740af68c",
+    "oldCorrectText": "Red thrombus lodged in the pulmonary artery   (9%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Fat microglobules in pulmonary arterioles   (83%)"
+  },
+  {
+    "id": "a36dded2",
+    "oldCorrectText": "Systolic ventricular wall stress   (5%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Duration of diastole   (74%)"
+  },
+  {
+    "id": "1b213d71",
+    "oldCorrectText": "Ascending colon   (11%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Rectosigmoid junction   (44%)"
+  },
+  {
+    "id": "7e0e7722",
+    "oldCorrectText": "The woman's child when it is born    (4%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "The woman's disabled son   (68%)"
+  },
+  {
+    "id": "9f1732ef",
+    "oldCorrectText": "High High High",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Low High Low"
+  },
+  {
+    "id": "de9660d7",
+    "oldCorrectText": "Abrupt standing from the supine position   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Valsalva maneuver release phase   (40%)"
+  },
+  {
+    "id": "5eac554b",
+    "oldCorrectText": "Relative risk is equal to 1   (24%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Odds ratio is equal to 1   (52%)"
+  },
+  {
+    "id": "45809506",
+    "oldCorrectText": "No changeNo changeNo changeNo change   (5%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "DecreasedProlongedProlongedProlonged   (36%)"
+  },
+  {
+    "id": "d92e6a20",
+    "oldCorrectText": "Alzheimer disease   (6%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Delirium   (64%)"
+  },
+  {
+    "id": "7ff5b96e",
+    "oldCorrectText": "Viral myocarditis   (17%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Transthyretin deposition   (49%)"
+  },
+  {
+    "id": "fe85742c",
+    "oldCorrectText": "Folic acid   (5%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Vitamin D   (68%)"
+  },
+  {
+    "id": "fe106f2a",
+    "oldCorrectText": "Squamous epithelial cells of the thick ascending limb of the loop of Henle   (2%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Modified smooth muscle cells of the afferent arteriole   (43%)"
+  },
+  {
+    "id": "0eb95036",
+    "oldCorrectText": "Ependymal cells   (8%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Neurons   (46%)"
+  },
+  {
+    "id": "e33b19b4",
+    "oldCorrectText": "Degradation in the rough endoplasmic reticulum   (8%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Storage in secretory granules   (39%)"
+  },
+  {
+    "id": "827ef6e9",
+    "oldCorrectText": "Driving pressure for blood flow   (6%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Blood flow per minute   (65%)"
+  },
+  {
+    "id": "1625d8fd",
+    "oldCorrectText": "Heart muscle   (2%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Erythrocytes   (80%)"
+  },
+  {
+    "id": "89f3ae79",
+    "oldCorrectText": "90% lower   (4%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "20% lower   (65%)"
+  },
+  {
+    "id": "c1a12224",
+    "oldCorrectText": "Increased sympathetic output to the sinoatrial node   (5%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Prolonged atrioventricular node refractory period   (53%)"
+  },
+  {
+    "id": "d4b9881a",
+    "oldCorrectText": "Increased serum cytokine levels   (7%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Increased serum erythropoietin levels   (57%)"
+  },
+  {
+    "id": "c0aa66bb",
+    "oldCorrectText": "Superior portion of the posterior thigh   (1%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Superomedial quadrant of the buttock   (51%)"
+  },
+  {
+    "id": "7c697efe",
+    "oldCorrectText": "Frequent urination   (3%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Dry mouth   (88%)"
+  },
+  {
+    "id": "4bf22eeb",
+    "oldCorrectText": "Acetazolamide   (2%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Spironolactone   (51%)"
+  },
+  {
+    "id": "dd3a3b08",
+    "oldCorrectText": "Fast equilibration with the brain   (5%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "High blood/gas partitioning coefficient   (37%)"
+  },
+  {
+    "id": "fcb284c0",
+    "oldCorrectText": "Forced expiratory volume in 1 second/forced vital capacity ratio   (10%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Residual volume/total lung capacity ratio   (57%)"
+  },
+  {
+    "id": "9a533403",
+    "oldCorrectText": "Loss of taste sensation on the anterior tongue   (8%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Sparing of the forehead muscles   (75%)"
+  },
+  {
+    "id": "21291868",
+    "oldCorrectText": "Tramadol   (27%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Ibuprofen   (46%)"
+  },
+  {
+    "id": "dd0bcea5",
+    "oldCorrectText": "Thyroid cartilage   (7%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Stapes   (60%)"
+  },
+  {
+    "id": "4ff55f15",
+    "oldCorrectText": "Isoleucine   (2%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Cysteine   (73%)"
+  },
+  {
+    "id": "98030e30",
+    "oldCorrectText": "Nonenveloped positive-sense RNA virus   (7%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Nonenveloped single-stranded DNA virus   (57%)"
+  },
+  {
+    "id": "a34055de",
+    "oldCorrectText": "Acid alpha-glucosidase   (3%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Acyl-CoA dehydrogenase   (34%)"
+  },
+  {
+    "id": "e507347b",
+    "oldCorrectText": "Origin from an adenomatous polyp   (13%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Multifocal origin   (48%)"
+  },
+  {
+    "id": "1145a296",
+    "oldCorrectText": "Caudate nucleus   (5%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Hippocampus   (65%)"
+  },
+  {
+    "id": "63e8e21c",
+    "oldCorrectText": "Dura mater and periosteum   (20%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Periosteum and galea aponeurosis   (31%)"
+  },
+  {
+    "id": "5dc6c87f",
+    "oldCorrectText": "Excessive patient caseload   (7%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Physician fatigue   (57%)"
+  },
+  {
+    "id": "80795810",
+    "oldCorrectText": "Cell surface receptors   (4%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Transcription regulators   (57%)"
+  },
+  {
+    "id": "e4e511fb",
+    "oldCorrectText": "Systolic anterior motion of the mitral valve   (5%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Engorged inferior vena cava   (47%)"
+  },
+  {
+    "id": "36a84ad9",
+    "oldCorrectText": "Bacterial conjunctivitis   (1%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Meningitis   (73%)"
+  },
+  {
+    "id": "4b592bd6",
+    "oldCorrectText": "Had unprotected sexual intercourse with a new partner   (3%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Had steamed oysters at a neighborhood restaurant   (76%)"
+  },
+  {
+    "id": "0842f50e",
+    "oldCorrectText": "Inferior oblique   (6%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Lateral rectus   (86%)"
+  },
+  {
+    "id": "ef23894b",
+    "oldCorrectText": "Diazepam   (16%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Lorazepam   (34%)"
+  },
+  {
+    "id": "faa27a90",
+    "oldCorrectText": "Minimal change disease   (6%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "IgA nephropathy   (55%)"
+  },
+  {
+    "id": "3aff56af",
+    "oldCorrectText": "Lithium   (17%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Sertraline   (72%)"
+  },
+  {
+    "id": "132694f0",
+    "oldCorrectText": "Diphenhydramine   (16%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Loratadine   (67%)"
+  },
+  {
+    "id": "da51ad17",
+    "oldCorrectText": "Niacin   (5%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Vitamin E   (63%)"
+  },
+  {
+    "id": "9ffc92f6",
+    "oldCorrectText": "Left ventricle   (8%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Pulmonary vessels   (41%)"
+  },
+  {
+    "id": "5051e94d",
+    "oldCorrectText": "Citrate   (6%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "α-Ketoglutarate   (62%)"
+  },
+  {
+    "id": "39f22614",
+    "oldCorrectText": "Rapid weight loss   (3%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Chronic hemolysis   (89%)"
+  },
+  {
+    "id": "a4a52334",
+    "oldCorrectText": "Endoplasmic reticulum   (15%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Mitochondria   (65%)"
+  },
+  {
+    "id": "250da0f2",
+    "oldCorrectText": "Superior division of middle cerebral artery   (16%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Lenticulostriate arteries   (60%)"
+  },
+  {
+    "id": "0db8f564",
+    "oldCorrectText": "Increased intestinal absorption of calcium   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Increased apoptosis of osteoclasts   (45%)"
+  },
+  {
+    "id": "d58e27e9",
+    "oldCorrectText": "Angle-closure glaucoma   (14%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Skin wrinkles   (66%)"
+  },
+  {
+    "id": "89d184c0",
+    "oldCorrectText": "Growth hormone   (4%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Prolactin   (67%)"
+  },
+  {
+    "id": "37db250f",
+    "oldCorrectText": "Vascular endothelial cells   (14%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Hematopoietic stem cells   (73%)"
+  },
+  {
+    "id": "7ab2830e",
+    "oldCorrectText": "Squamous cell lung carcinoma   (17%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Small cell lung cancer   (73%)"
+  },
+  {
+    "id": "b1986248",
+    "oldCorrectText": "Valsalva strain phase   (36%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Listening at end expiration   (37%)"
+  },
+  {
+    "id": "12dff03a",
+    "oldCorrectText": "Lower number of true positives   (9%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Higher sensitivity   (67%)"
+  },
+  {
+    "id": "cfd455f9",
+    "oldCorrectText": "Diabetic autonomic neuropathy   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Urethral sphincter dysfunction   (73%)"
+  },
+  {
+    "id": "106b7ff6",
+    "oldCorrectText": "\"I have the brain scan results and can discuss them with you later.\"   (18%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "\"Let's wait until morning signout to discuss all of the patients.\"   (46%)"
+  },
+  {
+    "id": "707a33b8",
+    "oldCorrectText": "Heat intolerance   (3%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Exophthalmos   (85%)"
+  },
+  {
+    "id": "b9a2f797",
+    "oldCorrectText": "Lipid-rich core   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Slow growth rate   (62%)"
+  },
+  {
+    "id": "7c184844",
+    "oldCorrectText": "Loss of cell polarity   (5%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Reversibility of changes   (80%)"
+  },
+  {
+    "id": "b87e58d5",
+    "oldCorrectText": "Prolactin-induced sodium secretion into bile and estrogen-induced gallbladder hypomotility   (4%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Estrogen-induced cholesterol hypersecretion and progesterone-induced gallbladder hypomotility   (76%)"
+  },
+  {
+    "id": "d99da3ae",
+    "oldCorrectText": "Elevated antistreptolysin titer   (6%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Adult onset   (66%)"
+  },
+  {
+    "id": "e38e1531",
+    "oldCorrectText": "Left-to-right shunt via atrial septal defect   (0%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Right-to-left shunt via ductus arteriosus   (40%)"
+  },
+  {
+    "id": "6235e8db",
+    "oldCorrectText": "External urethral sphincter paralysis   (17%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Erectile dysfunction   (58%)"
+  },
+  {
+    "id": "5d75af73",
+    "oldCorrectText": "Ceftazidime   (13%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Gentamicin   (40%)"
+  },
+  {
+    "id": "5f2e4f41",
+    "oldCorrectText": "Distal jejunum   (17%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Duodenum   (63%)"
+  },
+  {
+    "id": "aee4d868",
+    "oldCorrectText": "Left anterior descending Right dominant (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Right coronary Left dominant (46%)"
+  },
+  {
+    "id": "7688b6ca",
+    "oldCorrectText": "Pseudomonas aeruginosa   (9%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Streptococcus pneumoniae   (48%)"
+  },
+  {
+    "id": "e6910613",
+    "oldCorrectText": "Non-REM sleep in the prone position   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "REM sleep in the supine position   (60%)"
+  },
+  {
+    "id": "bce82cdd",
+    "oldCorrectText": "C   (36%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "D   (32%)"
+  },
+  {
+    "id": "4378c77d",
+    "oldCorrectText": "Enveloped single-stranded RNA virus   (7%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Enveloped double-stranded DNA virus   (57%)"
+  },
+  {
+    "id": "c671ae94",
+    "oldCorrectText": "Nitroprusside   (15%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Labetalol   (60%)"
+  },
+  {
+    "id": "4b542d89",
+    "oldCorrectText": "Hydrolyzed dietary protein   (20%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Water-soluble vitamin   (52%)"
+  },
+  {
+    "id": "656036e9",
+    "oldCorrectText": "Hepatic flexure   (4%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Splenic flexure   (87%)"
+  },
+  {
+    "id": "c255172e",
+    "oldCorrectText": "Valine   (3%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Tyrosine   (64%)"
+  },
+  {
+    "id": "da57e85f",
+    "oldCorrectText": "Great auricular nerve   (10%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Vagus nerve   (58%)"
+  },
+  {
+    "id": "92fa78f1",
+    "oldCorrectText": "Assessing the patient’s current social situation   (1%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Determining whether the patient needs language assistance   (88%)"
+  },
+  {
+    "id": "147f54b0",
+    "oldCorrectText": "Dysmorphic red blood cells   (16%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Granular casts   (54%)"
+  },
+  {
+    "id": "5edf3094",
+    "oldCorrectText": "Periumbilical venous distension   (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Varicocele   (85%)"
+  },
+  {
+    "id": "5c4e9a76",
+    "oldCorrectText": "Excessive vitamin D intake   (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Recent thyroid surgery   (76%)"
+  },
+  {
+    "id": "88e83614",
+    "oldCorrectText": "Increasing fecal loss of cholesterol derivatives   (16%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Reducing hepatic VLDL production   (45%)"
+  },
+  {
+    "id": "9900f402",
+    "oldCorrectText": "Presynaptic selective dopamine uptake   (1%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Monoamine breakdown   (74%)"
+  },
+  {
+    "id": "a66df290",
+    "oldCorrectText": "Bronchial microvessels → Pulmonary parenchymal lymphatics (34%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Intercostal microvessels → Parietal pleural lymphatics (47%)"
+  },
+  {
+    "id": "0395fe29",
+    "oldCorrectText": "Hydralazine   (7%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Hydrochlorothiazide   (69%)"
+  },
+  {
+    "id": "ef5075ad",
+    "oldCorrectText": "External iliac artery   (8%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Ureter   (48%)"
+  },
+  {
+    "id": "5446d72c",
+    "oldCorrectText": "Pancreatic β cells   (8%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Epidermal basal cells   (75%)"
+  },
+  {
+    "id": "ea8a79be",
+    "oldCorrectText": "Volume overload   (5%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Hypokalemia   (61%)"
+  },
+  {
+    "id": "59f3c54a",
+    "oldCorrectText": "140-220 mg/dL   (45%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "<180 mg/dL   (41%)"
+  },
+  {
+    "id": "e390fc59",
+    "oldCorrectText": "Trabecular meshwork   (21%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Ciliary epithelium   (43%)"
+  },
+  {
+    "id": "73fe3bf0",
+    "oldCorrectText": "Bordetella pertussis–selective agar   (24%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Burkholderia cepacia–selective agar   (37%)"
+  },
+  {
+    "id": "156ead2a",
+    "oldCorrectText": "Obtain serum testosterone level   (9%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Provide reassurance   (48%)"
+  },
+  {
+    "id": "217170a2",
+    "oldCorrectText": "Muscle relaxant properties   (13%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "No risk of dependence   (54%)"
+  },
+  {
+    "id": "46b0e1f8",
+    "oldCorrectText": "Decreased renal tubular reabsorption   (4%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Decreased renal tubular secretion   (88%)"
+  },
+  {
+    "id": "470ae1a3",
+    "oldCorrectText": "Left anterior descending artery   (35%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Right coronary artery   (55%)"
+  },
+  {
+    "id": "ed8bc500",
+    "oldCorrectText": "Superior gluteal   (12%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Inferior epigastric   (58%)"
+  },
+  {
+    "id": "e804e9e7",
+    "oldCorrectText": "Fulminant liver failure   (12%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Anaphylaxis   (49%)"
+  },
+  {
+    "id": "36d43498",
+    "oldCorrectText": "Decreased Decreased Increased (2%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Increased Increased Decreased (49%)"
+  },
+  {
+    "id": "587ebb1a",
+    "oldCorrectText": "\"She's had a pretty tough week and could benefit from some support.\"   (1%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "\"I cannot disclose confidential information about my patients to you.\"   (52%)"
+  },
+  {
+    "id": "3cb57c3c",
+    "oldCorrectText": "Herpes simplex virus   (2%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Zika virus   (54%)"
+  },
+  {
+    "id": "565ab35e",
+    "oldCorrectText": "Mast cells   (1%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Macrophages   (71%)"
+  },
+  {
+    "id": "f93be171",
+    "oldCorrectText": "Midway between the iliac crest and the femoral artery   (2%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Immediately medial to the femoral artery   (77%)"
+  },
+  {
+    "id": "5fb9913e",
+    "oldCorrectText": "Porphobilinogen deaminase   (13%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Heme oxygenase   (54%)"
+  },
+  {
+    "id": "39803d2d",
+    "oldCorrectText": "Different amounts of membrane surface area for diffusion   (4%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "The presence of a protein transporter   (81%)"
+  },
+  {
+    "id": "bae858aa",
+    "oldCorrectText": "Trimethoprim-sulfamethoxazole   (2%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Cefazolin   (61%)"
+  },
+  {
+    "id": "58c690d8",
+    "oldCorrectText": "Closure of a ventricular right-to-left shunt   (3%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Closure of an arterial left-to-right shunt   (43%)"
+  },
+  {
+    "id": "61fd4505",
+    "oldCorrectText": "Hypoglossal   (1%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Facial   (83%)"
+  },
+  {
+    "id": "a8d8104d",
+    "oldCorrectText": "Hepatocytes   (8%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Erythrocytes   (70%)"
+  },
+  {
+    "id": "2cf8ca4b",
+    "oldCorrectText": "Basement membrane   (8%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Tendon   (39%)"
+  },
+  {
+    "id": "c8de04a3",
+    "oldCorrectText": "Insulin glargine   (10%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Insulin aspart   (75%)"
+  },
+  {
+    "id": "ab81f9e6",
+    "oldCorrectText": "Extravasation of fluid from systemic capillaries   (16%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Increased ventilatory rate   (48%)"
+  },
+  {
+    "id": "13977f91",
+    "oldCorrectText": "Complete blood count   (3%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "History of mania   (65%)"
+  },
+  {
+    "id": "6e98a95b",
+    "oldCorrectText": "Distal convoluted tubule Secretion of hydrogen ions (10%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Proximal convoluted tubule Reabsorption of bicarbonate (65%)"
+  },
+  {
+    "id": "36b087fe",
+    "oldCorrectText": "Tremors   (11%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Hyperphagia   (47%)"
+  },
+  {
+    "id": "79896fc2",
+    "oldCorrectText": "Urine fractional excretion of sodium >2%   (12%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Urine sodium <20 mEq/L   (62%)"
+  },
+  {
+    "id": "2132e74e",
+    "oldCorrectText": "Rate of hepatic regeneration   (6%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Serum aminotransferase levels   (35%)"
+  },
+  {
+    "id": "deff34e3",
+    "oldCorrectText": "Fluconazole   (9%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Rifampin   (55%)"
+  },
+  {
+    "id": "5d181ceb",
+    "oldCorrectText": "Drug-induced parkinsonism   (2%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Neuroleptic malignant syndrome   (78%)"
+  },
+  {
+    "id": "c463bc86",
+    "oldCorrectText": "Nodular cortical hyperplasia   (2%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Bilateral cortical atrophy   (66%)"
+  },
+  {
+    "id": "3fb6ddcd",
+    "oldCorrectText": "Measles virus   (10%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Rotavirus   (56%)"
+  },
+  {
+    "id": "63e7abfa",
+    "oldCorrectText": "Left ventricular stroke volume   (1%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Right ventricular afterload   (77%)"
+  },
+  {
+    "id": "75255f88",
+    "oldCorrectText": "Laceration of the inferior border of the spleen   (42%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Contusion of the body of the pancreas   (47%)"
+  },
+  {
+    "id": "33d8192e",
+    "oldCorrectText": "Cellular receptor inhibitor drug   (6%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Inactivated vaccine   (40%)"
+  },
+  {
+    "id": "fd87d0ae",
+    "oldCorrectText": "Family history of cardiomyopathy   (20%)",
+    "newCorrectLetter": "B",
+    "newCorrectText": "Location of residence   (46%)"
+  },
+  {
+    "id": "9fcd70a5",
+    "oldCorrectText": "Opposition of the thumb   (10%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Extension of the wrist   (64%)"
+  },
+  {
+    "id": "fd4fbe05",
+    "oldCorrectText": "Hyperplasia of prostate with predominance of both collagen and smooth muscles   (28%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Hyperplasia of prostate with predominance of epithelial components   (38%)"
+  },
+  {
+    "id": "c50e6d51",
+    "oldCorrectText": "Intestinal epithelial cells   (10%)",
+    "newCorrectLetter": "D",
+    "newCorrectText": "Myocardial cells   (63%)"
+  },
+  {
+    "id": "767dd2d9",
+    "oldCorrectText": "Slow-wave sleep (delta EEG waves)   (26%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Muscle paralysis   (46%)"
+  },
+  {
+    "id": "a65f5123",
+    "oldCorrectText": "Arterial thrombosis   (8%)",
+    "newCorrectLetter": "F",
+    "newCorrectText": "Vasospasm   (65%)"
+  },
+  {
+    "id": "54ba5cd8",
+    "oldCorrectText": "Mesonephric duct   (13%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Metanephros   (57%)"
+  },
+  {
+    "id": "cda5e1ec",
+    "oldCorrectText": "Amniotic band sequence   (6%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Trisomy 21   (74%)"
+  },
+  {
+    "id": "28f8da87",
+    "oldCorrectText": "Bound fraction of oxygen in the arterial blood   (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Partial pressure of oxygen in the arterial blood   (59%)"
+  },
+  {
+    "id": "62b20241",
+    "oldCorrectText": "Integration into host genome   (17%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Coating of viral particles   (39%)"
+  },
+  {
+    "id": "27bb17f9",
+    "oldCorrectText": "Increased collecting duct free water excretion   (7%)",
+    "newCorrectLetter": "E",
+    "newCorrectText": "Increased proximal tubular sodium reabsorption   (51%)"
+  },
+  {
+    "id": "b85bc3fe",
+    "oldCorrectText": "Secretory leiomyoma   (1%)",
+    "newCorrectLetter": "C",
+    "newCorrectText": "Metastatic carcinoid   (73%)"
+  },
+  {
+    "id": "2e909665",
+    "oldCorrectText": "Posterior urethral valves   (6%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Anencephaly   (59%)"
+  },
+  {
+    "id": "7085fa7a",
+    "oldCorrectText": "Unchanged Decreased Increased (3%)",
+    "newCorrectLetter": "A",
+    "newCorrectText": "Decreased Decreased Decreased (88%)"
+  }
+]
