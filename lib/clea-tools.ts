@@ -236,7 +236,7 @@ export async function searchBooks(query: string, limit = 4): Promise<string> {
   try {
     const { questions } = await queryQuestions({ query, limit: 3 });
     if (questions.length) {
-      lines.push(`Qbank:\n${questions.map((q) => `Q: ${q.text.slice(0, 200)}\nExplanation: ${q.explanation.slice(0, 300)}`).join('\n---\n')}`);
+      lines.push(`Qbank:\n${questions.map((q: { text: string; explanation: string }) => `Q: ${q.text.slice(0, 200)}\nExplanation: ${q.explanation.slice(0, 300)}`).join('\n---\n')}`);
     }
   } catch (e) {
     console.error('qbank search failed', e);
@@ -321,7 +321,7 @@ async function runQbankQuery(
   const { questions, matched } = await queryQuestions({ subject, system, difficulty, query, limit });
   return {
     matched,
-    sample: questions.map((q) => ({
+    sample: questions.map((q: { subject: string; system: string; difficulty: string; text: string; explanation: string }) => ({
       subject: q.subject,
       system: q.system,
       difficulty: q.difficulty,
