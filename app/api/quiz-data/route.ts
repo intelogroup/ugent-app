@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { queryQuestions } from '@/lib/qbank';
 import { createClient } from '@/lib/supabase/server';
 
@@ -9,7 +10,16 @@ export async function GET(request: NextRequest) {
   const mode = searchParams.get('mode');
 
   if (mode === 'filters') {
-    const supabase = await createClient();
+    // Bank-wide counts/subject/system lists are public aggregate info, not
+    // user data — use a service-role client so the result (and this route's
+    // CDN cache) doesn't depend on the requester's auth/RLS state. An
+    // RLS-scoped client here previously let an anonymous request (bot, health
+    // check) cache a blocked-by-RLS `total:0` for every real user for 5 min.
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
     const sourceFilter = searchParams.get('source');
 
     let baseQuery = supabase.from('questions').select('*', { count: 'exact', head: true }).neq('correct_answer', '');
