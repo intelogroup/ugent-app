@@ -39,8 +39,8 @@ export default function CreateTest() {
   const handleCreateTest = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (selectedSubjects.length === 1) params.set('subject', selectedSubjects[0]);
-    if (selectedSystems.length === 1) params.set('system', selectedSystems[0]);
+    if (selectedSubjects.length) params.set('subject', selectedSubjects.join(','));
+    if (selectedSystems.length) params.set('system', selectedSystems.join(','));
     params.set('limit', String(questionCount));
     router.push(`/quiz?${params.toString()}`);
   };
@@ -65,7 +65,7 @@ export default function CreateTest() {
           <div>
             <p className="workspace-eyebrow">Question bank</p>
             <h1 className="workspace-title">Build a test</h1>
-            <p className="workspace-subtitle">Choose one subject and system, or leave both open for a mixed set from {filters.total.toLocaleString()} questions.</p>
+            <p className="workspace-subtitle">Choose any subjects and systems, or leave both open for a mixed set from {filters.total.toLocaleString()} questions.</p>
           </div>
           <p className="rounded-full border border-white/80 bg-white/55 px-3 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm backdrop-blur-md">
             {selectedSubjects.length + selectedSystems.length} filters selected
@@ -159,20 +159,16 @@ export default function CreateTest() {
                 </div>
               </div>
               <dl className="my-5 space-y-3 border-y border-white/80 py-4 text-xs">
-                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">Subject</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSubjects.length === 1 ? selectedSubjects[0] : selectedSubjects.length > 1 ? 'Choose one' : 'Mixed'}</dd></div>
-                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">System</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSystems.length === 1 ? selectedSystems[0] : selectedSystems.length > 1 ? 'Choose one' : 'Mixed'}</dd></div>
+                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">Subject</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSubjects.length === 0 ? 'Mixed' : selectedSubjects.length === 1 ? selectedSubjects[0] : `${selectedSubjects.length} selected`}</dd></div>
+                <div className="flex items-start justify-between gap-3"><dt className="text-neutral-500">System</dt><dd className="max-w-[170px] text-right font-semibold text-neutral-800">{selectedSystems.length === 0 ? 'Mixed' : selectedSystems.length === 1 ? selectedSystems[0] : `${selectedSystems.length} selected`}</dd></div>
                 <div className="flex items-center justify-between"><dt className="text-neutral-500">Estimated time</dt><dd className="font-semibold text-neutral-800">{Math.max(1, Math.round(questionCount * 1.5))} min</dd></div>
               </dl>
               <button
                 type="submit"
-                disabled={selectedSubjects.length > 1 || selectedSystems.length > 1}
                 className="btn-primary flex w-full items-center justify-center py-3 disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:shadow-none"
               >
                 Start {questionCount}-question test
               </button>
-              {(selectedSubjects.length > 1 || selectedSystems.length > 1) && (
-                <p className="mt-3 text-center text-xs leading-5 text-amber-700">Choose a single subject and system before starting.</p>
-              )}
             </div>
           </aside>
         </div>
