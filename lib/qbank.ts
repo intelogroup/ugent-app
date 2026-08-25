@@ -70,6 +70,9 @@ export async function queryQuestions(opts: {
     if (system) query = query.in('system', system.split(','));
     if (difficulty) query = query.eq('difficulty', difficulty);
     if (source) query = query.eq('source', source);
+    // Some scraped rows never got an answer key filled in (empty correct_answer,
+    // no option flagged isCorrect) — unanswerable, so exclude from the pool.
+    query = query.neq('correct_answer', '');
     return query;
   }
 

@@ -10,23 +10,20 @@ export async function GET(request: NextRequest) {
 
   if (mode === 'filters') {
     const supabase = await createClient();
+    const sourceFilter = searchParams.get('source');
 
-    const { count: total, error: countError } = await supabase
-      .from('questions')
-      .select('*', { count: 'exact', head: true });
+    let baseQuery = supabase.from('questions').select('*', { count: 'exact', head: true }).neq('correct_answer', '');
+    if (sourceFilter) baseQuery = baseQuery.eq('source', sourceFilter);
+    const { count: total, error: countError } = await baseQuery;
     if (countError) throw countError;
 
-    // PostgREST caps a single select at db.max_rows (1000) and the bank exceeds
-    // it, so a bare select can't enumerate every subject/system. Walk range
-    // windows (1000 rows each) until exhausted and union the values.
     const subjects = new Set<string>();
     const systems = new Set<string>();
     const windowSize = 1000;
     for (let start = 0; ; start += windowSize) {
-      const { data: rows } = await supabase
-        .from('questions')
-        .select('subject, system')
-        .range(start, start + windowSize - 1);
+      let q = supabase.from('questions').select('subject, system').neq('correct_answer', '');
+      if (sourceFilter) q = q.eq('source', sourceFilter);
+      const { data: rows } = await q.range(start, start + windowSize - 1);
       const batch = rows ?? [];
       for (const row of batch) {
         if (row.subject) subjects.add(row.subject);
@@ -48,8 +45,9 @@ export async function GET(request: NextRequest) {
   const subject = searchParams.get('subject') || undefined;
   const system = searchParams.get('system') || undefined;
   const difficulty = searchParams.get('difficulty') || undefined;
+  const source = searchParams.get('source') || undefined;
   const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-  const { questions, matched } = await queryQuestions({ subject, system, difficulty, limit });
+  const { questions, matched } = await queryQuestions({ subject, system, difficulty, source, limit });
   return NextResponse.json({ questions, matched });
 }
