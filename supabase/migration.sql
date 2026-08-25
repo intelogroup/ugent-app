@@ -88,3 +88,31 @@ CREATE POLICY "users can delete own progress"
   ON curriculum_progress FOR DELETE
   TO authenticated
   USING ((SELECT auth.uid()) = user_id);
+
+-- Live in-progress quiz state — one row per user, upserted on every question
+-- change so an unfinished quiz is still observable server-side (quiz_attempts/
+-- quiz_answers only get written at Complete Quiz).
+CREATE TABLE quiz_live_activity (
+  user_id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  question_number INTEGER NOT NULL,
+  total_questions INTEGER NOT NULL,
+  subject TEXT,
+  system TEXT,
+  difficulty TEXT,
+  is_answered BOOLEAN NOT NULL,
+  has_selected_answer BOOLEAN NOT NULL,
+  current_question_correct BOOLEAN,
+  correct_so_far INTEGER NOT NULL,
+  total_answered_so_far INTEGER NOT NULL,
+  question_text TEXT,
+  selected_option_text TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE quiz_live_activity ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "users can upsert own live activity"
+  ON quiz_live_activity FOR ALL
+  TO authenticated
+  USING ((SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) = user_id);

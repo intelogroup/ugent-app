@@ -53,5 +53,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, id: attempt.id })
   }
 
+  if ((body as Record<string, unknown>)?.activity) {
+    const activity = (body as { activity: Record<string, unknown> }).activity
+
+    const { error } = await supabase
+      .from('quiz_live_activity')
+      .upsert({
+        user_id: user.id,
+        question_number: activity.questionNumber,
+        total_questions: activity.totalQuestions,
+        subject: activity.subject ?? null,
+        system: activity.system ?? null,
+        difficulty: activity.difficulty ?? null,
+        is_answered: activity.isAnswered,
+        has_selected_answer: activity.hasSelectedAnswer,
+        current_question_correct: activity.currentQuestionCorrect ?? null,
+        correct_so_far: activity.correctSoFar,
+        total_answered_so_far: activity.totalAnsweredSoFar,
+        question_text: activity.questionText ?? null,
+        selected_option_text: activity.selectedOptionText ?? null,
+        updated_at: new Date().toISOString(),
+      })
+
+    if (error) {
+      console.error('quiz-activity upsert error:', error)
+      return NextResponse.json({ error: 'upsert failed' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  }
+
   return NextResponse.json({ ok: true })
 }

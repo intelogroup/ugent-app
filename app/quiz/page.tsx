@@ -79,7 +79,7 @@ function QuizActivitySync({
   const { watchEnabled, setActivity } = useWatch();
 
   useEffect(() => {
-    if (!watchEnabled || !currentQuestion) return;
+    if (!currentQuestion) return;
     const snapshot = buildQuizSnapshot(
       currentQuestion,
       currentIndex + 1,
@@ -91,8 +91,12 @@ function QuizActivitySync({
       answeredCount,
       selectedIndex
     );
-    setActivity(snapshot);
+    // Persisted to Supabase (quiz_live_activity) unconditionally so an
+    // in-progress quiz is observable server-side; local Clea awareness
+    // stays gated on watch mode.
     postQuizActivity({ activity: snapshot });
+    if (!watchEnabled) return;
+    setActivity(snapshot);
     return () => setActivity(null);
   }, [watchEnabled, questions, currentQuestion, currentIndex, isSubmitted, selectedIndex, correctCount, answeredCount, setActivity]);
 
