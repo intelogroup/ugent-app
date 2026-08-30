@@ -18,8 +18,10 @@
  *      High-leverage means pathognomonic, not common.
  *
  * Conservatively prunes discriminators whose ruleOutFact is empty/placeholder/
- * ultra-short. NEVER changes textHash / id / questionText — arrays only.
- * Always backs up first.
+ * ultra-short, or is a BARE dead cross-reference ("Same as above.", "See explanation.")
+ * with no content after it. Facts that begin with a ref but continue with real
+ * content ("Same as above; pain is not pleuritic") are KEPT. NEVER changes
+ * textHash / id / questionText — arrays only. Always backs up first.
  *
  * Usage:
  *   node scripts/qbank-clue-clean.mjs             # backup + write + report
@@ -118,7 +120,11 @@ for (const r of records) {
   if (CLEAN_DISCRIMINATORS && Array.isArray(e.discriminators)) {
     e.discriminators = e.discriminators.filter((d) => {
       const rf = norm(d?.ruleOutFact || '');
-      const ok = rf && rf.length >= 12 && !PLACEHOLDER.test(rf);
+      // Bare dead cross-reference e.g. "Same as above." / "See explanation."
+      // (a ref that has real content after it — "Same as above; pain is not pleuritic"
+      //  — is KEPT; only the empty tail is dropped).
+      const tail = rf.replace(/^(same as above|as above|see above|see (the )?explanation|ditto|refer to above|like above)[.;:\\s]*/i, '').trim();
+      const ok = rf && rf.length >= 12 && !PLACEHOLDER.test(rf) && !(tail.length < 4);
       if (!ok) { stats.removed.discEmpty++; pushEx('discEmpty', disease, d?.distractor || ''); return false; }
       return true;
     });
