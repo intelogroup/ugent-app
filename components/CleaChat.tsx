@@ -11,6 +11,7 @@ import {
   MicrophoneIcon,
   PaperAirplaneIcon,
   SpeakerWaveIcon,
+  SpeakerXMarkIcon,
   TrashIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -53,6 +54,10 @@ export default function CleaChat() {
   const [draft, setDraft] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [ttsId, setTtsId] = useState<string | null>(null);
+  const [autoPlay, setAutoPlay] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('clea-autoplay-tts') === '1';
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -213,6 +218,28 @@ export default function CleaChat() {
     }
   };
 
+  useEffect(() => {
+    window.localStorage.setItem('clea-autoplay-tts', autoPlay ? '1' : '0');
+  }, [autoPlay]);
+
+  // Auto-play only the reply to a turn sent *this session* — trigger on the
+  // streaming->ready transition, not on `status === 'ready'` alone, which
+  // would also fire once on mount/hydrate and replay old history.
+  const prevStatusRef = useRef(status);
+  const lastAutoPlayedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const wasBusy = prevStatusRef.current !== 'ready';
+    prevStatusRef.current = status;
+    if (!autoPlay || status !== 'ready' || !wasBusy) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+    const key = last.id || String(messages.length - 1);
+    if (lastAutoPlayedIdRef.current === key) return;
+    lastAutoPlayedIdRef.current = key;
+    void playMessage(getMessageText(last), key);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, autoPlay]);
+
   const clearChat = async () => {
     await fetch('/api/clea-chat', { method: 'DELETE', body: JSON.stringify({ id: chatId }) });
     setMessages([]);
@@ -286,6 +313,20 @@ export default function CleaChat() {
                 }`}
               >
                 {watchEnabled ? <EyeIcon className="h-4 w-4" /> : <EyeSlashIcon className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoPlay((on) => !on)}
+                aria-label={autoPlay ? 'Turn off auto-play replies' : 'Turn on auto-play replies'}
+                aria-pressed={autoPlay}
+                title={autoPlay ? 'Auto-play: on' : 'Auto-play: off'}
+                className={`flex items-center justify-center rounded-full p-1.5 transition focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  autoPlay
+                    ? 'bg-primary-50 text-primary-600'
+                    : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
+                }`}
+              >
+                {autoPlay ? <SpeakerWaveIcon className="h-4 w-4" /> : <SpeakerXMarkIcon className="h-4 w-4" />}
               </button>
               <button
                 type="button"
