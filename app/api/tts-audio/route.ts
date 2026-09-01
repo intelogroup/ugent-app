@@ -66,11 +66,11 @@ function streamWithLatencyLog(body: ReadableStream<Uint8Array>, via: string, tex
 // Rachel (21m00Tcm4TlvDq8ikWAM) started 402ing — ElevenLabs reclassified it
 // as a library voice, paid-plan-only. Bella cleared the free plan (verified
 // against prod: Adam/Bella/Antoni/Arnold 200, Rachel/Elli/Josh/Domi 402).
-const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Bella
+const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Bella
 
 export async function POST(request: Request) {
   const t0 = performance.now();
-  const { text, voiceId = DEFAULT_VOICE_ID } = await request.json();
+  const { text } = await request.json();
   if (!text) {
     return new Response('text required', { status: 400 });
   }
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
   // content-type must be checked before trusting the format we asked for.
   const ELEVEN_PCM_SR = 24000;
   const pcmRes = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream`,
     {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },

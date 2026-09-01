@@ -162,6 +162,12 @@ export default function CleaChat() {
   };
 
   const playingKeyRef = useRef<string | null>(null);
+  // Single-slot cache — a replay of the message just played reuses this
+  // object URL instead of re-hitting ElevenLabs. Only ever holds the most
+  // recent clip: a new one lands, the old one is revoked, so this never
+  // accumulates across a chat session.
+  const audioCacheRef = useRef<{ key: string; url: string } | null>(null);
+  useEffect(() => () => { if (audioCacheRef.current) URL.revokeObjectURL(audioCacheRef.current.url); }, []);
 
   const playMessage = async (text: string, key: string) => {
     // Guards against a double-click firing before the `disabled` prop's
@@ -173,6 +179,20 @@ export default function CleaChat() {
       if (playingKeyRef.current === key) playingKeyRef.current = null;
       setTtsId((current) => (current === key ? null : current));
     };
+
+    const cached = audioCacheRef.current;
+    if (cached?.key === key) {
+      const audio = new Audio(cached.url);
+      audio.onended = clearTts;
+      audio.onerror = clearTts;
+      try {
+        await audio.play();
+      } catch {
+        clearTts();
+      }
+      return;
+    }
+
     try {
       const res = await fetch('/api/tts-audio', {
         method: 'POST',
@@ -182,8 +202,10 @@ export default function CleaChat() {
       if (!res.ok) { clearTts(); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+      if (audioCacheRef.current) URL.revokeObjectURL(audioCacheRef.current.url);
+      audioCacheRef.current = { key, url };
       const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); clearTts(); };
+      audio.onended = clearTts;
       audio.onerror = clearTts;
       await audio.play();
     } catch {
