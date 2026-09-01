@@ -63,9 +63,10 @@ function streamWithLatencyLog(body: ReadableStream<Uint8Array>, via: string, tex
   return new Response(body.pipeThrough(timed), { headers: { 'Content-Type': contentType } });
 }
 
-// ponytail: temporary override to probe which ElevenLabs voice IDs the
-// account's plan can actually use — remove once a working default is locked in.
-const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM';
+// Rachel (21m00Tcm4TlvDq8ikWAM) started 402ing — ElevenLabs reclassified it
+// as a library voice, paid-plan-only. Bella cleared the free plan (verified
+// against prod: Adam/Bella/Antoni/Arnold 200, Rachel/Elli/Josh/Domi 402).
+const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Bella
 
 export async function POST(request: Request) {
   const t0 = performance.now();
