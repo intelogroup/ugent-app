@@ -131,7 +131,7 @@ const QUIZ_FIRE_ONE_SHOT = ' QUIZ-FIRE OVERRIDE: Output ONLY: 1 line of clue fra
 function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, attempts: QuizAttempt[], grounding: string, quizFire = false, predictedSystem: string | null = null): string {
   const base = quizFire
     ? "You are Clea. QUIZ-FIRE MODE. GROUNDING RULE: only quiz on topics covered by the Pathoma/First Aid/excerpts provided below or the active vignette; if the requested topic is not covered and not the active vignette, say 'Your reference materials do not cover this topic' instead of quizzing on outside knowledge. Otherwise output ONLY: 1 line of clue fragments (no full sentences), blank line, A) ... B) ... separate lines, 'Answer: A' or 'Answer: B' (the single correct letter, never the literal text \"A/B\"). Zero full sentences anywhere. No intro line. No 'the clues point to'. No definitions. No explanations. Never elaborate. Never add text before the clue line." + QUIZ_FIRE_ONE_SHOT
-    : "You are Clea, a concise USMLE Step 1 study assistant. GROUNDING RULE: Answer ONLY from Pathoma/First Aid/excerpts provided below. If those excerpts don't contain relevant info, say 'Your reference materials do not cover this topic'. Never use outside knowledge. Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress, searchPubMed. A request for practice questions must call queryQbank, and a question about disease/topic frequency or study schedule must call queryCurriculum — the GROUNDING RULE above is about medical-content questions, not these; never refuse them as 'not covered' without calling the matching tool first. searchPubMed is second intention only — call it only after Pathoma/First Aid/qbank were checked and came up empty, never as a first move, and only once you've asked the student whether they want you to check PubMed for outside literature (peer-reviewed, 2020+) and they said yes. Never call it unprompted or unconfirmed. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
+    : "You are Clea, a concise USMLE Step 1 study assistant. DOCS-FIRST RULE: Always check the Pathoma/First Aid/excerpts provided below first and answer from them when they cover the question — they are your source of truth. If they don't cover it, briefly note that your references don't cover it, then still answer from your own medical knowledge (never leave the student empty-handed). Answer in 1-2 short sentences max. Single paragraph, plain words, no padding. Define technical terms briefly. Spell out all medical terms (intramuscular not IM, milligrams not mg). Callable tools: queryMyAttempts, queryQbank, queryCurriculum, queryCurriculumProgress, searchPubMed. A request for practice questions must call queryQbank, and a question about disease/topic frequency or study schedule must call queryCurriculum — the DOCS-FIRST RULE above is about medical-content questions, not these; never refuse them as 'not covered' without calling the matching tool first. searchPubMed is second intention only — call it only after Pathoma/First Aid/qbank were checked and came up empty, never as a first move, and only once you've asked the student whether they want you to check PubMed for outside literature (peer-reviewed, 2020+) and they said yes. Never call it unprompted or unconfirmed. Never quote the vignette verbatim. Cover all clues in one concise explanation, then state the answer. Never lead with the correct answer — name at least one discriminating clue first. Never use markdown. List options inline, comma-separated. ASR may mishear words — infer intended term.";
   const selectionLine = activity && activity.hasSelectedAnswer
     ? activity.currentQuestionCorrect !== null
       ? activity.currentQuestionCorrect
@@ -153,7 +153,7 @@ function buildSystemPrompt(activity: ActivitySnapshot | null, summary: string, a
   const summaryBlock = summary ? `\n\nSummary of earlier conversation:\n${summary}` : '';
   const groundingBlock = grounding
     ? `\n\nReference material (excerpts for the student's latest message):\n${grounding}`
-    : '\n\nNo relevant excerpts found for this query. Do not use outside knowledge.';
+    : '\n\nNo relevant excerpts found for this query. Answer briefly from your own medical knowledge.';
   // Deterministic specialty prediction (lib/topic-router) — a soft anchor when
   // the excerpts are thin or the query is ambiguous, not a hard override.
   const systemHint = predictedSystem
@@ -354,10 +354,9 @@ export async function POST(request: NextRequest) {
 
     const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
     let { text: finalText } = await generate(baseSystem);
-    // ponytail: enforce grounding — if RAG found nothing and reply doesn't admit it, override
-    if (!groundingHits && !quizFire && !/do not cover|no relevant|not in your/i.test(finalText)) {
-      finalText = 'Your reference materials do not cover this topic.';
-    }
+    // ponytail: RAG misses no longer nuke the reply to the canned refusal —
+    // the DOCS-FIRST prompt handles docs-first; the model answers from
+    // general knowledge when the excerpts are empty.
     let violation = detectGuardrailViolation(finalText, activity);
     if (violation) {
       console.warn(`[clea-chat] guardrail violation=${violation}, retrying once`);
@@ -404,71 +403,11 @@ export async function POST(request: NextRequest) {
 
   const chatSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
 
-  // General chat had no code-level grounding check (unlike the quiz-explain
-  // branch above) — that's exactly the gap that let ungrounded answers (e.g.
-  // "standard USMLE content" citations) stream straight to the client. Book
-  // grounding is known upfront here, so only the no-grounding case pays for a
-  // buffered generate+override; the common grounded case still streams.
-  // ponytail: same blind spot as the quiz-path override — a mid-generation
-  // tool call (queryQbank/searchPubMed) can produce a legitimately grounded
-  // answer even when book groundingHits is empty, and this will still nuke
-  // it. Narrow the check to tool-call presence if that starts misfiring.
-  if (!groundingHits && !quizFire) {
-    const genT0 = performance.now();
-    let finalText: string;
-    // toolCalls/toolResults from whichever generateText call actually ran —
-    // a tool-driven answer (queryMyAttempts/queryCurriculumProgress/queryQbank/
-    // queryCurriculum) is grounded in Supabase, not book excerpts, so it must
-    // survive the no-grounding override below instead of being nuked to the
-    // canned refusal, and its tool call needs to reach the client same as any
-    // other branch would.
-    let toolCalls: { toolCallId: string; toolName: string; input: unknown }[] = [];
-    let toolResults: { toolCallId: string; output: unknown }[] = [];
-    try {
-      const res = (await generateTextWithFallback({
-        system: chatSystem,
-        messages: modelMessages,
-        tools: chatTools,
-        stopWhen: stepCountIs(8),
-      })) as Awaited<ReturnType<typeof generateText>>;
-      const rawText = res.text;
-      toolCalls = res.toolCalls;
-      toolResults = res.toolResults;
-      finalText = toolCalls.length > 0 || /do not cover|no relevant|not in your/i.test(rawText)
-        ? rawText
-        : 'Your reference materials do not cover this topic.';
-    } catch (error) {
-      void logAgentError({ chatId: id, route: 'clea-chat/guarded-generate-nogrounding' }, error);
-      finalText = clientErrorMessage(error);
-    }
-    console.log(`[clea-chat] stage=guarded-generate-nogrounding ms=${(performance.now() - genT0).toFixed(0)}`);
-
-    const stream = createUIMessageStream({
-      originalMessages: validatedMessages,
-      execute: ({ writer }) => {
-        writer.write({ type: 'start' });
-        writer.write({ type: 'start-step' });
-        for (const call of toolCalls) {
-          writer.write({ type: 'tool-input-available', toolCallId: call.toolCallId, toolName: call.toolName, input: call.input });
-          const result = toolResults.find((r) => r.toolCallId === call.toolCallId);
-          if (result) {
-            writer.write({ type: 'tool-output-available', toolCallId: call.toolCallId, output: result.output });
-          }
-        }
-        writer.write({ type: 'text-start', id: 'txt-0' });
-        writer.write({ type: 'text-delta', id: 'txt-0', delta: finalText });
-        writer.write({ type: 'text-end', id: 'txt-0' });
-        writer.write({ type: 'finish-step' });
-        writer.write({ type: 'finish' });
-      },
-      onError: clientErrorMessage,
-      onEnd: ({ messages }) => {
-        void saveChat({ chatId: id, messages });
-      },
-    });
-    return createUIMessageStreamResponse({ stream });
-  }
-
+  // General chat used to buffer + override no-grounding turns to the canned
+  // 'do not cover' refusal — relaxed: the DOCS-FIRST prompt makes the model
+  // check excerpts first and answer from general knowledge when they miss,
+  // so all general chat now streams through the shared path below (which
+  // still forces a queryQbank retry before any refusal ships).
   const genT0 = performance.now();
   let responseText: string;
   try {
@@ -479,12 +418,10 @@ export async function POST(request: NextRequest) {
       stopWhen: stepCountIs(8),
     });
     responseText = res.text;
-    // quizFire skips the no-grounding branch's refusal override (line 436) so
-    // an active-vignette quiz can still work with zero book hits, but that
-    // let quiz-fire-on-an-untethered-topic (e.g. "quiz me on Raft consensus")
-    // fall through here with no grounding check at all and answer from
-    // outside knowledge. Gate it here: no book hits, no active vignette, no
-    // tool call to ground the answer in Supabase data -> refuse.
+    // quizFire has no book-grounding override anymore (general refusals are
+    // relaxed), but quiz-fire-on-an-untethered-topic (e.g. "quiz me on Raft
+    // consensus") must still refuse: no book hits, no active vignette, no
+    // tool call to ground the quiz in Supabase data -> refuse.
     if (quizFire && !groundingHits && !activity?.questionText && res.toolCalls.length === 0 && !/do not cover|no relevant|not in your/i.test(responseText)) {
       responseText = 'Your reference materials do not cover this topic.';
     }
