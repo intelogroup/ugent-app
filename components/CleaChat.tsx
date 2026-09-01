@@ -48,7 +48,7 @@ export default function CleaChat() {
   const { watchEnabled, toggleWatch, activity } = useWatch();
   const {
     messages, sendMessage, status, micActive, toggleMic, micModelLoading, voiceSurface, setVoiceSurface,
-    setMessages, id: chatId, quickCorrect,
+    setMessages, id: chatId, quickCorrect, setIsSpeaking, registerSpeechInterrupt,
   } = useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [draft, setDraft] = useState('');
@@ -183,18 +183,30 @@ export default function CleaChat() {
     const clearTts = () => {
       if (playingKeyRef.current === key) playingKeyRef.current = null;
       setTtsId((current) => (current === key ? null : current));
+      setIsSpeaking(false);
+      registerSpeechInterrupt(null);
     };
 
-    const cached = audioCacheRef.current;
-    if (cached?.key === key) {
-      const audio = new Audio(cached.url);
+    // Registers this playback with the shared isSpeaking/barge-in contract
+    // (lib/clea-agent-context.tsx) so useWhisperMic's VAD treats it as Clea
+    // talking instead of stray input, and a real user barge-in stops it —
+    // without this, autoplay while the mic is on either gets picked back up
+    // as a garbled "user" turn or fights the mic's own state.
+    const runAudio = async (audio: HTMLAudioElement) => {
       audio.onended = clearTts;
       audio.onerror = clearTts;
+      setIsSpeaking(true);
+      registerSpeechInterrupt(() => { audio.pause(); clearTts(); });
       try {
         await audio.play();
       } catch {
         clearTts();
       }
+    };
+
+    const cached = audioCacheRef.current;
+    if (cached?.key === key) {
+      await runAudio(new Audio(cached.url));
       return;
     }
 
@@ -209,10 +221,7 @@ export default function CleaChat() {
       const url = URL.createObjectURL(blob);
       if (audioCacheRef.current) URL.revokeObjectURL(audioCacheRef.current.url);
       audioCacheRef.current = { key, url };
-      const audio = new Audio(url);
-      audio.onended = clearTts;
-      audio.onerror = clearTts;
-      await audio.play();
+      await runAudio(new Audio(url));
     } catch {
       clearTts();
     }
