@@ -18,7 +18,9 @@ async function transcribeElevenLabs(audio: Blob, filename: string, apiKey: strin
   forwardBody.append('file', audio, filename);
   forwardBody.append('model_id', 'scribe_v2');
   forwardBody.append('language_code', 'eng');
-  forwardBody.append('keyterms', ASR_TERMS.join(','));
+  // Repeated field, one term per entry — a single comma-joined string is
+  // treated as one keyterm and rejects on the API's 50-char-per-term cap.
+  for (const term of ASR_TERMS) forwardBody.append('keyterms', term);
 
   const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
     method: 'POST',
