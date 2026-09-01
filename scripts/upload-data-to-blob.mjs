@@ -6,6 +6,8 @@ const files = [
   'classified-questions.jsonl',
   'medicospira-enriched.jsonl',
   'genetics-discriminators.json',
+  'pathoma_text.jsonl',
+  'firstaid_text.jsonl',
 ];
 
 const dataDir = path.join(process.cwd(), 'data');
