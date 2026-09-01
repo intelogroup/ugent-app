@@ -161,9 +161,18 @@ export default function CleaChat() {
     setTimeout(() => setCopiedId((current) => (current === key ? null : current)), 1500);
   };
 
+  const playingKeyRef = useRef<string | null>(null);
+
   const playMessage = async (text: string, key: string) => {
+    // Guards against a double-click firing before the `disabled` prop's
+    // re-render lands — setTtsId alone isn't synchronous enough to block it.
+    if (playingKeyRef.current === key) return;
+    playingKeyRef.current = key;
     setTtsId(key);
-    const clearTts = () => setTtsId((current) => (current === key ? null : current));
+    const clearTts = () => {
+      if (playingKeyRef.current === key) playingKeyRef.current = null;
+      setTtsId((current) => (current === key ? null : current));
+    };
     try {
       const res = await fetch('/api/tts-audio', {
         method: 'POST',
