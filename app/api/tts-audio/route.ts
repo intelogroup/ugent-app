@@ -63,9 +63,13 @@ function streamWithLatencyLog(body: ReadableStream<Uint8Array>, via: string, tex
   return new Response(body.pipeThrough(timed), { headers: { 'Content-Type': contentType } });
 }
 
+// ponytail: temporary override to probe which ElevenLabs voice IDs the
+// account's plan can actually use — remove once a working default is locked in.
+const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM';
+
 export async function POST(request: Request) {
   const t0 = performance.now();
-  const { text } = await request.json();
+  const { text, voiceId = DEFAULT_VOICE_ID } = await request.json();
   if (!text) {
     return new Response('text required', { status: 400 });
   }
@@ -119,7 +123,7 @@ export async function POST(request: Request) {
   // content-type must be checked before trusting the format we asked for.
   const ELEVEN_PCM_SR = 24000;
   const pcmRes = await fetch(
-    'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/stream',
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
     {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json' },
