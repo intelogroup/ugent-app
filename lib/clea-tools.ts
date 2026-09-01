@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import { tool, embed } from 'ai';
 import { openai } from '@ai-sdk/openai';
-import { readFileSync } from 'fs';
-import path from 'path';
 import { queryQuestions } from '@/lib/qbank';
+import { readDataFile } from '@/lib/data-source';
 import { analyzeQuestions, getSystemDiseaseMap } from '@/lib/curriculum/analyzer';
 import { generateCurriculum } from '@/lib/curriculum/generator';
 import { createClient } from '@/lib/supabase/server';
@@ -55,8 +54,9 @@ function containsWord(lower: string, w: string): boolean {
   return re.test(lower);
 }
 
-function readPages(file: string): TextPage[] {
-  return readFileSync(path.join(process.cwd(), 'data', file), 'utf8')
+async function readPages(file: string): Promise<TextPage[]> {
+  const content = await readDataFile(file);
+  return content
     .split('\n')
     .filter(Boolean)
     .map((line) => JSON.parse(line) as TextPage);
@@ -76,10 +76,10 @@ function cleanQueryForBook(pages: TextPage[], query: string): string {
   return meaningful.length > 0 ? meaningful.join(' ') : query;
 }
 
-function searchByWordOverlap(file: string, query: string, limit: number) {
+async function searchByWordOverlap(file: string, query: string, limit: number) {
   // Strip punctuation so trailing "?"/"!" don't get glued onto the word ("wvf?").
   const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
-  const pages = readPages(file);
+  const pages = await readPages(file);
 
   // Count how many pages contain each word — words that appear in 0 pages
   // are junk (garbled ASR, gibberish, misspellings) and shouldn't inflate
@@ -202,7 +202,7 @@ async function searchByEmbedding(book: 'pathoma' | 'firstaid', query: string, li
 
 async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query: string, limit: number) {
   try {
-    const cleanedQuery = cleanQueryForBook(readPages(file), query);
+    const cleanedQuery = cleanQueryForBook(await readPages(file), query);
     const semanticHits = await searchByEmbedding(book, cleanedQuery, limit);
     if (semanticHits) return semanticHits;
     console.log(`[clea-tools] stage=fallback book=${book} reason=no-hits-above-threshold query="${query}"`);
@@ -213,7 +213,7 @@ async function searchTextFile(file: string, book: 'pathoma' | 'firstaid', query:
     console.log(`[clea-tools] stage=fallback book=${book} reason=embed-error query="${query}"`);
     console.error('searchByEmbedding failed, falling back to word overlap', error);
   }
-  const overlapHits = searchByWordOverlap(file, query, limit);
+  const overlapHits = await searchByWordOverlap(file, query, limit);
   console.log(`[clea-tools] stage=word-overlap-result book=${book} hits=${overlapHits.length} pages=${overlapHits.map((h) => h.page).join(',')}`);
   return overlapHits;
 }
