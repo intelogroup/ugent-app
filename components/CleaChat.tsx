@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   BoltIcon,
   ChatBubbleOvalLeftEllipsisIcon,
+  CheckIcon,
   ClipboardIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -50,6 +51,8 @@ export default function CleaChat() {
   } = useCleaAgent();
   const [mode, setMode] = useState<CleaMode>('closed');
   const [draft, setDraft] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [ttsId, setTtsId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -152,24 +155,31 @@ export default function CleaChat() {
       .join(' ');
   }
 
-  const copyMessage = (message: (typeof messages)[number]) => {
+  const copyMessage = (message: (typeof messages)[number], key: string) => {
     navigator.clipboard.writeText(getMessageText(message));
+    setCopiedId(key);
+    setTimeout(() => setCopiedId((current) => (current === key ? null : current)), 1500);
   };
 
-  const playMessage = async (text: string) => {
+  const playMessage = async (text: string, key: string) => {
+    setTtsId(key);
+    const clearTts = () => setTtsId((current) => (current === key ? null : current));
     try {
       const res = await fetch('/api/tts-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
-      if (!res.ok) return;
+      if (!res.ok) { clearTts(); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => { URL.revokeObjectURL(url); clearTts(); };
+      audio.onerror = clearTts;
       await audio.play();
-    } catch {}
+    } catch {
+      clearTts();
+    }
   };
 
   const clearChat = async () => {
@@ -279,8 +289,11 @@ export default function CleaChat() {
               const isUser = message.role === 'user';
               const text = getMessageText(message);
               const grounded = groundingOf(message);
+              const msgKey = message.id || String(index);
+              const justCopied = copiedId === msgKey;
+              const isPlaying = ttsId === msgKey;
               return (
-                <div key={message.id || index} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                <div key={msgKey} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     isUser
                       ? 'rounded-br-md bg-primary-600 text-white'
@@ -303,18 +316,20 @@ export default function CleaChat() {
                       <span className={`flex gap-1 ${isUser ? 'opacity-60' : 'opacity-40'} transition-opacity hover:opacity-100`}>
                       <button
                         type="button"
-                        onClick={() => copyMessage(message)}
-                        aria-label="Copy message"
-                        className={`rounded p-0.5 transition ${isUser ? 'hover:text-white' : 'hover:text-neutral-900'}`}
+                        onClick={() => copyMessage(message, msgKey)}
+                        aria-label={justCopied ? 'Copied' : 'Copy message'}
+                        className={`rounded p-0.5 transition ${justCopied ? 'text-emerald-600 opacity-100' : isUser ? 'hover:text-white' : 'hover:text-neutral-900'}`}
                       >
-                        <ClipboardIcon className="h-3.5 w-3.5" />
+                        {justCopied ? <CheckIcon className="h-3.5 w-3.5" /> : <ClipboardIcon className="h-3.5 w-3.5" />}
                       </button>
                       {!isUser && (
                         <button
                           type="button"
-                          onClick={() => playMessage(text)}
-                          aria-label="Play message"
-                          className="rounded p-0.5 transition hover:text-neutral-900"
+                          onClick={() => playMessage(text, msgKey)}
+                          disabled={isPlaying}
+                          aria-label={isPlaying ? 'Playing message' : 'Play message'}
+                          aria-pressed={isPlaying}
+                          className={`rounded p-0.5 transition ${isPlaying ? 'text-primary-600 opacity-100 animate-pulse' : 'hover:text-neutral-900'}`}
                         >
                           <SpeakerWaveIcon className="h-3.5 w-3.5" />
                         </button>
