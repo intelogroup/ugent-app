@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { navigation } from '@/lib/navigation';
 
 describe('navigation config', () => {
@@ -16,5 +18,19 @@ describe('navigation config', () => {
         }),
       ])
     );
+  });
+
+  // Assumption pin: every nav href must resolve to a real app route. A
+  // deleted page (the repo has a history of ~35 orphaned routes) leaves a
+  // dead sidebar/topbar link that 404s until caught.
+  it('every href resolves to an actual app route', () => {
+    const cwd = process.cwd();
+    const badPaths = navigation
+      .map((item) => item.href)
+      .filter((href) => {
+        if (href === '/') return !existsSync(join(cwd, 'app', 'page.tsx'));
+        return !existsSync(join(cwd, 'app', href.slice(1), 'page.tsx'));
+      });
+    expect(badPaths).toEqual([]);
   });
 });

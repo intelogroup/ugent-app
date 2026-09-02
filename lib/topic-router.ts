@@ -47,6 +47,11 @@ export function canonicalizeSystem(raw: string): string {
   k = k.replace(/\s+system$/, '').trim(); // "Endocrine System" -> "endocrine"
   if (SYSTEM_ALIAS[k]) return SYSTEM_ALIAS[k];
   k = k.split(/\s*[/,]\s*| and | & /)[0].trim(); // compound -> first segment
+  // A compound's first segment can itself end in "System" ("Nervous System,
+  // Cardiovascular" -> "nervous system"). The strip above ran only when the
+  // WHOLE raw string ended in "system", so a bare aliased segment kept its
+  // suffix and title-cased to a non-canonical label. Strip again post-split.
+  k = k.replace(/\s+system$/, '').trim();
   if (SYSTEM_ALIAS[k]) return SYSTEM_ALIAS[k];
   return k.replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case fallback
 }
