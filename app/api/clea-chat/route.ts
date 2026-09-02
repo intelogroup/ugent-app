@@ -237,11 +237,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No LLM API key configured (need DEEPSEEK_API_KEY or OPENAI_API_KEY)' }, { status: 500 });
   }
 
-  const authSupabase = await createClient();
-  if (!(await requireUser(authSupabase))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { id, message, activity: clientActivity, quizAttempts: clientAttempts } = (await request.json()) as {
     id: string;
     message: UIMessage;
@@ -253,11 +248,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'id and message are required' }, { status: 400 });
   }
 
-  const t0 = performance.now();
-  const serverState = null;
-  const activity = clientActivity;
+  const supabase = await createClient();
+  if (!(await requireUser(supabase))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  const supabase = await createClient()
+  const t0 = performance.now();
+  const activity = clientActivity;
 
   // Independent reads — none depend on each other's result — run in
   // parallel instead of as three sequential round trips. The RAG prefetch
@@ -353,32 +350,39 @@ export async function POST(request: NextRequest) {
       }) as ReturnType<typeof generateText>;
 
     const baseSystem = buildSystemPrompt(activity, summary, attempts, groundingHits, quizFire, predictedSystem);
-    let { text: finalText } = await generate(baseSystem);
-    // ponytail: RAG misses no longer nuke the reply to the canned refusal —
-    // the DOCS-FIRST prompt handles docs-first; the model answers from
-    // general knowledge when the excerpts are empty.
-    let violation = detectGuardrailViolation(finalText, activity);
-    if (violation) {
-      console.warn(`[clea-chat] guardrail violation=${violation}, retrying once`);
-      const retrySystem = `${baseSystem}\n\nIMPORTANT: your previous draft violated the rule against ${
-        violation === 'vignette-reread' ? 'quoting the vignette verbatim' : 'revealing the correct answer before reasoning through a clue'
-      }. Rewrite the reply so it doesn't do that this time.`;
-      const retry = await generate(retrySystem);
-      finalText = retry.text;
-      violation = detectGuardrailViolation(finalText, activity);
-      // Last resort for a leaked answer: the leak is always in the opening
-      // sentence (that's the whole definition of "premature"), so dropping
-      // it deterministically removes the leak without needing a 3rd model
-      // call. Vignette-reread has no such fixed location, so it's left as
-      // logged-only — a targeted redaction there would be more likely to
-      // mangle the sentence than fix it.
-      if (violation === 'premature-answer') {
-        console.warn('[clea-chat] guardrail violation=premature-answer persisted after retry, dropping leaked opening sentence');
-        const sentences = finalText.split(/(?<=[.!?])\s+/);
-        finalText = sentences.slice(1).join(' ').trim() || finalText;
-      } else if (violation) {
-        console.warn(`[clea-chat] guardrail violation=${violation} persisted after retry, shipping anyway`);
+    let finalText: string;
+    try {
+      let { text: generatedText } = await generate(baseSystem);
+      // ponytail: RAG misses no longer nuke the reply to the canned refusal —
+      // the DOCS-FIRST prompt handles docs-first; the model answers from
+      // general knowledge when the excerpts are empty.
+      let violation = detectGuardrailViolation(generatedText, activity);
+      if (violation) {
+        console.warn(`[clea-chat] guardrail violation=${violation}, retrying once`);
+        const retrySystem = `${baseSystem}\n\nIMPORTANT: your previous draft violated the rule against ${
+          violation === 'vignette-reread' ? 'quoting the vignette verbatim' : 'revealing the correct answer before reasoning through a clue'
+        }. Rewrite the reply so it doesn't do that this time.`;
+        const retry = await generate(retrySystem);
+        generatedText = retry.text;
+        violation = detectGuardrailViolation(generatedText, activity);
+        // Last resort for a leaked answer: the leak is always in the opening
+        // sentence (that's the whole definition of "premature"), so dropping
+        // it deterministically removes the leak without needing a 3rd model
+        // call. Vignette-reread has no such fixed location, so it's left as
+        // logged-only — a targeted redaction there would be more likely to
+        // mangle the sentence than fix it.
+        if (violation === 'premature-answer') {
+          console.warn('[clea-chat] guardrail violation=premature-answer persisted after retry, dropping leaked opening sentence');
+          const sentences = generatedText.split(/(?<=[.!?])\s+/);
+          generatedText = sentences.slice(1).join(' ').trim() || generatedText;
+        } else if (violation) {
+          console.warn(`[clea-chat] guardrail violation=${violation} persisted after retry, shipping anyway`);
+        }
       }
+      finalText = generatedText;
+    } catch (error) {
+      void logAgentError({ chatId: id, route: 'clea-chat/quiz-generate' }, error);
+      finalText = clientErrorMessage(error);
     }
     console.log(`[clea-chat] stage=guarded-generate ms=${(performance.now() - genT0).toFixed(0)}`);
 

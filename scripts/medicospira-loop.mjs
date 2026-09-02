@@ -149,13 +149,39 @@ async function selectSubjectsAndGenerate(page) {
   console.log('[CREATE] Clicked master Subjects checkbox');
   await page.waitForTimeout(2000);
 
-  // Step 2: master "Systems" checkbox (index 14) → selects ALL systems
-  // ID-only: change cbs[14] → cbs[114] and update comment
-  await page.evaluate(() => {
-    const cbs = document.querySelectorAll('.custom-checkbox-lg');
-    if (cbs[14]) cbs[14].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
-  console.log('[CREATE] Clicked master Systems checkbox');
+  // Step 2: Systems — targeted if TARGET_SYSTEMS env set, else master (index 14) → all
+  const targetSystems = (process.env.TARGET_SYSTEMS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (targetSystems.length > 0) {
+    console.log(`[CREATE] Targeting systems: ${targetSystems.join(', ')}`);
+    const clicked = await page.evaluate((targets) => {
+      const cbs = Array.from(document.querySelectorAll('.custom-checkbox-lg'));
+      const hit = [];
+      for (const cb of cbs) {
+        // derived label: parent/innerText next to checkbox (matches inspect-systems dump)
+        let label = '';
+        const parent = cb.parentElement;
+        if (parent) label = parent.innerText?.trim().split('\n')[0] || '';
+        if (!label) label = cb.nextElementSibling?.innerText?.trim().split('\n')[0] || '';
+        if (!label) continue;
+        for (const t of targets) {
+          if (label.toLowerCase().includes(t.toLowerCase())) {
+            cb.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            hit.push(label);
+            break;
+          }
+        }
+      }
+      return hit;
+    }, targetSystems);
+    console.log(`[CREATE] Clicked systems: ${clicked.join(', ') || '(none matched!)'}`);
+    if (clicked.length === 0) throw new Error(`TARGET_SYSTEMS no match: ${targetSystems.join(',')}`);
+  } else {
+    await page.evaluate(() => {
+      const cbs = document.querySelectorAll('.custom-checkbox-lg');
+      if (cbs[14]) cbs[14].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+    console.log('[CREATE] Clicked master Systems checkbox');
+  }
   await page.waitForTimeout(2000);
 
   // Step 3: set Q count = 5 (input is type="text")
@@ -441,7 +467,8 @@ async function saveQuestionsLocally(questions) {
 let browser, context, examPage;
 
 async function setupBrowser() {
-  browser = await chromium.launch({ headless: false });
+  const headless = process.env.HEADLESS !== 'false';
+  browser = await chromium.launch({ headless });
   context = await browser.newContext();
   examPage = await context.newPage();
 

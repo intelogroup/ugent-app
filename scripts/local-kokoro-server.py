@@ -4,6 +4,8 @@ Wav2Lip's /lipsync-stream, which wants raw int16 PCM, so a compressed format
 would have to be decoded client-side first.
 Run: python3 scripts/local-kokoro-server.py  (port 8767)
 """
+from __future__ import annotations
+
 import asyncio
 import os
 import queue
@@ -58,7 +60,9 @@ def get_pipeline() -> KPipeline:
     global _pipeline
     if _pipeline is None:
         print("[local-kokoro] loading pipeline...", file=sys.stderr)
-        _pipeline = KPipeline(lang_code=LANG, repo_id="hexgrad/Kokoro-82M", device="mps")
+        # kokoro 0.7.x dropped the `repo_id` kwarg — KModel.REPO_ID already
+        # defaults to hexgrad/Kokoro-82M, so plain construction is enough.
+        _pipeline = KPipeline(lang_code=LANG, model=True, device="cpu")
         print("[local-kokoro] ready", file=sys.stderr)
     return _pipeline
 

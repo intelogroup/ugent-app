@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
-import { WatchProvider, useWatch, buildQuizSnapshot, buildWatchReply, ActivitySnapshot } from '@/lib/watch-context';
+import { WatchProvider, useWatch, buildQuizSnapshot, ActivitySnapshot } from '@/lib/watch-context';
 
 function Consumer() {
   const { watchEnabled, toggleWatch, activity, setActivity } = useWatch();
@@ -133,53 +133,3 @@ describe('buildQuizSnapshot', () => {
   });
 });
 
-describe('buildWatchReply', () => {
-  const base = 'Clea is in placeholder mode for now.';
-
-  it('returns the base reply unchanged when there is no activity', () => {
-    expect(buildWatchReply(base, null)).toBe(base);
-  });
-
-  it('appends question context when activity is present', () => {
-    const activity: ActivitySnapshot = {
-      page: 'quiz',
-      questionNumber: 3,
-      totalQuestions: 20,
-      subject: 'Cardiovascular',
-      system: 'Cardiovascular',
-      difficulty: 'medium',
-      isAnswered: false,
-      hasSelectedAnswer: false,
-      currentQuestionCorrect: null,
-      correctSoFar: 1,
-      totalAnsweredSoFar: 2,
-      questionText: 'A 45-year-old man presents with chest pain.',
-      optionTexts: ['MI', 'GERD'],
-      selectedOptionText: null,
-    };
-    const result = buildWatchReply(base, activity);
-    expect(result).toContain(base);
-    expect(result).toContain('question 3 of 20');
-    expect(result).toContain('Cardiovascular');
-  });
-
-  it('omits the parenthetical when subject is null', () => {
-    const activity: ActivitySnapshot = {
-      page: 'quiz',
-      questionNumber: 1,
-      totalQuestions: 5,
-      subject: null,
-      system: null,
-      difficulty: 'easy',
-      isAnswered: false,
-      hasSelectedAnswer: false,
-      currentQuestionCorrect: null,
-      correctSoFar: 0,
-      totalAnsweredSoFar: 0,
-      questionText: 'A patient presents with fatigue.',
-      optionTexts: ['A', 'B'],
-      selectedOptionText: null,
-    };
-    expect(buildWatchReply(base, activity)).not.toContain('()');
-  });
-});

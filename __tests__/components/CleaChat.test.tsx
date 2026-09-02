@@ -9,6 +9,18 @@ import { CleaAgentProvider } from '@/lib/clea-agent-context';
 // integration tests against a real server.
 beforeEach(() => {
   window.localStorage.clear();
+  // Mock getUserMedia so useWhisperMic's mic acquisition resolves (returns a
+  // fake stream) instead of throwing in jsdom where navigator.mediaDevices is
+  // absent.  The hook only needs getAudioTracks()[0].label for BT detection.
+  Object.defineProperty(navigator, 'mediaDevices', {
+    value: {
+      getUserMedia: jest.fn().mockResolvedValue({
+        getAudioTracks: () => [{ label: 'mock-mic', stop: jest.fn() }],
+        getTracks: () => [{ stop: jest.fn() }],
+      }),
+    },
+    configurable: true,
+  });
   global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     if (!init) {
       // GET history-on-mount
@@ -54,7 +66,7 @@ describe('CleaChat', () => {
     expect(input).toHaveValue('');
   });
 
-  it('toggles the shared microphone state without requesting audio', () => {
+  it('toggles the shared microphone state without requesting audio', async () => {
     renderWithProvider(<CleaChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open Clea study assistant' }));
 
@@ -62,7 +74,11 @@ describe('CleaChat', () => {
     expect(microphone).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(microphone);
-    expect(screen.getByRole('button', { name: 'Stop visual microphone' })).toHaveAttribute('aria-pressed', 'true');
+    // micModelLoading flashes true during getUserMedia acquisition, then settles
+    // to false once the stream is obtained — wait for the final state.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Stop visual microphone' })).toHaveAttribute('aria-pressed', 'true');
+    });
     expect(screen.getByPlaceholderText('Listening...')).toBeInTheDocument();
   });
 

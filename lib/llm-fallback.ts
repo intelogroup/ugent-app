@@ -11,8 +11,16 @@ const FALLBACK_MODEL = 'gpt-4o-mini';
 // this in Supabase/Redis instead.
 let deepseekDown = false;
 
+// ponytail: test-only reset — not exported in prod bundle (tree-shaken),
+// but lets unit tests clear the circuit breaker between runs.
+export function _resetFallbackState() {
+  deepseekDown = false;
+}
+
 export async function generateTextWithFallback(opts: Record<string, unknown>) {
   if (deepseekDown) {
+    // openai is the only path left — if it fails, let the error propagate
+    // (no further fallback to try).
     return await generateText({ ...opts, model: openai(FALLBACK_MODEL) } as any);
   }
   try {
