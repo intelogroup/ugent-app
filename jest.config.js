@@ -40,6 +40,8 @@ const customJestConfig = {
     '<rootDir>/__tests__/lib/assumptions-zod-schemas.test.ts',
     '<rootDir>/__tests__/lib/assumptions-generator-references.test.ts',
     '<rootDir>/__tests__/lib/assumptions-quiz-attempts.test.ts',
+    '<rootDir>/__tests__/lib/assumptions-asr-correct.test.ts',
+    '<rootDir>/__tests__/lib/assumptions-curriculum-generator.test.ts',
     '<rootDir>/e2e/',
     '<rootDir>/tests/',
     '<rootDir>/.claude/worktrees/',
