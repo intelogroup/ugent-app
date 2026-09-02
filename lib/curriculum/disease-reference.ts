@@ -17,7 +17,7 @@ export interface SystemDiseaseGroup {
   diseases: DiseaseManifestation[];
 }
 
-const SYSTEM_NORMALIZE: Record<string, string> = {
+export const SYSTEM_NORMALIZE: Record<string, string> = {
   'Nervous System': 'Neurology',
   'Nervous': 'Neurology',
   'Visual System': 'Neurology',

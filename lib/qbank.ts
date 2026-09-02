@@ -9,7 +9,7 @@ const QBANK_STOPWORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'over
   'and', 'or', 'but', 'with', 'without', 'for', 'from', 'by', 'at', 'as', 'this', 'that', 'these', 'those',
   'its', 'it', 'his', 'her', 'their', 'one', 'what', 'which', 'who', 'do', 'does', 'did', 'not']);
 
-function tokenizeSearchText(searchText: string): string[] {
+export function tokenizeSearchText(searchText: string): string[] {
   return searchText.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
     .filter((w) => w && !QBANK_STOPWORDS.has(w))
     .slice(0, 6);
