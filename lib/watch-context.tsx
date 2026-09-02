@@ -28,8 +28,6 @@ type WatchContextValue = {
   toggleWatch: () => void;
   activity: ActivitySnapshot | null;
   setActivity: (activity: ActivitySnapshot | null) => void;
-  agentStatus: AgentStatus;
-  setAgentStatus: (status: AgentStatus) => void;
 };
 
 const WatchContext = createContext<WatchContextValue>({
@@ -37,8 +35,6 @@ const WatchContext = createContext<WatchContextValue>({
   toggleWatch: () => {},
   activity: null,
   setActivity: () => {},
-  agentStatus: 'idle',
-  setAgentStatus: () => {},
 });
 
 export function WatchProvider({ children }: { children: ReactNode }) {
@@ -47,8 +43,6 @@ export function WatchProvider({ children }: { children: ReactNode }) {
     return window.localStorage.getItem(STORAGE_KEY) === 'true';
   });
   const [activity, setActivity] = useState<ActivitySnapshot | null>(null);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
-
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, String(watchEnabled));
   }, [watchEnabled]);
@@ -57,7 +51,7 @@ export function WatchProvider({ children }: { children: ReactNode }) {
 
   return (
     <WatchContext.Provider
-      value={{ watchEnabled, toggleWatch, activity, setActivity, agentStatus, setAgentStatus }}
+      value={{ watchEnabled, toggleWatch, activity, setActivity }}
     >
       {children}
     </WatchContext.Provider>
@@ -97,8 +91,3 @@ export function buildQuizSnapshot(
   };
 }
 
-export function buildWatchReply(baseReply: string, activity: ActivitySnapshot | null): string {
-  if (!activity) return baseReply;
-  const subjectLabel = activity.subject ? ` (${activity.subject})` : '';
-  return `${baseReply} I can see you're on question ${activity.questionNumber} of ${activity.totalQuestions}${subjectLabel} — once my full tutoring is live, I'll use that directly.`;
-}

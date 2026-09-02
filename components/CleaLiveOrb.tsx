@@ -1,7 +1,7 @@
-import { useWatch } from '@/lib/watch-context';
+import { useCleaAgent } from '@/lib/clea-agent-context';
 
 export default function CleaLiveOrb() {
-  const { agentStatus } = useWatch();
+  const { agentStatus } = useCleaAgent();
 
   return (
     <div

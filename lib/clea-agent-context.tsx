@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, generateId, type UIMessage } from 'ai';
-import { useWatch } from '@/lib/watch-context';
+import { useWatch, type AgentStatus } from '@/lib/watch-context';
 import { useWhisperMic } from '@/lib/use-whisper-mic';
 import { correctText, stripTranscriptNoise } from '@/lib/asr-correct';
 import { logAsrTurn, getAsrLog, getAsrCorrections } from '@/lib/asr-log';
@@ -43,6 +43,7 @@ type CleaAgentValue = ReturnType<typeof useChat> & {
   // its stop function here so a mic-detected barge-in can kill that playback
   // immediately, regardless of which component owns the audio element.
   registerSpeechInterrupt: (handler: (() => void) | null) => void;
+  agentStatus: AgentStatus;
   // Context-aware LLM typo fixer for typed input (voice already gets the
   // dictionary-based correctText path via onTranscript). Fails open — always
   // resolves, worst case with the original text unchanged.
@@ -145,6 +146,22 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
   const [voiceSurface, setVoiceSurface] = useState<VoiceSurface>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Drive the orb animation from real signals instead of leaving it stuck idle.
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
+  useEffect(() => {
+    if (chat.status === 'submitted' || chat.status === 'streaming') {
+      setAgentStatus('thinking');
+    } else if (isSpeaking) {
+      setAgentStatus('speaking');
+    } else if (micActive) {
+      setAgentStatus('listening');
+    } else {
+      setAgentStatus('idle');
+    }
+  }, [chat.status, isSpeaking, micActive]);
+
+  const [micLoading, setMicLoading] = useState(false);
+
   useEffect(() => {
     (window as unknown as Record<string, unknown>).asrLog = getAsrLog;
     (window as unknown as Record<string, unknown>).asrMisses = getAsrCorrections;
@@ -201,7 +218,7 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
     setIsSpeaking(false);
   };
 
-  useWhisperMic(micActive, isSpeaking, onTranscript, onBargeIn);
+  useWhisperMic(micActive, isSpeaking, onTranscript, onBargeIn, setMicLoading);
 
   return (
     <CleaAgentContext.Provider
@@ -210,12 +227,13 @@ export function CleaAgentProvider({ children }: { children: ReactNode }) {
         sendMessage: queuedSendMessage,
         micActive,
         toggleMic,
-        micModelLoading: false,
+        micModelLoading: micLoading,
         voiceSurface,
         setVoiceSurface,
         isSpeaking,
         setIsSpeaking,
         registerSpeechInterrupt,
+        agentStatus,
         quickCorrect,
       }}
     >

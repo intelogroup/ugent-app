@@ -41,12 +41,15 @@ export function useWhisperMic(
   active: boolean,
   suppressed: boolean,
   onTranscript: (text: string) => void,
-  onBargeIn: () => void
+  onBargeIn: () => void,
+  onLoadingChange?: (loading: boolean) => void
 ) {
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
   const onBargeInRef = useRef(onBargeIn);
   onBargeInRef.current = onBargeIn;
+  const onLoadingChangeRef = useRef(onLoadingChange);
+  onLoadingChangeRef.current = onLoadingChange;
   // Read via ref rather than an effect dependency — `suppressed` flips every
   // time TTS starts/stops, and restarting the effect on every flip would tear
   // down and recreate the mic stream mid-conversation.
@@ -211,7 +214,12 @@ export function useWhisperMic(
     }
 
     (async () => {
-      if (!(await acquireMic()) || !stream) return;
+      onLoadingChangeRef.current?.(true);
+      if (!(await acquireMic()) || !stream) {
+        onLoadingChangeRef.current?.(false);
+        return;
+      }
+      onLoadingChangeRef.current?.(false);
       const ms: MediaStream = stream;
       isBluetooth = isBluetoothInput(ms);
       console.log(
@@ -229,7 +237,10 @@ export function useWhisperMic(
         if (isBluetooth && suppressedNow !== prevSuppressed) {
           prevSuppressed = suppressedNow;
           if (suppressedNow) releaseMic();
-          else void acquireMic();
+          else {
+            onLoadingChangeRef.current?.(true);
+            acquireMic().finally(() => onLoadingChangeRef.current?.(false));
+          }
         } else {
           prevSuppressed = suppressedNow;
         }
