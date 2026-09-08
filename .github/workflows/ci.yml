@@ -24,6 +24,8 @@ env:
 jobs:
   unit:
     runs-on: ubuntu-latest
+    outputs:
+      secrets_configured: ${{ steps.secrets.outputs.secrets_configured }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +40,17 @@ jobs:
         run: npx vitest run __tests__/api/quiz-activity.test.ts __tests__/lib/supabase/queries.test.ts
       - name: Vitest AI suites (ai-sdk ESM fails under Jest)
         run: npm run test:ai
+      - name: Check secrets configured
+        # `secrets` is not a context available in job `if` expressions, so
+        # probe it here (a `run` step can read secrets) and pass the result
+        # downstream as a job output.
+        id: secrets
+        run: |
+          if [ -n "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ] && [ -n "${{ secrets.E2E_USER_EMAIL }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
 
   # Lint currently fails on pre-existing react-hooks errors in avatar/Clea
   # components (new lint rules, files predate them). Run it as a non-blocking
@@ -58,7 +71,7 @@ jobs:
     needs: unit
     # E2E hits the real Supabase project; skip when secrets aren't configured
     # (e.g. forks / first push before repo secrets are set).
-    if: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.E2E_USER_EMAIL != '' }}
+    if: ${{ needs.unit.outputs.secrets_configured == 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
