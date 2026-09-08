@@ -19,7 +19,6 @@ env:
   DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-  BLOB_DATA_BASE_URL: ${{ secrets.BLOB_DATA_BASE_URL }}
 
 jobs:
   unit:
@@ -34,6 +33,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      - name: Fetch curriculum data from Blob
+        # data/*.jsonl is gitignored and not on the runner; prod reads it from
+        # Vercel Blob, so pull the same source for the API-health / query tests.
+        # Blob is public-read, so no secret is needed here.
+        run: |
+          mkdir -p data
+          for f in classified-questions.jsonl medicospira-enriched.jsonl medicospira-questions.jsonl genetics-discriminators.json firstaid_text.jsonl pathoma_text.jsonl; do
+            curl -sf "https://ba5ax207bl6fsn5l.public.blob.vercel-storage.com/$f" -o "data/$f" || echo "skipping $f (not in blob)"
+          done
+          ls -la data/ || true
       - name: Jest unit tests
         run: npx jest --ci
       - name: Vitest suites (jest-excluded)
@@ -87,7 +96,7 @@ jobs:
         run: |
           mkdir -p data
           for f in classified-questions.jsonl medicospira-enriched.jsonl medicospira-questions.jsonl genetics-discriminators.json firstaid_text.jsonl pathoma_text.jsonl; do
-            curl -sf "$BLOB_DATA_BASE_URL/$f" -o "data/$f" || echo "skipping $f (not in blob)"
+            curl -sf "https://ba5ax207bl6fsn5l.public.blob.vercel-storage.com/$f" -o "data/$f" || echo "skipping $f (not in blob)"
           done
           ls -la data/ || true
       - name: Run Playwright e2e
