@@ -49,6 +49,13 @@ const DRILL_CARD_BLOCKLIST = new Set<string>([
   "Aripiprazole",
   "Trazodone",
   "Omalizumab",
+  // 2026-09-08: 3 more from user-flagged review. Same tautology pattern — only 2
+  // clinical clues (symptom/finding), the 3rd promoted from mechanism is a
+  // definition restatement of the first two. Biostats + drug-mechanism cards
+  // don't work as clinical drill cards. Deck 1,759 -> 1,756.
+  "Absolute Risk Reduction",
+  "Intention-To-Treat Analysis",
+  "Chemotherapy-Induced Diarrhea",
 ]);
 
 function normalizeTopicType(type: string): TopicType {

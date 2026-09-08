@@ -77,6 +77,26 @@ function isTooShort(clue) {
   return norm(clue).length < MIN_CLUE_LEN;
 }
 
+// Reject a promotion candidate that is a substring of an already-kept clue.
+// A candidate like "watery diarrhea after chemotherapy" is a fragment of
+// clue 1 ("watery diarrhea and abdominal cramps after starting chemotherapy")
+// — not a new presentation clue, just a shorter echo. Exact dedup (norm
+// equality) already catches full duplicates; this catches partials.
+//
+// Returns 'replaced' (new is a longer superset → swap in), 'dropped' (existing
+// is longer or equal → discard new), or 'none' (no substring relation → caller
+// decides). Bidirectional, otherwise a fragment that arrives first would be
+// kept and the real clue dropped.
+function replaceIfSuperset(clue, existing) {
+  const n = norm(clue);
+  if (!n) return 'none';
+  const i = existing.findIndex((e) => norm(e).includes(n));
+  if (i < 0) return 'none';
+  if (norm(existing[i]).length >= n.length) return 'dropped';
+  existing[i] = clue;
+  return 'replaced';
+}
+
 function splitSentences(text) {
   return (text || '').split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>=MIN_CLUE_LEN);
 }
@@ -143,8 +163,8 @@ const isGeneric = (clue) => {
   return (clueDiseases.get(k)?.size ?? 0) >= GENERIC_DISEASE_THRESHOLD;
 };
 
-const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, reveal: 0, generic: 0, tooShort: 0, discEmpty: 0 }, kept: 0, promoted: 0 };
-const examples = { placeholder: [], demographic: [], restatement: [], reveal: [], generic: [], tooShort: [], promoted: [], discEmpty: [] };
+const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, reveal: 0, generic: 0, tooShort: 0, substring: 0, discEmpty: 0 }, kept: 0, promoted: 0, replaced: 0 };
+const examples = { placeholder: [], demographic: [], restatement: [], reveal: [], generic: [], tooShort: [], substring: [], promoted: [], replaced: [], discEmpty: [] };
 const MAX_EX = 6;
 function pushEx(cat, disease, val) {
   if (examples[cat].length < MAX_EX) examples[cat].push({ disease, val });
@@ -166,6 +186,9 @@ for (const r of records) {
     if (isPlaceholder(c)) { stats.removed.placeholder++; pushEx('placeholder', disease, c); continue; }
     if (isDemographicNoise(c)) { stats.removed.demographic++; pushEx('demographic', disease, c); continue; }
     if (isTooShort(c)) { stats.removed.tooShort++; pushEx('tooShort', disease, c); continue; }
+    const sub = replaceIfSuperset(c, cleaned);
+    if (sub === 'dropped') { stats.removed.substring++; pushEx('substring', disease, c); continue; }
+    if (sub === 'replaced') { stats.replaced++; pushEx('replaced', disease, c); }
     if (isNameRestatement(c, disease)) { stats.removed.restatement++; pushEx('restatement', disease, c); continue; }
     if (isAnswerReveal(c, disease)) { stats.removed.reveal++; pushEx('reveal', disease, c); continue; }
     if (isGeneric(c)) { stats.removed.generic++; pushEx('generic', disease, c); continue; }
@@ -181,6 +204,9 @@ for (const r of records) {
       const cn = stripNamePrefix(stripAI(cand), disease);
       const k = norm(cn);
       if (!cn || seen.has(k)) continue;
+      const sub = replaceIfSuperset(cn, cleaned);
+      if (sub === 'dropped') continue;
+      if (sub === 'replaced') { stats.replaced++; pushEx('replaced', disease, cn); }
       if (isPlaceholder(cn)) continue;
       if (isDemographicNoise(cn)) continue;
       if (isTooShort(cn)) continue;
@@ -223,7 +249,7 @@ console.log(`Records : ${records.length}`);
 console.log('\n=== CLUES ===');
 console.log(`before : ${beforeClueTotal}`);
 console.log(`after  : ${afterClueTotal}`);
-console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} tooShort=${stats.removed.tooShort} restatement=${stats.removed.restatement} reveal=${stats.removed.reveal} generic=${stats.removed.generic} promoted=${stats.promoted}`);
+console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} tooShort=${stats.removed.tooShort} restatement=${stats.removed.restatement} reveal=${stats.removed.reveal} generic=${stats.removed.generic} substring=${stats.removed.substring} promoted=${stats.promoted} replaced=${stats.replaced}`);
 console.log(`kept   : ${stats.kept}`);
 console.log(`records now with 0 clues+discriminators (dropped from drill deck): ${cardsDropped}`);
 const shortAfter = records.filter(r=> (r.enriched?.highLeverageClues?.length||0) <3).length;
