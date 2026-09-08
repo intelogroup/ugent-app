@@ -39,12 +39,10 @@ export default function CardCarousel<T>({
   }, [items.length, cardIndex]);
 
   const setIndexAndNotify = (next: number | ((prev: number) => number)) => {
-    setCardIndex((prev) => {
-      const resolved = typeof next === 'function' ? (next as (p: number) => number)(prev) : next;
-      const clamped = Math.max(0, Math.min(resolved, items.length - 1));
-      if (items[clamped]) onIndexChange?.(clamped, items[clamped]);
-      return clamped;
-    });
+    const resolved = typeof next === 'function' ? (next as (p: number) => number)(cardIndex) : next;
+    const clamped = Math.max(0, Math.min(resolved, items.length - 1));
+    setCardIndex(clamped);
+    if (items[clamped]) onIndexChange?.(clamped, items[clamped]);
   };
 
   if (items.length === 0) return null;

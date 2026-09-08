@@ -131,6 +131,15 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     }
   }, []);
 
+  const syncFeedback = (cardId: string, patch: { flagged?: boolean; liked?: boolean; mastered?: boolean; comment?: string; cardType?: string }) => {
+    const cardType = patch.cardType ?? (cardId.startsWith('concept-') ? 'concept' : 'qbank');
+    fetch('/api/drill-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardId, cardType, ...patch }),
+    }).catch(() => {});
+  };
+
   const saveMastered = (ids: string[]) => {
     setMasteredIds(ids);
     localStorage.setItem(FLASHCARD_STORAGE_KEY, JSON.stringify(ids));
@@ -138,14 +147,16 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
 
   const toggleMastered = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (masteredIds.includes(id)) {
+    const nextMastered = masteredIds.includes(id);
+    if (nextMastered) {
       saveMastered(masteredIds.filter((item) => item !== id));
     } else {
       saveMastered([...masteredIds, id]);
     }
+    syncFeedback(id, { mastered: !nextMastered });
   };
 
-  // Per-card user feedback: flag + comment + liked, persisted to localStorage
+  // Per-card user feedback: flag + comment + liked, persisted to Supabase + localStorage cache
   const [flaggedIds, setFlaggedIds] = useState<string[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
@@ -171,19 +182,67 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     } catch (e) {
       console.error(e);
     }
+    // Supabase is canonical — hydrate from /api/drill-feedback and overwrite local cache
+    fetch('/api/drill-feedback')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { rows?: { card_id: string; flagged: boolean; liked: boolean; mastered: boolean; comment: string }[] } | null) => {
+        if (!j?.rows) return;
+        const flags: string[] = [];
+        const liked: string[] = [];
+        const mastered: string[] = [];
+        const comm: Record<string, string> = {};
+        for (const row of j.rows) {
+          if (row.flagged) flags.push(row.card_id);
+          if (row.liked) liked.push(row.card_id);
+          if (row.mastered) mastered.push(row.card_id);
+          if (row.comment) comm[row.card_id] = row.comment;
+        }
+        if (flags.length || j.rows.some((r) => r.flagged === false)) setFlaggedIds(flags);
+        if (liked.length || j.rows.some((r) => r.liked === false)) setLikedIds(liked);
+        if (Object.keys(comm).length || j.rows.length) setComments(comm);
+        if (flags.length) localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(flags));
+        if (liked.length) localStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(liked));
+        if (Object.keys(comm).length) localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(comm));
+        if (mastered.length) {
+          setMasteredIds((prev) => {
+            const merged = Array.from(new Set([...prev, ...mastered]));
+            localStorage.setItem(FLASHCARD_STORAGE_KEY, JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  // Restore last subtab (qbank vs concepts) so relog lands where user left off
+  // Restore last subtab (qbank vs concepts) so relog lands where user left off — Supabase canonical, localStorage fallback
   useEffect(() => {
     const last = localStorage.getItem(LAST_SUBTAB_KEY);
     if (last === 'qbank' || last === 'concepts') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubTab(last);
     }
+    fetch('/api/drill-state')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { state?: { last_subtab?: string; last_qbank_card_id?: string; last_concept_card_id?: string } | null } | null) => {
+        if (j?.state?.last_subtab === 'qbank' || j?.state?.last_subtab === 'concepts') {
+          setSubTab(j.state.last_subtab);
+          localStorage.setItem(LAST_SUBTAB_KEY, j.state.last_subtab);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const syncState = (patch: { lastQbankCardId?: string; lastConceptCardId?: string; lastSubtab?: string }) => {
+    fetch('/api/drill-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).catch(() => {});
+  };
 
   useEffect(() => {
     localStorage.setItem(LAST_SUBTAB_KEY, subTab);
+    syncState({ lastSubtab: subTab });
   }, [subTab]);
 
   const toggleFlag = (id: string, e: React.MouseEvent) => {
@@ -193,6 +252,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       : [...flaggedIds, id];
     setFlaggedIds(next);
     localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(next));
+    syncFeedback(id, { flagged: next.includes(id) });
   };
 
   const toggleLiked = (id: string, e: React.MouseEvent) => {
@@ -200,6 +260,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     const next = likedIds.includes(id) ? likedIds.filter((item) => item !== id) : [...likedIds, id];
     setLikedIds(next);
     localStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(next));
+    syncFeedback(id, { liked: next.includes(id) });
   };
 
   const toggleComment = (id: string, e: React.MouseEvent) => {
@@ -213,6 +274,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     else delete next[id];
     setComments(next);
     localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(next));
+    syncFeedback(id, { comment: text });
   };
 
   const buildQBankVisibleText = (card: QuestionBankClue, isRevealed: boolean, mode: string) => {
@@ -328,12 +390,31 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   }, [flatConcepts, selectedSystem, searchQuery, showMastered, masteredIds]);
 
   // Restore last viewed card after relog — persist per subTab via card id (robust to deck reordering/filtering)
+  // Supabase is canonical; localStorage is fallback cache.
   const hasRestoredQbank = useRef(false);
   const hasRestoredConcept = useRef(false);
+  const [serverLastQbankId, setServerLastQbankId] = useState<string | null>(null);
+  const [serverLastConceptId, setServerLastConceptId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/drill-state')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { state?: { last_qbank_card_id?: string; last_concept_card_id?: string } | null } | null) => {
+        if (j?.state?.last_qbank_card_id) {
+          setServerLastQbankId(j.state.last_qbank_card_id);
+          localStorage.setItem(LAST_QBANK_CARD_KEY, j.state.last_qbank_card_id);
+        }
+        if (j?.state?.last_concept_card_id) {
+          setServerLastConceptId(j.state.last_concept_card_id);
+          localStorage.setItem(LAST_CONCEPT_CARD_KEY, j.state.last_concept_card_id);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (hasRestoredQbank.current || filteredQBank.length === 0) return;
-    const lastId = localStorage.getItem(LAST_QBANK_CARD_KEY);
+    const lastId = serverLastQbankId ?? localStorage.getItem(LAST_QBANK_CARD_KEY);
     if (lastId) {
       const idx = filteredQBank.findIndex((c) => c.id === lastId);
       if (idx >= 0) {
@@ -342,11 +423,11 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       }
     }
     hasRestoredQbank.current = true;
-  }, [filteredQBank]);
+  }, [filteredQBank, serverLastQbankId]);
 
   useEffect(() => {
     if (hasRestoredConcept.current || filteredConcepts.length === 0) return;
-    const lastId = localStorage.getItem(LAST_CONCEPT_CARD_KEY);
+    const lastId = serverLastConceptId ?? localStorage.getItem(LAST_CONCEPT_CARD_KEY);
     if (lastId) {
       const idx = filteredConcepts.findIndex((c) => c.id === lastId);
       if (idx >= 0) {
@@ -355,16 +436,22 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       }
     }
     hasRestoredConcept.current = true;
-  }, [filteredConcepts]);
+  }, [filteredConcepts, serverLastConceptId]);
 
   const handleQbankIndexChange = (idx: number, item: QuestionBankClue) => {
     setQbankIndex(idx);
-    if (item?.id) localStorage.setItem(LAST_QBANK_CARD_KEY, item.id);
+    if (item?.id) {
+      localStorage.setItem(LAST_QBANK_CARD_KEY, item.id);
+      syncState({ lastQbankCardId: item.id });
+    }
   };
 
   const handleConceptIndexChange = (idx: number, item: Pair & { id: string; category: string }) => {
     setConceptIndex(idx);
-    if (item?.id) localStorage.setItem(LAST_CONCEPT_CARD_KEY, item.id);
+    if (item?.id) {
+      localStorage.setItem(LAST_CONCEPT_CARD_KEY, item.id);
+      syncState({ lastConceptCardId: item.id });
+    }
   };
 
   // Reset carousel positions when filters change (user intentionally changed view)
