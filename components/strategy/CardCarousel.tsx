@@ -10,6 +10,8 @@ type Props<T> = {
   onCardClick?: (item: T, wasDrag: boolean) => void;
   maxWidthClassName?: string;
   resetKey?: unknown;
+  initialIndex?: number;
+  onIndexChange?: (index: number, item: T) => void;
 };
 
 export default function CardCarousel<T>({
@@ -19,22 +21,38 @@ export default function CardCarousel<T>({
   onCardClick,
   maxWidthClassName = 'max-w-xl',
   resetKey,
+  initialIndex = 0,
+  onIndexChange,
 }: Props<T>) {
-  const [cardIndex, setCardIndex] = useState(0);
+  const [cardIndex, setCardIndex] = useState(initialIndex);
   const [dragX, setDragX] = useState(0);
   const dragStartX = useRef<number | null>(null);
   const wasDrag = useRef(false);
 
   useEffect(() => {
-    setCardIndex(0);
-  }, [resetKey]);
+    setCardIndex(initialIndex);
+  }, [resetKey, initialIndex]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    if (cardIndex >= items.length) setCardIndex(items.length - 1);
+  }, [items.length, cardIndex]);
+
+  const setIndexAndNotify = (next: number | ((prev: number) => number)) => {
+    setCardIndex((prev) => {
+      const resolved = typeof next === 'function' ? (next as (p: number) => number)(prev) : next;
+      const clamped = Math.max(0, Math.min(resolved, items.length - 1));
+      if (items[clamped]) onIndexChange?.(clamped, items[clamped]);
+      return clamped;
+    });
+  };
 
   if (items.length === 0) return null;
 
   const currentItem = items[cardIndex];
 
-  const goNext = () => setCardIndex((i) => Math.min(i + 1, items.length - 1));
-  const goPrev = () => setCardIndex((i) => Math.max(i - 1, 0));
+  const goNext = () => setIndexAndNotify((i) => Math.min(i + 1, items.length - 1));
+  const goPrev = () => setIndexAndNotify((i) => Math.max(i - 1, 0));
 
   const handlePointerDown = (e: React.PointerEvent) => {
     dragStartX.current = e.clientX;
@@ -52,6 +70,8 @@ export default function CardCarousel<T>({
       goPrev();
     } else if (dragX < -SWIPE_THRESHOLD) {
       goNext();
+    } else {
+      // Even without swipe, ensure current card persistence is notified on mount
     }
     dragStartX.current = null;
     setDragX(0);

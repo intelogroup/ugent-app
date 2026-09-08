@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   CheckCircleIcon,
   SparklesIcon,
@@ -55,6 +55,9 @@ const LEGACY_MASTERY_STORAGE_KEY = 'ugent-memorize-mastered';
 const FLAG_STORAGE_KEY = 'ugent-flashcards-flagged';
 const COMMENT_STORAGE_KEY = 'ugent-flashcards-comments';
 const LIKED_STORAGE_KEY = 'ugent-flashcards-liked';
+const LAST_QBANK_CARD_KEY = 'ugent-last-qbank-card-id';
+const LAST_CONCEPT_CARD_KEY = 'ugent-last-concept-card-id';
+const LAST_SUBTAB_KEY = 'ugent-last-strategy-subtab';
 
 function CommentBox({
   id,
@@ -107,6 +110,8 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showMastered, setShowMastered] = useState<boolean>(true);
   const [cardMode, setCardMode] = useState<'clues-first' | 'disease-first'>('clues-first');
+  const [qbankIndex, setQbankIndex] = useState(0);
+  const [conceptIndex, setConceptIndex] = useState(0);
 
   // Track mastered card IDs in localStorage
   const [masteredIds, setMasteredIds] = useState<string[]>([]);
@@ -167,6 +172,19 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       console.error(e);
     }
   }, []);
+
+  // Restore last subtab (qbank vs concepts) so relog lands where user left off
+  useEffect(() => {
+    const last = localStorage.getItem(LAST_SUBTAB_KEY);
+    if (last === 'qbank' || last === 'concepts') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSubTab(last);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LAST_SUBTAB_KEY, subTab);
+  }, [subTab]);
 
   const toggleFlag = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -308,6 +326,68 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       return systemMatch && (catMatch || textMatch) && (showMastered || !isMastered);
     });
   }, [flatConcepts, selectedSystem, searchQuery, showMastered, masteredIds]);
+
+  // Restore last viewed card after relog — persist per subTab via card id (robust to deck reordering/filtering)
+  const hasRestoredQbank = useRef(false);
+  const hasRestoredConcept = useRef(false);
+
+  useEffect(() => {
+    if (hasRestoredQbank.current || filteredQBank.length === 0) return;
+    const lastId = localStorage.getItem(LAST_QBANK_CARD_KEY);
+    if (lastId) {
+      const idx = filteredQBank.findIndex((c) => c.id === lastId);
+      if (idx >= 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setQbankIndex(idx);
+      }
+    }
+    hasRestoredQbank.current = true;
+  }, [filteredQBank]);
+
+  useEffect(() => {
+    if (hasRestoredConcept.current || filteredConcepts.length === 0) return;
+    const lastId = localStorage.getItem(LAST_CONCEPT_CARD_KEY);
+    if (lastId) {
+      const idx = filteredConcepts.findIndex((c) => c.id === lastId);
+      if (idx >= 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setConceptIndex(idx);
+      }
+    }
+    hasRestoredConcept.current = true;
+  }, [filteredConcepts]);
+
+  const handleQbankIndexChange = (idx: number, item: QuestionBankClue) => {
+    setQbankIndex(idx);
+    if (item?.id) localStorage.setItem(LAST_QBANK_CARD_KEY, item.id);
+  };
+
+  const handleConceptIndexChange = (idx: number, item: Pair & { id: string; category: string }) => {
+    setConceptIndex(idx);
+    if (item?.id) localStorage.setItem(LAST_CONCEPT_CARD_KEY, item.id);
+  };
+
+  // Reset carousel positions when filters change (user intentionally changed view)
+  // Must run after restoration effects so we don't clobber the relog restore
+  const prevFiltersRef = useRef({ system: selectedSystem, query: searchQuery, mastered: showMastered });
+  useEffect(() => {
+    const prev = prevFiltersRef.current;
+    const changed = prev.system !== selectedSystem || prev.query !== searchQuery || prev.mastered !== showMastered;
+    if (changed && hasRestoredQbank.current) {
+      setQbankIndex(0);
+      hasRestoredQbank.current = false; // allow re-restore if user clears filters and saved id becomes visible again
+      // don't clear localStorage — keep last id for when filters return to that context
+    }
+    prevFiltersRef.current = { system: selectedSystem, query: searchQuery, mastered: showMastered };
+  }, [selectedSystem, searchQuery, showMastered]);
+
+  useEffect(() => {
+    // Concepts tab only filtered by system 'Genetics' + search/mastered, but keep same reset behavior
+    if (hasRestoredConcept.current) {
+      setConceptIndex(0);
+      hasRestoredConcept.current = false;
+    }
+  }, [searchQuery, showMastered, selectedSystem]);
 
   // Progress Calculations
   const qbankTotal = questionBankClues.length;
@@ -463,6 +543,8 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
           keyFn={(card) => card.id}
           maxWidthClassName="max-w-xl"
           resetKey={`qbank-${selectedSystem}-${searchQuery}-${showMastered}`}
+          initialIndex={Math.min(qbankIndex, Math.max(0, filteredQBank.length - 1))}
+          onIndexChange={handleQbankIndexChange}
           onCardClick={(card) => toggleReveal(card.id)}
           renderCard={(card) => {
             const isRevealed = !!revealedIds[card.id];
@@ -655,6 +737,8 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
           keyFn={(pair) => pair.id}
           maxWidthClassName="max-w-2xl"
           resetKey={`concepts-${selectedSystem}-${searchQuery}-${showMastered}`}
+          initialIndex={Math.min(conceptIndex, Math.max(0, filteredConcepts.length - 1))}
+          onIndexChange={handleConceptIndexChange}
           onCardClick={(pair) => toggleReveal(pair.id)}
           renderCard={(pair) => {
             const isMastered = masteredIds.includes(pair.id);
