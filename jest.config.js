@@ -43,6 +43,7 @@ const customJestConfig = {
     '<rootDir>/__tests__/lib/assumptions-asr-correct.test.ts',
     '<rootDir>/__tests__/lib/assumptions-curriculum-generator.test.ts',
     '<rootDir>/__tests__/lib/assumptions-navigation.test.ts',
+    '<rootDir>/__tests__/lib/drill-feedback-store.test.ts',
     '<rootDir>/e2e/',
     '<rootDir>/tests/',
     '<rootDir>/.claude/worktrees/',
