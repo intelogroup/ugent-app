@@ -49,6 +49,15 @@ const stripAI = (s) => (s || '').trim().replace(/^AI-Generation\s*/i, '');
 const norm = (s) =>
   stripAI(s).toLowerCase().replace(/\s+/g, ' ').trim().replace(/[\u00a0\u200b]/g, ' ');
 
+// The diagnosis name can carry a parenthesized qualifier that never appears in
+// a clue — "Cerebral Palsy (Spastic)" vs "cerebral palsy with spasticity".
+// Stripping the qualifier lets the substring check actually match: the core
+// "cerebral palsy" is present in both. A bare qualifier alone ("Spastic") is
+// too short to be meaningful, so it's dropped.
+function coreDiagnosis(diseaseName) {
+  return norm(diseaseName).replace(/\s*\([^)]*\)/g, '').trim();
+}
+
 const PLACEHOLDER = /^(n\/a|none|pending further analysis|pending|not applicable|tba|unknown|unspecified|null|)$/i;
 const DEMO_TOKENS = new Set([
   'year', 'years', 'yr', 'yrs', 'yo', 'year-old', 'months', 'month', 'mo', 'wks', 'weeks', 'week', 'wk', 'days', 'day',
@@ -105,8 +114,8 @@ function stripNamePrefix(cand, diseaseName) {
   // If a promotion candidate contains the disease/concept name (answer-reveal),
   // try removing the name plus a trailing " = " / ":" / "-" so the remainder is
   // still a substantive clue (e.g. "Sensitivity = TP/(TP+FN) = 75/100 (75%).").
-  const cn = norm(cand);
-  const dn = norm(diseaseName);
+  const cn = stripParentheticals(norm(cand));
+  const dn = coreDiagnosis(diseaseName);
   if (!dn || !cn.includes(dn)) return cand;
   const re = new RegExp(`^${dn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[:=\\-—–]+\\s*`, 'i');
   const stripped = cn.replace(re, '').trim();
@@ -126,22 +135,31 @@ function getPromotionCandidates(e) {
 }
 
 function isNameRestatement(clue, diseaseName) {
-  const cn = norm(clue).replace(/[^a-z]/g, '');
-  const dn = norm(diseaseName).replace(/[^a-z]/g, '');
-  if (!dn || cn.length < 4) return false;
-  return dn.includes(cn);
+  const outside = stripParentheticals(norm(clue)).replace(/[^a-z]/g, '');
+  const dn = coreDiagnosis(diseaseName).replace(/[^a-z]/g, '');
+  if (!dn || outside.length < 4) return false;
+  return dn.includes(outside);
+}
+
+// A match that lives only inside a parenthetical is not a restatement of the
+// diagnosis — "(heart failure cells)" is a histologic term, "(risk factors for
+// heart failure)" is a risk-factor gloss. Both are real clinical content.
+// Checking the text outside parens only also skips editorial glosses the
+// enricher appended in parens, which are a separate concern.
+function stripParentheticals(s) {
+  return (s || '').replace(/\s*\([^)]*\)/g, ' ');
 }
 
 function isAnswerReveal(clue, diseaseName) {
-  const cn = norm(clue).replace(/[^a-z]/g, '');
-  const dn = norm(diseaseName).replace(/[^a-z]/g, '');
+  const outside = stripParentheticals(norm(clue));
+  const cn = outside.replace(/[^a-z]/g, '');
+  const dn = coreDiagnosis(diseaseName).replace(/[^a-z]/g, '');
   if (!dn || dn.length < 4 || cn.length < 4) return false;
   // multi-token disease name (had internal spaces): treat as a contiguous phrase
   if (/\s/.test(norm(diseaseName))) return cn.includes(dn);
   // single-token disease name: require whole-word match in the space-normalized
   // text ("septic shock" on the Shock card counts; "shock" inside "shockwave" does not)
-  const spaced = norm(clue).toLowerCase();
-  return new RegExp(`(^|\\W)${dn}(\\W|$)`).test(spaced);
+  return new RegExp(`(^|\\W)${dn}(\\W|$)`).test(outside.toLowerCase());
 }
 // ---- pass 1: collect global generic-frequency (distinct diseases per clue) ----
 const lines = fs.readFileSync(FILE, 'utf-8').trim().split('\n').filter(Boolean);
