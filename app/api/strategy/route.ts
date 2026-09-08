@@ -16,6 +16,18 @@ const TOPIC_TYPES = new Set<TopicType>([
   "CONCEPT",
 ]);
 
+// Diseases with only generic/non-specific clues — excluded from the drill-card
+// deck so cards always show condition-specific clinical presentation on the front
+// and the disease on the back. Removed 2026-09-08 (audit: all clues were generic).
+const DRILL_CARD_BLOCKLIST = new Set<string>([
+  "Bipolar Disorder (Antidepressant-Induced Mania)",
+  "Cushing Disease",
+  "Nephrotic Syndrome",
+  "Parainfluenza Virus",
+  "Specificity", // 0 specific clues after answer-reveal scrub (all were "specificity is ...")
+  "TSH-Secreting Pituitary Adenoma",
+]);
+
 function normalizeTopicType(type: string): TopicType {
   return TOPIC_TYPES.has(type as TopicType) ? type as TopicType : "CONCEPT";
 }
@@ -363,6 +375,7 @@ export async function GET() {
     // Build dynamic question bank clues
     const questionBankClues = allNodes
       .filter((n) => n.type !== "PRINCIPLE" && (n.highLeverageClues.length > 0 || n.discriminators.length > 0))
+      .filter((n) => !DRILL_CARD_BLOCKLIST.has(n.name))
       .map((n) => ({
         id: n.id,
         diseaseName: n.name,
@@ -370,6 +383,7 @@ export async function GET() {
         system: mapSystem(n.system || "Other", n.subject),
         clues: n.highLeverageClues,
         discriminators: n.discriminators,
+        discriminatorDetails: n.discriminatorDetails,
       }));
 
     return NextResponse.json({

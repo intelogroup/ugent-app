@@ -13,7 +13,13 @@
  *      tokens are only age/gender descriptors, no substantive clinical content.
  *      (demographics already live in enriched.clinicalContext)
  *   3. Name-restatements — the clue merely restates the disease/concept name.
- *   4. Low-specificity recycled phrases — a clue shared across >= 6 DISTINCT
+ *   4. Answer-reveals — the clue CONTAINS the disease/concept name (reverse of 3)
+ *      e.g. "CT shows saddle pulmonary embolism" on the Pulmonary Embolism card.
+ *      For drill cards the clue front-face must make the student reason, so a clue
+ *      that names the answer is as useless as one that restates it. (Multi-token
+ *      disease names match as a substring; single-token names match at word
+ *      boundaries to avoid "shock" inside "shockwave".)
+ *   5. Low-specificity recycled phrases — a clue shared across >= 6 DISTINCT
  *      diseases in the whole bank (e.g. "hypotension and tachycardia").
  *      High-leverage means pathognomonic, not common.
  *
@@ -71,6 +77,18 @@ function isNameRestatement(clue, diseaseName) {
   if (!dn || cn.length < 4) return false;
   return dn.includes(cn);
 }
+
+function isAnswerReveal(clue, diseaseName) {
+  const cn = norm(clue).replace(/[^a-z]/g, '');
+  const dn = norm(diseaseName).replace(/[^a-z]/g, '');
+  if (!dn || dn.length < 4 || cn.length < 4) return false;
+  // multi-token disease name (had internal spaces): treat as a contiguous phrase
+  if (/\s/.test(norm(diseaseName))) return cn.includes(dn);
+  // single-token disease name: require whole-word match in the space-normalized
+  // text ("septic shock" on the Shock card counts; "shock" inside "shockwave" does not)
+  const spaced = norm(clue).toLowerCase();
+  return new RegExp(`(^|\\W)${dn}(\\W|$)`).test(spaced);
+}
 // ---- pass 1: collect global generic-frequency (distinct diseases per clue) ----
 const lines = fs.readFileSync(FILE, 'utf-8').trim().split('\n').filter(Boolean);
 const records = lines.map((l) => JSON.parse(l));
@@ -91,8 +109,8 @@ const isGeneric = (clue) => {
   return (clueDiseases.get(k)?.size ?? 0) >= GENERIC_DISEASE_THRESHOLD;
 };
 
-const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, generic: 0, discEmpty: 0 }, kept: 0 };
-const examples = { placeholder: [], demographic: [], restatement: [], generic: [], discEmpty: [] };
+const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, reveal: 0, generic: 0, discEmpty: 0 }, kept: 0 };
+const examples = { placeholder: [], demographic: [], restatement: [], reveal: [], generic: [], discEmpty: [] };
 const MAX_EX = 6;
 function pushEx(cat, disease, val) {
   if (examples[cat].length < MAX_EX) examples[cat].push({ disease, val });
@@ -111,6 +129,7 @@ for (const r of records) {
     if (isPlaceholder(c)) { stats.removed.placeholder++; pushEx('placeholder', disease, c); continue; }
     if (isDemographicNoise(c)) { stats.removed.demographic++; pushEx('demographic', disease, c); continue; }
     if (isNameRestatement(c, disease)) { stats.removed.restatement++; pushEx('restatement', disease, c); continue; }
+    if (isAnswerReveal(c, disease)) { stats.removed.reveal++; pushEx('reveal', disease, c); continue; }
     if (isGeneric(c)) { stats.removed.generic++; pushEx('generic', disease, c); continue; }
     cleaned.push(raw);
     stats.kept++;
@@ -145,7 +164,7 @@ console.log(`Records : ${records.length}`);
 console.log('\n=== CLUES ===');
 console.log(`before : ${beforeClueTotal}`);
 console.log(`after  : ${afterClueTotal}`);
-console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} restatement=${stats.removed.restatement} generic=${stats.removed.generic}`);
+console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} restatement=${stats.removed.restatement} reveal=${stats.removed.reveal} generic=${stats.removed.generic}`);
 console.log(`kept   : ${stats.kept}`);
 console.log(`records now with 0 clues+discriminators (dropped from drill deck): ${cardsDropped}`);
 console.log('\n=== DISCRIMINATORS ===');
@@ -161,13 +180,14 @@ const printEx = (cat, label) => {
 printEx('placeholder', 'Placeholder/clue examples removed');
 printEx('demographic', 'Demographic-noise clues removed');
 printEx('restatement', 'Name-restatement clues removed');
+printEx('reveal', 'Answer-revealing clues removed');
 printEx('generic', 'Generic recycled clues removed');
 printEx('discEmpty', 'Discriminators with empty/placeholder facts removed');
 
 if (PREVIEW) {
   console.log('\n[PREVIEW MODE] — no files modified.');
 } else {
-  const changed = stats.removed.placeholder + stats.removed.demographic + stats.removed.restatement + stats.removed.generic + stats.removed.discEmpty;
+  const changed = stats.removed.placeholder + stats.removed.demographic + stats.removed.restatement + stats.removed.reveal + stats.removed.generic + stats.removed.discEmpty;
   if (changed > 0) {
     const ts = Date.now();
     const backup = path.join(BACKUP_DIR, `medicospira-enriched-${ts}.jsonl`);

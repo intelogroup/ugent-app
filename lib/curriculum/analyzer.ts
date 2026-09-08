@@ -681,6 +681,12 @@ export async function analyzeQuestions(): Promise<AnalysisResult> {
       for (const discriminator of node.discriminators) {
         if (!existing.discriminators.includes(discriminator)) existing.discriminators.push(discriminator);
       }
+      for (const dd of node.discriminatorDetails || []) {
+        if (dd && dd.distractor && !(existing.discriminatorDetails || []).some(x => x.distractor === dd.distractor)) {
+          if (!existing.discriminatorDetails) existing.discriminatorDetails = [];
+          existing.discriminatorDetails.push(dd);
+        }
+      }
       if (!existing.systems) {
         existing.systems = existing.system ? [existing.system] : [];
       }
@@ -751,6 +757,7 @@ export async function analyzeQuestions(): Promise<AnalysisResult> {
           dependsOn: prereqIds,
           questionIds: [h],
           discriminators: (e.discriminators || []).map(d => d.distractor),
+          discriminatorDetails: (e.discriminators || []).map(d => ({ distractor: d.distractor, ruleOutFact: d.ruleOutFact })),
           highLeverageClues: e.highLeverageClues || [],
         };
 
@@ -770,6 +777,7 @@ export async function analyzeQuestions(): Promise<AnalysisResult> {
               dependsOn: [],
               questionIds: [],
               discriminators: [],
+              discriminatorDetails: [],
               highLeverageClues: [],
             };
             addNode(conceptNode);

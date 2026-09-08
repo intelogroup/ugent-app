@@ -8,6 +8,8 @@ import {
   MagnifyingGlassIcon,
   EyeIcon,
   BookOpenIcon,
+  FlagIcon,
+  ChatBubbleLeftIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon } from '@heroicons/react/24/solid';
 import CardCarousel from './CardCarousel';
@@ -19,6 +21,7 @@ type QuestionBankClue = {
   system: string;
   clues: string[];
   discriminators: string[];
+  discriminatorDetails?: { distractor: string; ruleOutFact: string }[];
 };
 
 type Pair = {
@@ -47,6 +50,53 @@ type Props = {
 
 const FLASHCARD_STORAGE_KEY = 'ugent-flashcards-mastered';
 const LEGACY_MASTERY_STORAGE_KEY = 'ugent-memorize-mastered';
+const FLAG_STORAGE_KEY = 'ugent-flashcards-flagged';
+const COMMENT_STORAGE_KEY = 'ugent-flashcards-comments';
+
+function CommentBox({
+  id,
+  comment,
+  onSave,
+  onClose,
+}: {
+  id: string;
+  comment: string;
+  onSave: (id: string, text: string) => void;
+  onClose: (id: string) => void;
+}) {
+  const [draft, setDraft] = useState(comment);
+  return (
+    <div
+      className="mt-3 pt-3 border-t border-neutral-100"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span className="text-[9px] font-bold uppercase text-neutral-400 tracking-wider block mb-1">
+        Comment
+      </span>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={2}
+        placeholder="Note anything wrong or worth remembering…"
+        className="w-full text-xs text-neutral-800 bg-white border border-neutral-200 rounded-lg p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-400"
+      />
+      <div className="flex items-center justify-end gap-2 mt-1.5">
+        <button
+          onClick={() => onClose(id)}
+          className="text-[11px] text-neutral-400 hover:text-neutral-600"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => { onSave(id, draft.trim()); onClose(id); }}
+          className="text-[11px] font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-md px-3 py-1"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Props) {
   const [subTab, setSubTab] = useState<'qbank' | 'concepts'>('qbank');
@@ -85,6 +135,47 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     } else {
       saveMastered([...masteredIds, id]);
     }
+  };
+
+  // Per-card user feedback: flag + comment, persisted to localStorage
+  const [flaggedIds, setFlaggedIds] = useState<string[]>([]);
+  const [comments, setComments] = useState<Record<string, string>>({});
+  const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const savedFlags = localStorage.getItem(FLAG_STORAGE_KEY);
+    const savedComments = localStorage.getItem(COMMENT_STORAGE_KEY);
+    try {
+      if (savedFlags) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFlaggedIds(JSON.parse(savedFlags));
+      }
+      if (savedComments) {
+        setComments(JSON.parse(savedComments));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const toggleFlag = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = flaggedIds.includes(id)
+      ? flaggedIds.filter((item) => item !== id)
+      : [...flaggedIds, id];
+    setFlaggedIds(next);
+    localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const toggleComment = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCommentOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const saveComment = (id: string, text: string) => {
+    const next = { ...comments, [id]: text };
+    setComments(next);
+    localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(next));
   };
 
   const toggleReveal = (id: string) => {
@@ -331,17 +422,33 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     </span>
                   </div>
 
-                  <button
-                    onClick={(e) => toggleMastered(card.id, e)}
-                    className="text-neutral-300 hover:text-emerald-600 transition-colors"
-                    title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
-                  >
-                    {isMastered ? (
-                      <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
-                    ) : (
-                      <CheckCircleIcon className="w-5 h-5" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => toggleComment(card.id, e)}
+                      className={`text-neutral-300 hover:text-blue-600 transition-colors ${comments[card.id] ? 'text-blue-600' : ''}`}
+                      title={comments[card.id] ? "Edit comment" : "Add comment"}
+                    >
+                      <ChatBubbleLeftIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => toggleFlag(card.id, e)}
+                      className={`text-neutral-300 hover:text-rose-600 transition-colors ${flaggedIds.includes(card.id) ? 'text-rose-600' : ''}`}
+                      title={flaggedIds.includes(card.id) ? "Unflag card" : "Flag this card"}
+                    >
+                      <FlagIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => toggleMastered(card.id, e)}
+                      className="text-neutral-300 hover:text-emerald-600 transition-colors"
+                      title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
+                    >
+                      {isMastered ? (
+                        <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <CheckCircleIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col justify-between">
@@ -384,15 +491,16 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                       </div>
 
                       {cardMode === 'clues-first' ? (
-                        card.discriminators.length > 0 && (
+                        (card.discriminatorDetails ?? []).length > 0 && (
                           <div className="border-t border-neutral-100 pt-2">
                             <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block mb-1">
                               High-Yield Discriminators & Traps
                             </span>
                             <ul className="space-y-1">
-                              {card.discriminators.slice(0, 2).map((trap, idx) => (
+                              {(card.discriminatorDetails ?? []).slice(0, 2).map((d, idx) => (
                                 <li key={idx} className="text-[11px] text-rose-800 bg-rose-50 px-2 py-1 rounded border border-rose-100/50">
-                                  {trap}
+                                  <span className="font-semibold">{d.distractor}</span>
+                                  {d.ruleOutFact ? <span className="text-rose-700"> — {d.ruleOutFact}</span> : null}
                                 </li>
                               ))}
                             </ul>
@@ -410,13 +518,13 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                               ))}
                             </ul>
                           </div>
-                          {card.discriminators.length > 0 && (
+                          {(card.discriminatorDetails ?? []).length > 0 && (
                             <div>
                               <span className="text-[9px] font-bold uppercase text-rose-500 tracking-wider block">
                                 Traps
                               </span>
                               <p className="text-[11px] text-rose-800 italic truncate">
-                                {card.discriminators[0]}
+                                {(card.discriminatorDetails ?? [])[0].distractor}
                               </p>
                             </div>
                           )}
@@ -425,6 +533,26 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     </div>
                   )}
 
+                  {commentOpen[card.id] ? (
+                    <CommentBox id={card.id} comment={comments[card.id] || ''} onSave={saveComment} onClose={(id) => setCommentOpen((p) => ({ ...p, [id]: false }))} />
+                  ) : comments[card.id] ? (
+                    <div className="mt-3 pt-3 border-t border-neutral-100" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[9px] font-bold uppercase text-blue-500 tracking-wider block mb-1">
+                        Your comment
+                      </span>
+                      <p className="text-[11px] text-neutral-600 bg-blue-50/50 px-2 py-1.5 rounded border border-blue-100/50">
+                        {comments[card.id]}
+                      </p>
+                    </div>
+                  ) : null}
+                  {flaggedIds.includes(card.id) && (
+                    <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <FlagIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span className="text-[10px] text-rose-600 font-semibold flex items-center gap-1">
+                        Flagged for review
+                      </span>
+                    </div>
+                  )}
                   <div className="mt-4 pt-3 border-t border-neutral-50 flex items-center justify-between text-xs text-neutral-400">
                     <span className="flex items-center gap-1">
                       <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
@@ -468,17 +596,33 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     </span>
                   </div>
 
-                  <button
-                    onClick={(e) => toggleMastered(pair.id, e)}
-                    className="text-neutral-300 hover:text-emerald-600 transition-colors"
-                    title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
-                  >
-                    {isMastered ? (
-                      <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
-                    ) : (
-                      <CheckCircleIcon className="w-5 h-5" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => toggleComment(pair.id, e)}
+                      className={`text-neutral-300 hover:text-blue-600 transition-colors ${comments[pair.id] ? 'text-blue-600' : ''}`}
+                      title={comments[pair.id] ? "Edit comment" : "Add comment"}
+                    >
+                      <ChatBubbleLeftIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => toggleFlag(pair.id, e)}
+                      className={`text-neutral-300 hover:text-rose-600 transition-colors ${flaggedIds.includes(pair.id) ? 'text-rose-600' : ''}`}
+                      title={flaggedIds.includes(pair.id) ? "Unflag card" : "Flag this card"}
+                    >
+                      <FlagIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => toggleMastered(pair.id, e)}
+                      className="text-neutral-300 hover:text-emerald-600 transition-colors"
+                      title={isMastered ? "Mark Unmastered" : "Mark Mastered"}
+                    >
+                      {isMastered ? (
+                        <CheckCircleIconSolid className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <CheckCircleIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-5 space-y-4 flex-1 flex flex-col">
@@ -607,6 +751,26 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                     </div>
                   )}
 
+                  {commentOpen[pair.id] ? (
+                    <CommentBox id={pair.id} comment={comments[pair.id] || ''} onSave={saveComment} onClose={(id) => setCommentOpen((p) => ({ ...p, [id]: false }))} />
+                  ) : comments[pair.id] ? (
+                    <div className="mt-2 border-t border-neutral-100 pt-2" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[9px] font-bold uppercase text-blue-500 tracking-wider block mb-1">
+                        Your comment
+                      </span>
+                      <p className="text-[11px] text-neutral-600 bg-blue-50/50 px-2 py-1.5 rounded border border-blue-100/50">
+                        {comments[pair.id]}
+                      </p>
+                    </div>
+                  ) : null}
+                  {flaggedIds.includes(pair.id) && (
+                    <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <FlagIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span className="text-[10px] text-rose-600 font-semibold flex items-center gap-1">
+                        Flagged for review
+                      </span>
+                    </div>
+                  )}
                   <div className="pt-2 mt-auto flex items-center justify-between text-xs text-neutral-400">
                     <span className="flex items-center gap-1">
                       <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />

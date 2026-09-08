@@ -63,6 +63,7 @@ export interface TopicNode {
   dependsOn: string[];     // same as prerequisites, for graph edges
   questionIds: string[];   // textHash references
   discriminators: string[];
+  discriminatorDetails?: { distractor: string; ruleOutFact: string }[];
   highLeverageClues: string[];
 }
 

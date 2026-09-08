@@ -44,6 +44,7 @@ type StrategyData = {
     system: string;
     clues: string[];
     discriminators: string[];
+    discriminatorDetails?: { distractor: string; ruleOutFact: string }[];
   }[];
 };
 
