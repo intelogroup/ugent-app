@@ -26,6 +26,29 @@ const DRILL_CARD_BLOCKLIST = new Set<string>([
   "Parainfluenza Virus",
   "Specificity", // 0 specific clues after answer-reveal scrub (all were "specificity is ...")
   "TSH-Secreting Pituitary Adenoma",
+  // 2026-09-08: 19 more — only 2 clinical clues each; the 3rd was promoted
+  // from explanation/mechanism and is a tautology of the first two (definition
+  // fluff), not a new clinical presentation clue. Biostats concepts + drug
+  // mechanism cards don't work as clinical drill cards. Deck 1,778 -> 1,759.
+  "Case-Fatality Rate",
+  "Power",
+  "Correlation Analysis",
+  "Cumulative Incidence",
+  "Sensitivity",
+  "Cleft Lip",
+  "Correlation",
+  "Attributable Risk Percent",
+  "Cyclophosphamide",
+  "Vemurafenib",
+  "Idarucizumab",
+  "Ruxolitinib",
+  "Simvastatin",
+  "Lovastatin",
+  "Midazolam",
+  "Alprazolam",
+  "Aripiprazole",
+  "Trazodone",
+  "Omalizumab",
 ]);
 
 function normalizeTopicType(type: string): TopicType {
