@@ -58,6 +58,8 @@ const DEMO_TOKENS = new Set([
   'presents', 'presented', 'presenting', 'comes', 'patient', 'history',
 ]);
 
+const MIN_CLUE_LEN = 15;
+
 
 function isDemographicNoise(clue) {
   const words = norm(clue).split(/[^a-z0-9]+/).filter(Boolean);
@@ -69,6 +71,38 @@ function isDemographicNoise(clue) {
 function isPlaceholder(clue) {
   const n = norm(clue);
   return !n || n.length < 4 || PLACEHOLDER.test(n);
+}
+
+function isTooShort(clue) {
+  return norm(clue).length < MIN_CLUE_LEN;
+}
+
+function splitSentences(text) {
+  return (text || '').split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>=MIN_CLUE_LEN);
+}
+
+function stripNamePrefix(cand, diseaseName) {
+  // If a promotion candidate contains the disease/concept name (answer-reveal),
+  // try removing the name plus a trailing " = " / ":" / "-" so the remainder is
+  // still a substantive clue (e.g. "Sensitivity = TP/(TP+FN) = 75/100 (75%).").
+  const cn = norm(cand);
+  const dn = norm(diseaseName);
+  if (!dn || !cn.includes(dn)) return cand;
+  const re = new RegExp(`^${dn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[:=\\-—–]+\\s*`, 'i');
+  const stripped = cn.replace(re, '').trim();
+  return stripped.length >= MIN_CLUE_LEN ? stripped : cand;
+}
+
+function getPromotionCandidates(e) {
+  const pool = [];
+  if (Array.isArray(e.keySymptoms)) pool.push(...e.keySymptoms);
+  if (e.mechanism) pool.push(...splitSentences(e.mechanism));
+  if (e.educationalObjective) pool.push(...splitSentences(e.educationalObjective));
+  if (e.explanation) pool.push(...splitSentences(e.explanation));
+  if (e.clinicalContext && typeof e.clinicalContext === 'object') {
+    for (const v of Object.values(e.clinicalContext)) if (typeof v === 'string' && v.length>=MIN_CLUE_LEN) pool.push(v);
+  }
+  return pool;
 }
 
 function isNameRestatement(clue, diseaseName) {
@@ -109,8 +143,8 @@ const isGeneric = (clue) => {
   return (clueDiseases.get(k)?.size ?? 0) >= GENERIC_DISEASE_THRESHOLD;
 };
 
-const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, reveal: 0, generic: 0, discEmpty: 0 }, kept: 0 };
-const examples = { placeholder: [], demographic: [], restatement: [], reveal: [], generic: [], discEmpty: [] };
+const stats = { removed: { placeholder: 0, demographic: 0, restatement: 0, reveal: 0, generic: 0, tooShort: 0, discEmpty: 0 }, kept: 0, promoted: 0 };
+const examples = { placeholder: [], demographic: [], restatement: [], reveal: [], generic: [], tooShort: [], promoted: [], discEmpty: [] };
 const MAX_EX = 6;
 function pushEx(cat, disease, val) {
   if (examples[cat].length < MAX_EX) examples[cat].push({ disease, val });
@@ -124,15 +158,40 @@ for (const r of records) {
   if (!e) continue;
   const disease = e.diseaseName || '';
   const cleaned = [];
+  const seen = new Set();
   for (const raw of e.highLeverageClues || []) {
     const c = stripAI(raw);
+    const k = norm(c);
+    if (seen.has(k)) continue;
     if (isPlaceholder(c)) { stats.removed.placeholder++; pushEx('placeholder', disease, c); continue; }
     if (isDemographicNoise(c)) { stats.removed.demographic++; pushEx('demographic', disease, c); continue; }
+    if (isTooShort(c)) { stats.removed.tooShort++; pushEx('tooShort', disease, c); continue; }
     if (isNameRestatement(c, disease)) { stats.removed.restatement++; pushEx('restatement', disease, c); continue; }
     if (isAnswerReveal(c, disease)) { stats.removed.reveal++; pushEx('reveal', disease, c); continue; }
     if (isGeneric(c)) { stats.removed.generic++; pushEx('generic', disease, c); continue; }
+    seen.add(k);
     cleaned.push(raw);
     stats.kept++;
+  }
+  // ensure exactly 3 specific clues via deterministic promotion
+  if (cleaned.length < 3) {
+    const candidates = getPromotionCandidates(e);
+    for (const cand of candidates) {
+      if (cleaned.length >= 3) break;
+      const cn = stripNamePrefix(stripAI(cand), disease);
+      const k = norm(cn);
+      if (!cn || seen.has(k)) continue;
+      if (isPlaceholder(cn)) continue;
+      if (isDemographicNoise(cn)) continue;
+      if (isTooShort(cn)) continue;
+      if (isNameRestatement(cn, disease)) continue;
+      if (isAnswerReveal(cn, disease)) continue;
+      if (isGeneric(cn)) continue;
+      seen.add(k);
+      cleaned.push(cn);
+      stats.promoted++;
+      pushEx('promoted', disease, cn);
+    }
   }
   e.highLeverageClues = cleaned;
 
@@ -164,9 +223,11 @@ console.log(`Records : ${records.length}`);
 console.log('\n=== CLUES ===');
 console.log(`before : ${beforeClueTotal}`);
 console.log(`after  : ${afterClueTotal}`);
-console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} restatement=${stats.removed.restatement} reveal=${stats.removed.reveal} generic=${stats.removed.generic}`);
+console.log(`removed: placeholder=${stats.removed.placeholder} demographic=${stats.removed.demographic} tooShort=${stats.removed.tooShort} restatement=${stats.removed.restatement} reveal=${stats.removed.reveal} generic=${stats.removed.generic} promoted=${stats.promoted}`);
 console.log(`kept   : ${stats.kept}`);
 console.log(`records now with 0 clues+discriminators (dropped from drill deck): ${cardsDropped}`);
+const shortAfter = records.filter(r=> (r.enriched?.highLeverageClues?.length||0) <3).length;
+console.log(`records with <3 clues after promotion: ${shortAfter}`);
 console.log('\n=== DISCRIMINATORS ===');
 console.log(`before : ${beforeDiscTotal}`);
 console.log(`after  : ${afterDiscTotal}`);
@@ -179,15 +240,17 @@ const printEx = (cat, label) => {
 };
 printEx('placeholder', 'Placeholder/clue examples removed');
 printEx('demographic', 'Demographic-noise clues removed');
+printEx('tooShort', 'Too-short (<15) clues removed');
 printEx('restatement', 'Name-restatement clues removed');
 printEx('reveal', 'Answer-revealing clues removed');
 printEx('generic', 'Generic recycled clues removed');
+printEx('promoted', 'Promoted from keySymptoms/mechanism to reach 3 clues');
 printEx('discEmpty', 'Discriminators with empty/placeholder facts removed');
 
 if (PREVIEW) {
   console.log('\n[PREVIEW MODE] — no files modified.');
 } else {
-  const changed = stats.removed.placeholder + stats.removed.demographic + stats.removed.restatement + stats.removed.reveal + stats.removed.generic + stats.removed.discEmpty;
+  const changed = stats.removed.placeholder + stats.removed.demographic + stats.removed.tooShort + stats.removed.restatement + stats.removed.reveal + stats.removed.generic + stats.promoted + stats.removed.discEmpty;
   if (changed > 0) {
     const ts = Date.now();
     const backup = path.join(BACKUP_DIR, `medicospira-enriched-${ts}.jsonl`);
