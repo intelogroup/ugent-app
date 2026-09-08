@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon, HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import CardCarousel from './CardCarousel';
+import { syncFeedback, syncState } from '@/lib/drill-feedback-store';
 
 type QuestionBankClue = {
   id: string;
@@ -131,15 +132,6 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     }
   }, []);
 
-  const syncFeedback = (cardId: string, patch: { flagged?: boolean; liked?: boolean; mastered?: boolean; comment?: string; cardType?: string }) => {
-    const cardType = patch.cardType ?? (cardId.startsWith('concept-') ? 'concept' : 'qbank');
-    fetch('/api/drill-feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cardId, cardType, ...patch }),
-    }).catch(() => {});
-  };
-
   const saveMastered = (ids: string[]) => {
     setMasteredIds(ids);
     localStorage.setItem(FLASHCARD_STORAGE_KEY, JSON.stringify(ids));
@@ -153,7 +145,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     } else {
       saveMastered([...masteredIds, id]);
     }
-    syncFeedback(id, { mastered: !nextMastered });
+    syncFeedback({ cardId: id, mastered: !nextMastered });
   };
 
   // Per-card user feedback: flag + comment + liked, persisted to Supabase + localStorage cache
@@ -232,14 +224,6 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       .catch(() => {});
   }, []);
 
-  const syncState = (patch: { lastQbankCardId?: string; lastConceptCardId?: string; lastSubtab?: string }) => {
-    fetch('/api/drill-state', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    }).catch(() => {});
-  };
-
   useEffect(() => {
     localStorage.setItem(LAST_SUBTAB_KEY, subTab);
     syncState({ lastSubtab: subTab });
@@ -252,7 +236,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       : [...flaggedIds, id];
     setFlaggedIds(next);
     localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(next));
-    syncFeedback(id, { flagged: next.includes(id) });
+    syncFeedback({ cardId: id, flagged: next.includes(id) });
   };
 
   const toggleLiked = (id: string, e: React.MouseEvent) => {
@@ -260,7 +244,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     const next = likedIds.includes(id) ? likedIds.filter((item) => item !== id) : [...likedIds, id];
     setLikedIds(next);
     localStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(next));
-    syncFeedback(id, { liked: next.includes(id) });
+    syncFeedback({ cardId: id, liked: next.includes(id) });
   };
 
   const toggleComment = (id: string, e: React.MouseEvent) => {
@@ -274,7 +258,7 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     else delete next[id];
     setComments(next);
     localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(next));
-    syncFeedback(id, { comment: text });
+    syncFeedback({ cardId: id, comment: text });
   };
 
   const buildQBankVisibleText = (card: QuestionBankClue, isRevealed: boolean, mode: string) => {
