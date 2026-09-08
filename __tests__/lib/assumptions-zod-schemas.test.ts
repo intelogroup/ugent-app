@@ -60,7 +60,7 @@ describe('assumption: Zod schemas enforce enrichment contract', () => {
     const data = validIntelligence();
     delete (data as any).nextBestStep;
     delete (data as any).tableData;
-    delete (data.clinicalContext).age;
+    delete (data.clinicalContext as any).age;
     expect(() => ExtractedIntelligenceSchema.parse(data)).not.toThrow();
   });
 });

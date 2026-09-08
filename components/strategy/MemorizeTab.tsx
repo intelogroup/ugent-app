@@ -10,8 +10,10 @@ import {
   BookOpenIcon,
   FlagIcon,
   ChatBubbleLeftIcon,
+  HeartIcon,
+  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
-import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon as CheckCircleIconSolid, CheckIcon, HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import CardCarousel from './CardCarousel';
 
 type QuestionBankClue = {
@@ -52,6 +54,7 @@ const FLASHCARD_STORAGE_KEY = 'ugent-flashcards-mastered';
 const LEGACY_MASTERY_STORAGE_KEY = 'ugent-memorize-mastered';
 const FLAG_STORAGE_KEY = 'ugent-flashcards-flagged';
 const COMMENT_STORAGE_KEY = 'ugent-flashcards-comments';
+const LIKED_STORAGE_KEY = 'ugent-flashcards-liked';
 
 function CommentBox({
   id,
@@ -137,14 +140,17 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     }
   };
 
-  // Per-card user feedback: flag + comment, persisted to localStorage
+  // Per-card user feedback: flag + comment + liked, persisted to localStorage
   const [flaggedIds, setFlaggedIds] = useState<string[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
+  const [likedIds, setLikedIds] = useState<string[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedFlags = localStorage.getItem(FLAG_STORAGE_KEY);
     const savedComments = localStorage.getItem(COMMENT_STORAGE_KEY);
+    const savedLiked = localStorage.getItem(LIKED_STORAGE_KEY);
     try {
       if (savedFlags) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -152,6 +158,10 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
       }
       if (savedComments) {
         setComments(JSON.parse(savedComments));
+      }
+      if (savedLiked) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLikedIds(JSON.parse(savedLiked));
       }
     } catch (e) {
       console.error(e);
@@ -167,15 +177,67 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
     localStorage.setItem(FLAG_STORAGE_KEY, JSON.stringify(next));
   };
 
+  const toggleLiked = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = likedIds.includes(id) ? likedIds.filter((item) => item !== id) : [...likedIds, id];
+    setLikedIds(next);
+    localStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(next));
+  };
+
   const toggleComment = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCommentOpen((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const saveComment = (id: string, text: string) => {
-    const next = { ...comments, [id]: text };
+    const next = { ...comments };
+    if (text) next[id] = text;
+    else delete next[id];
     setComments(next);
     localStorage.setItem(COMMENT_STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const buildQBankVisibleText = (card: QuestionBankClue, isRevealed: boolean, mode: string) => {
+    if (!isRevealed) {
+      if (mode === 'clues-first') return `Clinical Presentation:\n${card.clues.slice(0, 3).map((c) => `• ${c}`).join('\n')}`;
+      return `USMLE Target Topic: ${card.diseaseName}`;
+    }
+    const header = `Diagnosis: ${card.diseaseName}`;
+    if (mode === 'clues-first') {
+      const traps = (card.discriminatorDetails ?? []).slice(0, 2).map((d) => `${d.distractor}${d.ruleOutFact ? ` — ${d.ruleOutFact}` : ''}`).join('\n');
+      return traps ? `${header}\n\nDiscriminators & Traps:\n${traps}` : header;
+    }
+    const clues = card.clues.slice(0, 2).map((c) => `• ${c}`).join('\n');
+    const trap = (card.discriminatorDetails ?? [])[0]?.distractor ?? '';
+    return `${header}\n\nPresentation Clues:\n${clues}${trap ? `\n\nTraps: ${trap}` : ''}`;
+  };
+
+  const buildConceptVisibleText = (pair: Pair & { category: string }, isRevealed: boolean) => {
+    const front = `${pair.a} vs ${pair.b}${pair.c ? ` vs ${pair.c}` : ''}`;
+    if (!isRevealed) return front;
+    const parts = [`${front}`, `\nDiagnostic Contrast: ${pair.test}`, `\nHow to Tell Apart: ${pair.discriminator}`];
+    if (pair.examples?.length) parts.push(`\nKey Examples: ${pair.examples.join(', ')}`);
+    if (pair.disorders?.length) parts.push(`\nSyndromes: ${pair.disorders.map((d) => d.name).join(', ')}`);
+    return parts.join('\n');
+  };
+
+  const copyVisible = async (id: string, text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
   };
 
   const toggleReveal = (id: string) => {
@@ -558,11 +620,29 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                       <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
                       {isRevealed ? 'Hide details' : 'Click to flip'}
                     </span>
-                    {isMastered && (
-                      <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
-                        <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
-                      </span>
-                    )}
+                    <span className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => copyVisible(card.id, buildQBankVisibleText(card, isRevealed, cardMode), e)}
+                        className={`p-1 rounded hover:bg-neutral-100 transition-colors ${copiedId === card.id ? 'text-emerald-600' : 'text-neutral-400 hover:text-neutral-600'}`}
+                        title={copiedId === card.id ? 'Copied!' : 'Copy visible card text'}
+                        aria-label="Copy visible card text"
+                      >
+                        {copiedId === card.id ? <CheckIcon className="w-4 h-4" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={(e) => toggleLiked(card.id, e)}
+                        className={`p-1 rounded hover:bg-pink-50 transition-colors ${likedIds.includes(card.id) ? 'text-pink-600' : 'text-neutral-300 hover:text-pink-600'}`}
+                        title={likedIds.includes(card.id) ? 'Unlike' : 'Like'}
+                        aria-label={likedIds.includes(card.id) ? 'Unlike' : 'Like'}
+                      >
+                        {likedIds.includes(card.id) ? <HeartIconSolid className="w-4 h-4" /> : <HeartIcon className="w-4 h-4" />}
+                      </button>
+                      {isMastered && (
+                        <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
+                          <CheckIcon className="w-3 h-3 text-emerald-600" /> Mastered
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -776,11 +856,29 @@ export default function FlashcardsTab({ geneticsPairs, questionBankClues }: Prop
                       <EyeIcon className="w-3.5 h-3.5 text-neutral-300" />
                       {isRevealed ? 'Hide details' : 'Click to expand details'}
                     </span>
-                    {isMastered && (
-                      <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
-                        <CheckIcon className="w-3 h-3" /> Mastered
-                      </span>
-                    )}
+                    <span className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => copyVisible(pair.id, buildConceptVisibleText(pair, isRevealed), e)}
+                        className={`p-1 rounded hover:bg-neutral-100 transition-colors ${copiedId === pair.id ? 'text-emerald-600' : 'text-neutral-400 hover:text-neutral-600'}`}
+                        title={copiedId === pair.id ? 'Copied!' : 'Copy visible card text'}
+                        aria-label="Copy visible card text"
+                      >
+                        {copiedId === pair.id ? <CheckIcon className="w-4 h-4" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={(e) => toggleLiked(pair.id, e)}
+                        className={`p-1 rounded hover:bg-pink-50 transition-colors ${likedIds.includes(pair.id) ? 'text-pink-600' : 'text-neutral-300 hover:text-pink-600'}`}
+                        title={likedIds.includes(pair.id) ? 'Unlike' : 'Like'}
+                        aria-label={likedIds.includes(pair.id) ? 'Unlike' : 'Like'}
+                      >
+                        {likedIds.includes(pair.id) ? <HeartIconSolid className="w-4 h-4" /> : <HeartIcon className="w-4 h-4" />}
+                      </button>
+                      {isMastered && (
+                        <span className="text-emerald-600 font-semibold flex items-center gap-0.5 text-[10px]">
+                          <CheckIcon className="w-3 h-3" /> Mastered
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
