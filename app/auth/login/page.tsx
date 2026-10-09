@@ -151,6 +151,12 @@ function LoginForm() {
               </div>
             </div>
 
+            <div className="text-right -mt-2">
+              <Link href="/auth/forgot-password" className="text-xs text-cyan-400 font-semibold hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+
             {error && (
               <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3">
                 {error}
