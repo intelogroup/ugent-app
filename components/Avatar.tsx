@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useAvatar } from '@/lib/avatar';
 import type { AvatarUser } from '@/lib/avatar';
 
@@ -15,6 +16,9 @@ const SIZE_CLASS = {
   lg: 'w-16 h-16',
 } as const;
 
+// Matches SIZE_CLASS above (w-8=32, w-10=40, w-16=64) for next/image dimensions.
+const SIZE_PX = { sm: 32, md: 40, lg: 64 } as const;
+
 export default function Avatar({ user, size = 'md', className = '' }: AvatarProps) {
   const { resolved } = useAvatar(user);
 
@@ -22,9 +26,14 @@ export default function Avatar({ user, size = 'md', className = '' }: AvatarProp
     <div
       className={`${SIZE_CLASS[size]} rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 ${className}`}
     >
-      <img
+      {/* unoptimized: src is a dynamic remote URL or a data-URI initials fallback,
+          and no remotePatterns are configured in next.config */}
+      <Image
         src={resolved.src}
         alt={resolved.alt}
+        width={SIZE_PX[size]}
+        height={SIZE_PX[size]}
+        unoptimized
         className="w-full h-full object-cover"
       />
     </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { TrophyIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { removeStudyBuddy, type LeaderboardRow } from '@/lib/leaderboard';
 
@@ -63,9 +64,14 @@ export default function LeaderboardTable({ rows, onChanged }: LeaderboardTablePr
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
+                    {/* unoptimized: avatarSrc is a dynamic remote URL or a data-URI
+                        initials fallback, no remotePatterns in next.config */}
+                    <Image
                       src={row.avatarSrc}
                       alt={row.avatarAlt}
+                      width={36}
+                      height={36}
+                      unoptimized
                       className="w-9 h-9 rounded-full object-cover shrink-0"
                     />
                     <div className="min-w-0">

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { XMarkIcon, PlayIcon, MicrophoneIcon } from '@heroicons/react/24/outline';
 import { useCleaAgent } from '@/lib/clea-agent-context';
@@ -1004,7 +1005,7 @@ export default function FloatingAvatar() {
         style={{ left: thumbPos.x, top: thumbPos.y }}
         className="fixed z-50 hidden h-16 w-16 cursor-grab touch-none select-none overflow-hidden rounded-full border-2 border-white shadow-lg transition hover:scale-105 active:cursor-grabbing lg:block"
       >
-        <img src="/clea1-avatar-photo.png" alt="Clea" className="h-full w-full object-cover" draggable={false} />
+        <Image src="/clea1-avatar-photo.png" alt="Clea" width={64} height={64} className="h-full w-full object-cover" draggable={false} />
       </button>
     );
   }
