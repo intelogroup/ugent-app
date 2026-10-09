@@ -12,6 +12,7 @@ const WEIGHT_ORDER = { pathognomonic: 0, classic: 1, common: 2 } as const;
 
 interface Props {
   idx: HubIndex;
+  diseaseParents: Record<string, string>;
   picks: Pick[];
   ranked: Ranked[];
   inPlay: Ranked[];
@@ -33,9 +34,12 @@ function Circled({ id, children }: { id: string; children: React.ReactNode }) {
   );
 }
 
-export default function DxSheet({ idx, picks, ranked, inPlay, next, expanded, labelOf, onExpand, onPick }: Props) {
+export default function DxSheet({ idx, diseaseParents, picks, ranked, inPlay, next, expanded, labelOf, onExpand, onPick }: Props) {
   const present = picks.filter((p) => p.state === 'present');
   const live = new Set(inPlay.map((r) => r.disease));
+  // "a form of X" note when the parent disease is also on the sheet, so a tie reads as umbrella vs subtype, not two equals
+  const onSheet = new Set(ranked.map((r) => r.disease));
+  const formOf = (d: string) => (diseaseParents[d] && onSheet.has(diseaseParents[d]) ? diseaseParents[d] : null);
   const split = inPlay.length >= 2 && inPlay.length <= 3;
   const tops = useMemo(() => leaders(idx, ranked, picks), [idx, ranked, picks]);
   const topNames = useMemo(() => new Set(tops.map((t) => t.disease)), [tops]);
@@ -90,6 +94,7 @@ export default function DxSheet({ idx, picks, ranked, inPlay, next, expanded, la
           {tops.map((t) => (
             <div key={t.disease}>
               <button className={s.verdictName} aria-expanded={expanded === t.disease} onClick={() => onExpand(expanded === t.disease ? null : t.disease)}>{t.disease}</button>
+              {formOf(t.disease) && <p className={s.verdictWhy}>A form of {formOf(t.disease)}.</p>}
               {expanded === t.disease && detailBlock}
               <p className={s.verdictWhy}>Pathognomonic: {t.proof.join(', ')}. Matches {t.matched} of {present.length} findings.</p>
             </div>
@@ -135,6 +140,7 @@ export default function DxSheet({ idx, picks, ranked, inPlay, next, expanded, la
                 <span className={s.rowName}>{r.disease}</span>
                 <span className={s.rowScore}>{r.matched} of {present.length}</span>
               </button>
+              {formOf(r.disease) && <p className={s.formNote}>A form of {formOf(r.disease)}.</p>}
               {deadBy.length > 0 && <p className={s.deadNote}>Usually has {deadBy.join(', ')}, which you marked absent.</p>}
               {open && detailBlock}
             </li>

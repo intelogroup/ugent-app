@@ -104,7 +104,7 @@ export default function HubPage() {
               </div>
 
               <section className={s.dxCol} data-active={tab === 'dx'} aria-label="Diagnoses">
-                <DxSheet idx={idx} picks={picks} ranked={ranked} inPlay={inPlay} next={next} expanded={expanded} labelOf={labelOf} onExpand={setExpanded} onPick={togglePick} />
+                <DxSheet idx={idx} diseaseParents={data!.diseaseParents} picks={picks} ranked={ranked} inPlay={inPlay} next={next} expanded={expanded} labelOf={labelOf} onExpand={setExpanded} onPick={togglePick} />
               </section>
             </div>
           </>
