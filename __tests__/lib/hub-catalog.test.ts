@@ -20,11 +20,11 @@ describe('context findings (course, size, geography)', () => {
   const chronic = f('Course over years', 'course', ['systemic']);
   const withCtx = buildCatalog([...DATA, { disease: 'Cirrhosis', topicType: 'DISEASE', findings: [chronic] }]);
   it('ignore the body region: they describe the case, not a body part', () => {
-    const ids = filterCatalog(withCtx, { region: regionById('pelvis')!, type: 'course' }).map((c) => c.id);
+    const ids = filterCatalog(withCtx, { region: regionById('prostate')!, type: 'course' }).map((c) => c.id);
     expect(ids).toEqual([chronic.id]);
   });
   it('still respect the sector type', () => {
-    expect(filterCatalog(withCtx, { region: regionById('pelvis')!, type: 'lab' }).map((c) => c.id)).not.toContain(chronic.id);
+    expect(filterCatalog(withCtx, { region: regionById('prostate')!, type: 'lab' }).map((c) => c.id)).not.toContain(chronic.id);
   });
 });
 
@@ -34,8 +34,8 @@ describe('catalog', () => {
     expect(cat.find((c) => c.id === fever.id)!.df).toBe(1);
   });
 
-  it('pelvis dot lists PSA and not eye pressure', () => {
-    const ids = filterCatalog(cat, { region: regionById('pelvis')! }).map((c) => c.id);
+  it('prostate dot lists PSA and not eye pressure', () => {
+    const ids = filterCatalog(cat, { region: regionById('prostate')! }).map((c) => c.id);
     expect(ids).toContain(psa.id);
     expect(ids).not.toContain(eyeP.id);
   });
@@ -46,7 +46,7 @@ describe('catalog', () => {
   });
 
   it('search ignores region and sector', () => {
-    const ids = filterCatalog(cat, { region: regionById('pelvis')!, type: 'lab', query: 'pressure' }).map((c) => c.id);
+    const ids = filterCatalog(cat, { region: regionById('prostate')!, type: 'lab', query: 'pressure' }).map((c) => c.id);
     expect(ids).toEqual([eyeP.id]);
   });
 });

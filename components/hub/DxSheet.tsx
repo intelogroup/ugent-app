@@ -2,7 +2,9 @@
 
 import { useMemo } from 'react';
 import { inkEllipse } from '@/lib/hub/ink';
+import { diseasesForRegion } from '@/lib/hub/browse';
 import { differentiators, leaders, type HubIndex } from '@/lib/hub/rank';
+import type { Region } from '@/lib/hub/regions';
 import type { Finding, Pick, Ranked } from '@/lib/hub/types';
 import s from './hub.module.css';
 
@@ -13,6 +15,9 @@ const WEIGHT_ORDER = { pathognomonic: 0, classic: 1, common: 2 } as const;
 interface Props {
   idx: HubIndex;
   diseaseParents: Record<string, string>;
+  /** body dot currently selected; with no findings picked the sheet lists that region's diseases */
+  region: Region | null;
+  yieldByDisease: Record<string, number>;
   picks: Pick[];
   ranked: Ranked[];
   inPlay: Ranked[];
@@ -34,11 +39,15 @@ function Circled({ id, children }: { id: string; children: React.ReactNode }) {
   );
 }
 
-export default function DxSheet({ idx, diseaseParents, picks, ranked, inPlay, next, expanded, labelOf, onExpand, onPick }: Props) {
+export default function DxSheet({ idx, diseaseParents, region, yieldByDisease, picks, ranked, inPlay, next, expanded, labelOf, onExpand, onPick }: Props) {
   const present = picks.filter((p) => p.state === 'present');
   const live = new Set(inPlay.map((r) => r.disease));
   // "a form of X" note when the parent disease is also on the sheet, so a tie reads as umbrella vs subtype, not two equals
-  const onSheet = new Set(ranked.map((r) => r.disease));
+  const browse = useMemo(
+    () => (region && present.length === 0 ? diseasesForRegion(idx, region, yieldByDisease) : []),
+    [idx, region, yieldByDisease, present.length],
+  );
+  const onSheet = new Set(browse.length ? browse.map((b) => b.disease) : ranked.map((r) => r.disease));
   const formOf = (d: string) => (diseaseParents[d] && onSheet.has(diseaseParents[d]) ? diseaseParents[d] : null);
   const split = inPlay.length >= 2 && inPlay.length <= 3;
   const tops = useMemo(() => leaders(idx, ranked, picks), [idx, ranked, picks]);
@@ -80,7 +89,9 @@ export default function DxSheet({ idx, diseaseParents, picks, ranked, inPlay, ne
   return (
     <div className={s.sheet}>
       <h2 className={s.sheetHead}>Differential</h2>
-      {present.length === 0 ? (
+      {present.length === 0 && region ? (
+        <p className={s.summary} aria-live="polite">{browse.length} conditions for {region.label.toLowerCase()}, most tested first. Pick findings to narrow them.</p>
+      ) : present.length === 0 ? (
         <p className={s.empty}>Pick findings from the wheel. The list narrows as you add specific ones. It covers {idx.diseases.size} conditions so far, not the whole of medicine.</p>
       ) : ranked.length === 0 ? (
         <p className={s.empty}>None of the {idx.diseases.size} conditions covered so far has these findings together.</p>
@@ -129,6 +140,21 @@ export default function DxSheet({ idx, diseaseParents, picks, ranked, inPlay, ne
         <p className={s.askNext}>Ask next: <button onClick={() => onPick(next.id)}>{next.label}</button></p>
       )}
 
+
+      {browse.length > 0 && (
+        <ul className={s.rows}>
+          {browse.map((b) => (
+            <li key={b.disease} className={s.row} data-live="true">
+              <button className={s.rowBtn} aria-expanded={expanded === b.disease} onClick={() => onExpand(expanded === b.disease ? null : b.disease)}>
+                <span className={s.rowName}>{b.disease}</span>
+                {b.yield > 0 && <span className={s.rowScore} title="Questions about this in the bank">{b.yield} q</span>}
+              </button>
+              {formOf(b.disease) && <p className={s.formNote}>A form of {formOf(b.disease)}.</p>}
+              {expanded === b.disease && detailBlock}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <ul className={s.rows}>
         {rows.map((r) => {

@@ -7,6 +7,7 @@ export interface CatalogEntry {
   label: string;
   type: FindingType;
   systems: string[];
+  sites: string[];
   /** number of conditions that have this finding directly */
   df: number;
 }
@@ -16,9 +17,10 @@ export function buildCatalog(data: DiseaseFindings[]): CatalogEntry[] {
   for (const d of data) {
     for (const f of d.findings) {
       const e = m.get(f.id);
-      if (!e) { m.set(f.id, { id: f.id, label: f.label, type: f.type, systems: [...f.systems], df: 1 }); continue; }
+      if (!e) { m.set(f.id, { id: f.id, label: f.label, type: f.type, systems: [...f.systems], sites: [...(f.sites ?? [])], df: 1 }); continue; }
       e.df++;
       for (const s of f.systems) if (!e.systems.includes(s)) e.systems.push(s);
+      for (const s of f.sites ?? []) if (!e.sites.includes(s)) e.sites.push(s);
     }
   }
   return [...m.values()];
@@ -35,6 +37,6 @@ export function filterCatalog(catalog: CatalogEntry[], { region, type, query }: 
   const q = query?.trim().toLowerCase();
   const hit = q
     ? catalog.filter((c) => c.label.toLowerCase().includes(q))
-    : catalog.filter((c) => (!type || c.type === type) && (!region || isContextType(c.type) || findingInRegion(c.systems, region)));
+    : catalog.filter((c) => (!type || c.type === type) && (!region || isContextType(c.type) || findingInRegion(c, region)));
   return hit.sort((a, b) => b.df - a.df || a.label.localeCompare(b.label));
 }

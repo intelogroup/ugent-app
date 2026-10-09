@@ -10,7 +10,7 @@ import s from '@/components/hub/hub.module.css';
 import type { HubPayload } from '@/app/api/hub/route';
 import { buildCatalog, filterCatalog } from '@/lib/hub/catalog';
 import { buildIndex, nextBestFinding, rank, remaining } from '@/lib/hub/rank';
-import { regionById, type BodyView } from '@/lib/hub/regions';
+import { disabledFor, regionById, type Sex } from '@/lib/hub/regions';
 import type { FindingType, Pick } from '@/lib/hub/types';
 
 const EMPTY_COUNTS: Record<FindingType, number> = { symptom: 0, sign: 0, lab: 0, imaging: 0, path: 0, course: 0, size: 0, geography: 0 };
@@ -18,7 +18,7 @@ const EMPTY_COUNTS: Record<FindingType, number> = { symptom: 0, sign: 0, lab: 0,
 export default function HubPage() {
   const [data, setData] = useState<HubPayload | null>(null);
   const [error, setError] = useState(false);
-  const [view, setView] = useState<BodyView>('front');
+  const [sex, setSex] = useState<Sex>('male');
   const [regionId, setRegionId] = useState<string | null>(null);
   const [sector, setSector] = useState<FindingType>('symptom');
   const [query, setQuery] = useState('');
@@ -62,6 +62,12 @@ export default function HubPage() {
     });
   }, []);
 
+  // a region only the other body has (cervix on a male) is dropped, not left selected on a disabled dot
+  const switchSex = (next: Sex) => {
+    setSex(next);
+    if (region && disabledFor(region, next)) setRegionId(null);
+  };
+
   const labelOf = useCallback((id: string) => labels.get(id) ?? id, [labels]);
   const heading = query.trim()
     ? `${entries.length} matching, across everything`
@@ -74,8 +80,8 @@ export default function HubPage() {
           <h1 className={s.title}>Body hub</h1>
           <p className={s.note}>Pick findings, mark what is absent, and watch the differential narrow.</p>
           <div className={s.topActions}>
-            <button className={s.link} aria-pressed={view === 'front'} onClick={() => setView('front')}>Front</button>
-            <button className={s.link} aria-pressed={view === 'back'} onClick={() => setView('back')}>Back</button>
+            <button className={s.link} aria-pressed={sex === 'male'} onClick={() => switchSex('male')}>Male</button>
+            <button className={s.link} aria-pressed={sex === 'female'} onClick={() => switchSex('female')}>Female</button>
             <button className={s.link} disabled={picks.length === 0} onClick={() => { setPicks([]); setExpanded(null); }}>Clear case</button>
           </div>
         </div>
@@ -97,14 +103,15 @@ export default function HubPage() {
               </section>
 
               <div className={s.bodyCol}>
-                <BodyAvatar view={view} region={regionId} onRegion={(id) => { setRegionId(id); setQuery(''); }} />
+                <BodyAvatar sex={sex} region={regionId} onRegion={(id) => { setRegionId(id); setQuery(''); }} />
                 <button className={s.whole} aria-pressed={regionId === 'wholebody'} onClick={() => { setRegionId(regionId === 'wholebody' ? null : 'wholebody'); setQuery(''); }}>
                   Whole body
                 </button>
+                <p className={s.credit}>Body art: <a href="https://www.ebi.ac.uk/gxa/home" target="_blank" rel="noreferrer">EMBL-EBI Expression Atlas</a>, CC BY 4.0</p>
               </div>
 
               <section className={s.dxCol} data-active={tab === 'dx'} aria-label="Diagnoses">
-                <DxSheet idx={idx} diseaseParents={data!.diseaseParents} picks={picks} ranked={ranked} inPlay={inPlay} next={next} expanded={expanded} labelOf={labelOf} onExpand={setExpanded} onPick={togglePick} />
+                <DxSheet idx={idx} diseaseParents={data!.diseaseParents} region={region} yieldByDisease={data!.yield} picks={picks} ranked={ranked} inPlay={inPlay} next={next} expanded={expanded} labelOf={labelOf} onExpand={setExpanded} onPick={togglePick} />
               </section>
             </div>
           </>

@@ -52,25 +52,34 @@
 .findingsCol[data-active='false'], .dxCol[data-active='false'] { display: none; }
 @media (min-width: 1024px) {
   .tabs { display: none; }
-  .grid { grid-template-columns: minmax(300px, 340px) minmax(220px, 1fr) minmax(300px, 360px); align-items: start; }
+  .grid { grid-template-columns: minmax(280px, 320px) minmax(300px, 1.3fr) minmax(280px, 340px); align-items: start; }
   .findingsCol[data-active='false'], .dxCol[data-active='false'] { display: block; }
 }
 .bodyCol { order: -1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 @media (min-width: 1024px) { .bodyCol { order: 0; } }
 
 /* body */
-.bodySvg { width: min(100%, 300px); max-height: 56vh; height: auto; overflow: visible; }
-@media (min-width: 1024px) { .bodySvg { max-height: calc(100vh - 14rem); } }
+.bodySvg { width: min(100%, 440px); max-height: 60vh; height: auto; overflow: visible; }
+@media (min-width: 1024px) { .bodySvg { max-height: calc(100vh - 12rem); } }
 .stroke { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; }
+.bodyLine { fill: none; stroke: var(--ink); stroke-width: 0.45; stroke-linecap: round; stroke-linejoin: round; }
+.organ { fill: rgba(27, 42, 140, 0.07); stroke: var(--ink); stroke-width: 0.22; stroke-linejoin: round; opacity: 0.8; transition: fill 160ms, opacity 160ms; }
+.organLine { fill: none; stroke: var(--ink); stroke-width: 0.3; stroke-linecap: round; opacity: 0.55; }
+.organ[data-lit='true'], .organLine[data-lit='true'] { fill: rgba(27, 42, 140, 0.26); opacity: 1; }
+.organLine[data-lit='true'] { stroke-width: 0.6; }
 .dot { cursor: pointer; }
 .dot:focus-visible { outline: none; }
+.dot[data-disabled='true'] { opacity: 0.18; pointer-events: none; }
 .dotCore { fill: var(--ink); transition: r 160ms var(--ease); }
-.dot:hover .dotCore, .dot:focus-visible .dotCore { r: 8; }
-.dot:focus-visible .dotHit { stroke: var(--ink); stroke-width: 1.5; }
+.dot:not([data-disabled='true']):hover .dotCore, .dot:focus-visible .dotCore { r: 2.2; }
+.dot:focus-visible .dotHit { stroke: var(--ink); stroke-width: 0.4; }
 .dotHit { fill: transparent; stroke: transparent; }
-.dotLabel { font-family: var(--hand); font-size: 22px; fill: var(--ink); opacity: 0; transition: opacity 160ms; pointer-events: none; }
+.dotLabel { font-family: var(--hand); font-size: 5.4px; fill: var(--ink); opacity: 0; transition: opacity 160ms; pointer-events: none; paint-order: stroke; stroke: var(--paper); stroke-width: 1.2px; stroke-linejoin: round; }
 .dot:hover .dotLabel, .dot:focus-visible .dotLabel, .dot[aria-pressed='true'] .dotLabel { opacity: 1; }
-.ring { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; }
+.ring { fill: none; stroke: var(--ink); stroke-width: 0.5; stroke-linecap: round; }
+.sexToggle { display: inline-flex; gap: 0.25rem; }
+.credit { font-size: 0.6875rem; color: var(--ink-2); }
+.credit a { text-decoration: underline; text-underline-offset: 2px; }
 .draw { stroke-dasharray: 1; stroke-dashoffset: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .draw { animation: draw 520ms var(--ease) both; }
