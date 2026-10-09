@@ -471,7 +471,7 @@ export default function CleaChat() {
       ) : (
         <div className="relative flex items-end justify-end">
           {micActive && (
-            <p className="absolute bottom-1 right-16 whitespace-nowrap rounded-full border border-[#D5DEE7] bg-white px-3 py-1.5 text-xs font-semibold text-[#111111] shadow-[0_8px_24px_rgba(15,23,42,0.12)]" aria-live="polite">
+            <p className="absolute bottom-1 right-16 whitespace-nowrap rounded-full border border-[#dedede] bg-white px-3 py-1.5 text-xs font-semibold text-[#111111] shadow-[0_8px_24px_rgba(28,28,28,0.12)]" aria-live="polite">
               Listening...
             </p>
           )}

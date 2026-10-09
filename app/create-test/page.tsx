@@ -50,7 +50,7 @@ export default function CreateTest() {
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-[#0E7490]/25 border-t-[#0E7490]" />
+            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-[#111111]/25 border-t-[#111111]" />
             <p className="text-sm text-neutral-500">Loading question bank</p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function CreateTest() {
                   <h2 className="text-base font-semibold tracking-tight text-neutral-900">Subject</h2>
                   <p className="mt-0.5 text-xs text-neutral-500">Discipline or foundational science</p>
                 </div>
-                {selectedSubjects.length > 0 && <button type="button" onClick={() => setSelectedSubjects([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#0E7490] hover:bg-white/70">Clear</button>}
+                {selectedSubjects.length > 0 && <button type="button" onClick={() => setSelectedSubjects([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#111111] hover:bg-white/70">Clear</button>}
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {filters.subjects.map((subject) => {
@@ -91,10 +91,10 @@ export default function CreateTest() {
                         type="button"
                         onClick={() => toggleSubject(subject)}
                         className={`pressable group flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold ${
-                          isSelected ? 'border-[#0E7490]/40 bg-cyan-50/80 text-[#155E75] shadow-[0_5px_18px_rgba(14,116,144,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
+                          isSelected ? 'border-[#111111]/40 bg-cyan-50/80 text-[#000000] shadow-[0_5px_18px_rgba(17,17,17,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
                         }`}
                       >
-                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#0E7490] bg-[#0E7490]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
+                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#111111] bg-[#111111]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
                             {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
                           </span>
                           <span>{subject}</span>
@@ -110,7 +110,7 @@ export default function CreateTest() {
                   <h2 className="text-base font-semibold tracking-tight text-neutral-900">Organ system</h2>
                   <p className="mt-0.5 text-xs text-neutral-500">Clinical system focus</p>
                 </div>
-                {selectedSystems.length > 0 && <button type="button" onClick={() => setSelectedSystems([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#0E7490] hover:bg-white/70">Clear</button>}
+                {selectedSystems.length > 0 && <button type="button" onClick={() => setSelectedSystems([])} className="pressable rounded-md px-2 py-1 text-xs font-semibold text-[#111111] hover:bg-white/70">Clear</button>}
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {filters.systems.map((system) => {
@@ -121,10 +121,10 @@ export default function CreateTest() {
                         type="button"
                         onClick={() => toggleSystem(system)}
                         className={`pressable group flex min-h-11 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold ${
-                          isSelected ? 'border-[#0E7490]/40 bg-cyan-50/80 text-[#155E75] shadow-[0_5px_18px_rgba(14,116,144,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
+                          isSelected ? 'border-[#111111]/40 bg-cyan-50/80 text-[#000000] shadow-[0_5px_18px_rgba(17,17,17,0.08)]' : 'border-white/80 bg-white/45 text-neutral-700 hover:border-neutral-200 hover:bg-white/80'
                         }`}
                       >
-                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#0E7490] bg-[#0E7490]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
+                          <span className={`grid h-4 w-4 flex-shrink-0 place-items-center rounded-[5px] border ${isSelected ? 'border-[#111111] bg-[#111111]' : 'border-neutral-300 bg-white/60 group-hover:border-neutral-400'}`}>
                             {isSelected && <CheckIcon className="w-3 h-3 text-white" />}
                           </span>
                           <span>{system}</span>

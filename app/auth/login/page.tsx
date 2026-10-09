@@ -100,7 +100,7 @@ function LoginForm() {
             className="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-slate-900 bg-white hover:bg-slate-100 shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2.5"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47a5.54 5.54 0 0 1-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.66z" />
+              <path fill="#9b9b9b" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47a5.54 5.54 0 0 1-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.66z" />
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.93-2.9l-3.87-3c-1.08.72-2.46 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.94H1.28v3.1A12 12 0 0 0 12 24z" />
               <path fill="#FBBC05" d="M5.29 14.32A7.2 7.2 0 0 1 4.91 12c0-.8.14-1.58.38-2.32V6.58H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.42z" />
               <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.94 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.28 6.58l4.01 3.1C6.23 6.86 8.88 4.75 12 4.75z" />

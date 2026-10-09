@@ -212,7 +212,7 @@ export default function Home() {
                         <stop offset="95%" stopColor="#111111" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#EEF2F6" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f2f2f2" vertical={false} />
                     <XAxis dataKey="date" stroke="#9A9893" style={{ fontSize: '11px' }} tickLine={false} axisLine={false} />
                     <YAxis stroke="#9A9893" style={{ fontSize: '11px' }} tickLine={false} axisLine={false} domain={[0, 100]} />
                     <Tooltip
@@ -221,7 +221,7 @@ export default function Home() {
                         border: '1px solid #E7E5E1',
                         borderRadius: '8px',
                         fontSize: '12px',
-                        boxShadow: '0 8px 24px rgba(15,23,42, 0.08)',
+                        boxShadow: '0 8px 24px rgba(28,28,28, 0.08)',
                       }}
                     />
                     <Area type="monotone" dataKey="score" stroke="#111111" strokeWidth={2.25} fill="url(#scoreGradient)" />

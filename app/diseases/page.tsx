@@ -76,7 +76,7 @@ export default function DiseaseReferencePage() {
       <DashboardLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-[#0E7490]/25 border-t-[#0E7490]" />
+            <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-[#111111]/25 border-t-[#111111]" />
             <p className="text-sm text-neutral-500">Loading disease reference</p>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function DiseaseReferencePage() {
               placeholder="Search diseases, symptoms, mechanisms, or discriminators"
               value={search}
               onChange={event => updateSearch(event.target.value)}
-              className="h-11 w-full rounded-xl border border-white/80 bg-white/55 pl-9 pr-10 text-sm text-neutral-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 placeholder:text-neutral-400 focus:border-[#0E7490]/30 focus:bg-white/85 focus:shadow-[0_0_0_3px_rgba(14,116,144,0.08)]"
+              className="h-11 w-full rounded-xl border border-white/80 bg-white/55 pl-9 pr-10 text-sm text-neutral-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 placeholder:text-neutral-400 focus:border-[#111111]/30 focus:bg-white/85 focus:shadow-[0_0_0_3px_rgba(17,17,17,0.08)]"
             />
             {search && (
               <button
@@ -165,7 +165,7 @@ export default function DiseaseReferencePage() {
                     className={`pressable flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left ${isActive ? 'bg-white/85 text-neutral-900 shadow-sm' : 'text-neutral-600 hover:bg-white/50 hover:text-neutral-900'}`}
                   >
                     <span className="min-w-0 truncate text-xs font-semibold">{system.system}</span>
-                    <span className={`text-[11px] font-semibold ${isActive ? 'text-[#0E7490]' : 'text-neutral-400'}`}>{system.diseases.length}</span>
+                    <span className={`text-[11px] font-semibold ${isActive ? 'text-[#111111]' : 'text-neutral-400'}`}>{system.diseases.length}</span>
                   </button>
                 );
               })}
@@ -182,7 +182,7 @@ export default function DiseaseReferencePage() {
                       {activeGroup.diseases.length} {normalizedSearch ? 'matching ' : ''}topics · {activeQuestionCount.toLocaleString()} questions
                     </p>
                   </div>
-                  {normalizedSearch && <span className="whitespace-nowrap text-xs font-semibold text-[#0E7490]">{matchingDiseases} total matches</span>}
+                  {normalizedSearch && <span className="whitespace-nowrap text-xs font-semibold text-[#111111]">{matchingDiseases} total matches</span>}
                 </div>
 
                 <div className="divide-y divide-white/80">
@@ -200,7 +200,7 @@ export default function DiseaseReferencePage() {
                           <ChevronRightIcon className={`h-3.5 w-3.5 flex-shrink-0 text-neutral-400 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`} />
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-800">{disease.diseaseName}</span>
                           {disease.topicType !== 'DISEASE' && (
-                            <span className="hidden rounded-md bg-cyan-50/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0E7490] sm:block">{disease.topicType}</span>
+                            <span className="hidden rounded-md bg-cyan-50/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#111111] sm:block">{disease.topicType}</span>
                           )}
                           <span className="min-w-7 rounded-md bg-white/65 px-1.5 py-0.5 text-center text-[11px] font-semibold text-neutral-400">{disease.questionCount}×</span>
                         </button>

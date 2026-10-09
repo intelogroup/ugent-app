@@ -5,7 +5,7 @@ export interface AvatarUser {
   profilePictureUrl?: string | null;
 }
 
-const AVATAR_COLORS = ['#2563EB', '#DC2626', '#0EA5E9', '#7C3AED', '#059669', '#DB2777', '#0891B2', '#B45309'];
+const AVATAR_COLORS = ['#111111', '#DC2626', '#6B6B6B', '#444444', '#059669', '#C2321F', '#222222', '#B45309'];
 
 export function getAvatarDisplayName(user: AvatarUser | null | undefined): string {
   if (!user) return 'You';

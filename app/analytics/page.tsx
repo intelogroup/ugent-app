@@ -68,7 +68,7 @@ export default function Analytics() {
           </div>
           <div className="border-l border-white/80 px-3 py-4 sm:px-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Accuracy</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-[#0E7490]">{averageScore}%</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-[#111111]">{averageScore}%</p>
             <p className="mt-0.5 text-xs text-neutral-500">{totalCorrect.toLocaleString()} correct</p>
           </div>
           <div className="border-l border-white/80 px-3 py-4 sm:px-5">
@@ -102,11 +102,11 @@ export default function Analytics() {
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
-                    <CartesianGrid stroke="rgba(148,163,184,0.18)" vertical={false} />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11 }} />
-                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11 }} />
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid rgba(255,255,255,.8)', background: 'rgba(255,255,255,.88)', boxShadow: '0 12px 30px rgba(15,23,42,.10)', fontSize: 12 }} formatter={(value) => [`${value}%`, 'Score']} />
-                    <Line type="monotone" dataKey="score" stroke="#0E7490" strokeWidth={2.5} dot={{ r: 3, fill: '#0E7490', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#0E7490', stroke: '#fff', strokeWidth: 2 }} />
+                    <CartesianGrid stroke="rgba(166,166,166,0.18)" vertical={false} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#9A9893', fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#9A9893', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid rgba(255,255,255,.8)', background: 'rgba(255,255,255,.88)', boxShadow: '0 12px 30px rgba(28,28,28,.10)', fontSize: 12 }} formatter={(value) => [`${value}%`, 'Score']} />
+                    <Line type="monotone" dataKey="score" stroke="#111111" strokeWidth={2.5} dot={{ r: 3, fill: '#111111', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#111111', stroke: '#fff', strokeWidth: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -132,7 +132,7 @@ export default function Analytics() {
                       <span className="text-sm font-bold text-neutral-900">{item.accuracy}%</span>
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-neutral-200/70">
-                      <div className="h-full rounded-full bg-[#0E7490]" style={{ width: `${item.accuracy}%` }} />
+                      <div className="h-full rounded-full bg-[#111111]" style={{ width: `${item.accuracy}%` }} />
                     </div>
                   </div>
                 ))}

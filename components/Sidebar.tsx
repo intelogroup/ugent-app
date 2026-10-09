@@ -81,13 +81,13 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
       <div className="flex items-center justify-between pb-5">
         <Link href="/dashboard" className={`flex items-center gap-2.5 ${collapsed ? 'mx-auto' : ''}`} aria-label="Ugent dashboard">
           <UgentLogo className="h-7 w-7" />
-          {!collapsed && <span className="text-[28px] font-extrabold leading-none tracking-[-0.03em] text-[#111318]">ugent</span>}
+          {!collapsed && <span className="text-[28px] font-extrabold leading-none tracking-[-0.03em] text-[#141414]">ugent</span>}
         </Link>
         <button
           type="button"
           aria-label={mobileOpen ? 'Close navigation' : collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           onClick={() => (mobileOpen ? onMobileClose() : onCollapsedChange(!collapsed))}
-          className={`grid h-7 w-7 place-items-center rounded-md border border-[#E0E3EA] bg-white text-[#8B91A1] shadow-[0_1px_2px_rgba(15,23,42,0.03)] ${collapsed ? 'mx-auto' : ''}`}
+          className={`grid h-7 w-7 place-items-center rounded-md border border-[#e5e5e5] bg-white text-[#969696] shadow-[0_1px_2px_rgba(28,28,28,0.03)] ${collapsed ? 'mx-auto' : ''}`}
         >
           {mobileOpen ? <ChevronLeftIcon className="h-3.5 w-3.5" /> : collapsed ? <ChevronRightIcon className="h-3.5 w-3.5" /> : <CommandLineIcon className="h-3.5 w-3.5" />}
         </button>
@@ -101,7 +101,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           placeholder="Search"
           readOnly
           onClick={onSearchOpen}
-          className="h-10 w-full rounded-lg border border-[#E4E6EC] bg-white px-9 text-sm font-medium text-[#20232B] outline-none transition placeholder:text-[#8F96A6] focus:border-[#C9CEDA] focus:ring-2 focus:ring-[#111111]/10"
+          className="h-10 w-full rounded-lg border border-[#e8e8e8] bg-white px-9 text-sm font-medium text-[#262626] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#d2d2d2] focus:ring-2 focus:ring-[#111111]/10"
         />
         <span className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           <kbd className="rounded-md border border-[#E7E5E1] bg-[#F8F7F5] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9A9893]">
@@ -125,7 +125,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${collapsed ? 'justify-center px-0' : ''} ${
                   active
-                    ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                    ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
                     : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
                 }`}
               >
@@ -148,7 +148,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                   aria-current={active ? 'page' : undefined}
                   className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
                     active
-                      ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                      ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
                       : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
                   }`}
                 >
@@ -160,13 +160,13 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           </div>
         </div>
 
-        <div className={`mt-7 border-t border-[#E6E8EF] pt-4 ${collapsed ? 'border-transparent' : ''}`}>
+        <div className={`mt-7 border-t border-[#ebebeb] pt-4 ${collapsed ? 'border-transparent' : ''}`}>
           <Link
             href="/settings"
             aria-current={isActive('/settings') ? 'page' : undefined}
             className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
               isActive('/settings')
-                ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
                 : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
             }`}
           >
@@ -181,7 +181,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className={`flex h-14 w-full items-center gap-3 rounded-xl border border-[#E7E5E1] bg-white px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:bg-[#FCFBFA] ${collapsed ? 'justify-center px-0' : ''}`}
+            className={`flex h-14 w-full items-center gap-3 rounded-xl border border-[#E7E5E1] bg-white px-3 text-left shadow-[0_1px_2px_rgba(28,28,28,0.03)] transition hover:bg-[#FCFBFA] ${collapsed ? 'justify-center px-0' : ''}`}
           >
             <div className="relative">
               <Avatar
@@ -192,10 +192,10 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
             </div>
             {!collapsed && <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold leading-4 text-[#111111]">{user?.email?.split('@')[0] ?? 'Student'}</p>
-              <p className="truncate text-[12px] font-medium leading-4 text-[#7D8492]">{user?.email ?? ''}</p>
+              <p className="truncate text-[12px] font-medium leading-4 text-[#888888]">{user?.email ?? ''}</p>
             </div>}
             {!collapsed && <ChevronUpIcon
-              className={`h-4 w-4 text-[#A0A6B4] transition-transform duration-200 ${
+              className={`h-4 w-4 text-[#aaaaaa] transition-transform duration-200 ${
                 isUserMenuOpen ? 'rotate-180' : ''
               }`}
             />}
