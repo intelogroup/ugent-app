@@ -4,9 +4,9 @@
 .root {
   --paper: #ffffff;
   --sheet: #faf9f7;
-  --ink: #111111;
+  --ink: #11224E;
   --ink-2: #6b6b6b;
-  --wash: rgba(17,17,17, 0.05);
+  --wash: rgba(17,34,78, 0.05);
   --rule: #e7e5e1;
   --red: #c2321f;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -60,9 +60,9 @@
 @media (min-width: 1024px) { .bodySvg { max-height: calc(100vh - 12rem); } }
 .stroke { fill: none; stroke: var(--ink); stroke-linecap: round; stroke-linejoin: round; }
 .bodyLine { fill: none; stroke: var(--ink); stroke-width: 0.45; stroke-linecap: round; stroke-linejoin: round; }
-.organ { fill: rgba(17,17,17, 0.05); stroke: var(--ink); stroke-width: 0.22; stroke-linejoin: round; opacity: 0.8; transition: fill 160ms, opacity 160ms; }
+.organ { fill: rgba(17,34,78, 0.05); stroke: var(--ink); stroke-width: 0.22; stroke-linejoin: round; opacity: 0.8; transition: fill 160ms, opacity 160ms; }
 .organLine { fill: none; stroke: var(--ink); stroke-width: 0.3; stroke-linecap: round; opacity: 0.55; }
-.organ[data-lit='true'], .organLine[data-lit='true'] { fill: rgba(17,17,17, 0.22); opacity: 1; }
+.organ[data-lit='true'], .organLine[data-lit='true'] { fill: rgba(17,34,78, 0.22); opacity: 1; }
 .organLine[data-lit='true'] { stroke-width: 0.6; }
 .dot { cursor: pointer; }
 .dot:focus, .dot:focus-visible { outline: none; }
@@ -89,7 +89,7 @@
 .wheelSvg { width: 100%; height: 100%; display: block; overflow: visible; }
 .sector { fill: transparent; cursor: pointer; transition: fill 160ms; }
 .sector:hover { fill: var(--wash); }
-.sector[aria-pressed='true'] { fill: rgba(17,17,17, 0.10); }
+.sector[aria-pressed='true'] { fill: rgba(17,34,78, 0.10); }
 .sector:focus-visible { outline: none; stroke: var(--ink); stroke-width: 2; }
 .sectorLabel { font-size: 13px; font-weight: 600; fill: var(--ink); pointer-events: none; }
 .sectorCount { font-size: 11px; fill: var(--ink-2); pointer-events: none; }

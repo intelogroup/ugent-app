@@ -113,7 +113,7 @@ export default function Home() {
         <section aria-label="Study actions" className="grid gap-3 md:grid-cols-[1.35fr_1fr_1fr]">
           <Link
             href="/create-test"
-            className="group flex min-h-20 items-center gap-4 rounded-xl bg-[#111111] px-5 py-4 text-white transition-colors hover:bg-[#000000]"
+            className="group flex min-h-20 items-center gap-4 rounded-xl bg-[#11224E] px-5 py-4 text-white transition-colors hover:bg-[#000000]"
           >
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/14">
               <Squares2X2Icon className="h-5 w-5" />
@@ -128,7 +128,7 @@ export default function Home() {
             href="/strategy"
             className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#111111]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#11224E]">
               <DocumentTextIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0">
@@ -141,7 +141,7 @@ export default function Home() {
             href="/curriculum"
             className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#111111]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#11224E]">
               <ChartPieIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0">
@@ -173,7 +173,7 @@ export default function Home() {
               </div>
               <p className="mt-2 text-2xl font-bold text-neutral-900">{blocksCompleted}{totalBlocks > 0 && <span className="ml-1 text-sm font-medium text-neutral-400">/ {totalBlocks}</span>}</p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
-                <div className="h-full rounded-full bg-[#111111]" style={{ width: `${curriculumProgress}%` }} />
+                <div className="h-full rounded-full bg-[#11224E]" style={{ width: `${curriculumProgress}%` }} />
               </div>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function Home() {
               </div>
               {performanceData.length > 0 && (
                 <div className="flex shrink-0 items-center gap-2 text-xs text-neutral-500">
-                  <span className="h-2 w-2 rounded-full bg-[#111111]" />
+                  <span className="h-2 w-2 rounded-full bg-[#11224E]" />
                   Accuracy
                 </div>
               )}
@@ -198,7 +198,7 @@ export default function Home() {
               <div className="flex h-[220px] flex-col items-center justify-center text-center">
                 <p className="text-sm font-medium text-neutral-700">Your performance trend will appear here</p>
                 <p className="mt-1 max-w-sm text-xs leading-5 text-neutral-400">Complete a practice block to establish your first accuracy benchmark.</p>
-                <Link href="/create-test" className="mt-4 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#000000]">
+                <Link href="/create-test" className="mt-4 rounded-lg bg-[#11224E] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#000000]">
                   Create practice block
                 </Link>
               </div>
@@ -208,8 +208,8 @@ export default function Home() {
                   <AreaChart data={performanceData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                     <defs>
                       <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#111111" stopOpacity={0.18} />
-                        <stop offset="95%" stopColor="#111111" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#11224E" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#11224E" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f2f2f2" vertical={false} />
@@ -224,7 +224,7 @@ export default function Home() {
                         boxShadow: '0 8px 24px rgba(28,28,28, 0.08)',
                       }}
                     />
-                    <Area type="monotone" dataKey="score" stroke="#111111" strokeWidth={2.25} fill="url(#scoreGradient)" />
+                    <Area type="monotone" dataKey="score" stroke="#11224E" strokeWidth={2.25} fill="url(#scoreGradient)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -251,7 +251,7 @@ export default function Home() {
                     </div>
                     <p className="mt-1 truncate text-[11px] text-neutral-400">{system.detail}</p>
                     <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100">
-                      <div className="h-full rounded-full bg-[#111111]" style={{ width: `${system.progress}%` }} />
+                      <div className="h-full rounded-full bg-[#11224E]" style={{ width: `${system.progress}%` }} />
                     </div>
                   </div>
                 ))}

@@ -62,7 +62,7 @@ export default function LeaderboardPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`pb-4 border-b-2 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'border-[#111111] text-[#111111] font-semibold'
+                    ? 'border-[#11224E] text-[#11224E] font-semibold'
                     : 'border-transparent text-neutral-600 hover:text-neutral-900'
                 }`}
               >

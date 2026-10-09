@@ -91,7 +91,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       key={item.href}
                       href={item.href}
                       onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-                      className="flex items-center rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-cyan-50 hover:text-[#111111]"
+                      className="flex items-center rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-cyan-50 hover:text-[#11224E]"
                     >
                       {item.name}
                     </Link>

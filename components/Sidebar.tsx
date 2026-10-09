@@ -101,7 +101,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           placeholder="Search"
           readOnly
           onClick={onSearchOpen}
-          className="h-10 w-full rounded-lg border border-[#e8e8e8] bg-white px-9 text-sm font-medium text-[#262626] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#d2d2d2] focus:ring-2 focus:ring-[#111111]/10"
+          className="h-10 w-full rounded-lg border border-[#e8e8e8] bg-white px-9 text-sm font-medium text-[#262626] outline-none transition placeholder:text-[#9b9b9b] focus:border-[#d2d2d2] focus:ring-2 focus:ring-[#11224E]/10"
         />
         <span className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
           <kbd className="rounded-md border border-[#E7E5E1] bg-[#F8F7F5] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9A9893]">
@@ -125,11 +125,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${collapsed ? 'justify-center px-0' : ''} ${
                   active
-                    ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
-                    : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
+                    ? 'border border-[#E7E5E1] bg-white text-[#11224E] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
+                    : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
                 }`}
               >
-                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
+                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
                 {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
               </Link>
             );
@@ -148,11 +148,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                   aria-current={active ? 'page' : undefined}
                   className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
                     active
-                      ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
-                      : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
+                      ? 'border border-[#E7E5E1] bg-white text-[#11224E] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
+                      : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
                   }`}
                 >
-                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
+                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
                   {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
                 </Link>
               );
@@ -166,11 +166,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
             aria-current={isActive('/settings') ? 'page' : undefined}
             className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
               isActive('/settings')
-                ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
-                : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
+                ? 'border border-[#E7E5E1] bg-white text-[#11224E] shadow-[0_1px_2px_rgba(28,28,28,0.04)]'
+                : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
             }`}
           >
-            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
+            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
             {!collapsed && <span className="min-w-0 flex-1 truncate">Settings</span>}
           </Link>
         </div>
@@ -191,7 +191,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#16A34A]" />
             </div>
             {!collapsed && <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold leading-4 text-[#111111]">{user?.email?.split('@')[0] ?? 'Student'}</p>
+              <p className="truncate text-sm font-bold leading-4 text-[#11224E]">{user?.email?.split('@')[0] ?? 'Student'}</p>
               <p className="truncate text-[12px] font-medium leading-4 text-[#888888]">{user?.email ?? ''}</p>
             </div>}
             {!collapsed && <ChevronUpIcon

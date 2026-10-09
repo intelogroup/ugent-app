@@ -2,7 +2,7 @@
   --ink: #242424;
   --muted: #727272;
   --line: #e4e4e4;
-  --cyan: #111111;
+  --cyan: #11224E;
   --cyan-dark: #3a3a3a;
   --ice: #FAF9F7;
   min-height: 100vh;
@@ -11,7 +11,7 @@
   color: var(--ink);
   font-family: var(--font-jakarta), sans-serif;
 }
-.page a:focus-visible { outline: 3px solid rgba(17,17,17,0.28); outline-offset: 4px; }
+.page a:focus-visible { outline: 3px solid rgba(17,34,78,0.28); outline-offset: 4px; }
 
 .header {
   position: relative;
@@ -99,7 +99,7 @@
 .heroFloatCard div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .heroFloatCard small { color: #818181; font-size: 8px; font-weight: 850; letter-spacing: 0.11em; }
 .heroFloatCard strong { color: #393939; font-size: 12px; line-height: 1.15; white-space: nowrap; }
-.floatIcon { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid rgba(17,17,17,0.16); border-radius: 12px; background: rgba(236,236,236,0.62); color: var(--cyan); box-shadow: inset 0 1px 0 rgba(255,255,255,0.78); }
+.floatIcon { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid rgba(17,34,78,0.16); border-radius: 12px; background: rgba(236,236,236,0.62); color: var(--cyan); box-shadow: inset 0 1px 0 rgba(255,255,255,0.78); }
 .floatStatus { margin-left: 6px; padding: 6px 8px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid rgba(74,74,74,0.08); border-radius: 999px; background: rgba(236,236,236,0.58); color: #4a4a4a; font-size: 9px; font-weight: 750; }
 .planFloat { top: 17%; left: -2%; animation: cardDrift 5.5s ease-in-out infinite; }
 .cleaFloat { right: -3%; bottom: 17%; animation: cardDrift 6.2s ease-in-out -2.3s infinite; }
@@ -142,7 +142,7 @@
 .cleaPortrait img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.22); }
 .waveCard { position: absolute; z-index: 3; right: -25px; bottom: 42px; min-width: 245px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; background: rgba(255,255,255,0.92); box-shadow: 0 18px 40px rgba(56,56,56,0.14); color: var(--cyan); }
 .waveform { height: 36px; flex: 1; display: flex; align-items: center; gap: 3px; }
-.waveform i { width: 3px; border-radius: 999px; background: linear-gradient(#757575,#111111); }
+.waveform i { width: 3px; border-radius: 999px; background: linear-gradient(#757575,#11224E); }
 .waveCard span { color: #6B6B6B; font-size: 10px; font-weight: 750; }
 .darkCta { margin-top: 28px; padding: 14px 19px; background: var(--ink); color: white; font-size: 14px; }
 .darkCta:hover { background: #383838; }

@@ -88,7 +88,7 @@ export default function StrategyHub() {
                 onClick={() => setView("graph")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   view === "graph"
-                    ? "bg-white text-[#111111] shadow-xs font-semibold"
+                    ? "bg-white text-[#11224E] shadow-xs font-semibold"
                     : "text-neutral-500 hover:text-neutral-800"
                 }`}
               >
@@ -99,7 +99,7 @@ export default function StrategyHub() {
                 onClick={() => setView("flashcards")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                   view === "flashcards"
-                    ? "bg-white text-[#111111] shadow-xs font-semibold"
+                    ? "bg-white text-[#11224E] shadow-xs font-semibold"
                     : "text-neutral-500 hover:text-neutral-800"
                 }`}
               >

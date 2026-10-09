@@ -43,7 +43,7 @@ export default function Tests() {
           </div>
           <div className="border-l border-white/80 px-3 py-4 sm:px-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Average</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-[#111111]">{avgScore}%</p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-[#11224E]">{avgScore}%</p>
           </div>
           <div className="border-l border-white/80 px-3 py-4 sm:px-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">Questions answered</p>
@@ -87,7 +87,7 @@ export default function Tests() {
                     </div>
                     <div className="flex items-center gap-3 sm:justify-end">
                       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-neutral-200/70">
-                        <div className="h-full rounded-full bg-[#111111]" style={{ width: `${score}%` }} />
+                        <div className="h-full rounded-full bg-[#11224E]" style={{ width: `${score}%` }} />
                       </div>
                       <p className="w-12 text-right text-xl font-bold tracking-tight text-neutral-900">{score}%</p>
                     </div>

@@ -3,9 +3,9 @@
 
 @theme {
   /* Primary: black. Color is reserved for status accents below. */
-  --color-primary-700: #000000;
-  --color-primary-600: #111111;
-  --color-primary-500: #444444;
+  --color-primary-700: #0A1636;
+  --color-primary-600: #11224E;
+  --color-primary-500: #3B4A75;
   --color-primary-100: #EFEDE8;
   --color-primary-50:  #F6F5F2;
 
@@ -18,8 +18,8 @@
   --color-amber-50:    #FFFBEB;
 
   /* Neutral: true gray with a warm tilt */
-  --color-neutral-900: #111111;
-  --color-neutral-800: #1F1F1F;
+  --color-neutral-900: #11224E;
+  --color-neutral-800: #1B2C5C;
   --color-neutral-700: #333333;
   --color-neutral-500: #6B6B6B;
   --color-neutral-400: #9A9893;
@@ -38,8 +38,8 @@
   --color-cyan-500: #6B6B6B;
   --color-cyan-600: #4A4A4A;
   --color-cyan-700: #333333;
-  --color-cyan-800: #1F1F1F;
-  --color-cyan-900: #111111;
+  --color-cyan-800: #1B2C5C;
+  --color-cyan-900: #11224E;
   --color-cyan-950: #000000;
   --color-sky-50: #FAFAF9;
   --color-sky-100: #F4F3F0;
@@ -49,8 +49,8 @@
   --color-sky-500: #6B6B6B;
   --color-sky-600: #4A4A4A;
   --color-sky-700: #333333;
-  --color-sky-800: #1F1F1F;
-  --color-sky-900: #111111;
+  --color-sky-800: #1B2C5C;
+  --color-sky-900: #11224E;
   --color-sky-950: #000000;
   --color-blue-50: #FAFAF9;
   --color-blue-100: #F4F3F0;
@@ -60,8 +60,8 @@
   --color-blue-500: #6B6B6B;
   --color-blue-600: #4A4A4A;
   --color-blue-700: #333333;
-  --color-blue-800: #1F1F1F;
-  --color-blue-900: #111111;
+  --color-blue-800: #1B2C5C;
+  --color-blue-900: #11224E;
   --color-blue-950: #000000;
   --color-indigo-50: #FAFAF9;
   --color-indigo-100: #F4F3F0;
@@ -71,8 +71,8 @@
   --color-indigo-500: #6B6B6B;
   --color-indigo-600: #4A4A4A;
   --color-indigo-700: #333333;
-  --color-indigo-800: #1F1F1F;
-  --color-indigo-900: #111111;
+  --color-indigo-800: #1B2C5C;
+  --color-indigo-900: #11224E;
   --color-indigo-950: #000000;
   --color-teal-50: #FAFAF9;
   --color-teal-100: #F4F3F0;
@@ -82,8 +82,8 @@
   --color-teal-500: #6B6B6B;
   --color-teal-600: #4A4A4A;
   --color-teal-700: #333333;
-  --color-teal-800: #1F1F1F;
-  --color-teal-900: #111111;
+  --color-teal-800: #1B2C5C;
+  --color-teal-900: #11224E;
   --color-teal-950: #000000;
   --color-slate-50: #FAFAF9;
   --color-slate-100: #F4F3F0;
@@ -93,8 +93,8 @@
   --color-slate-500: #6B6B6B;
   --color-slate-600: #4A4A4A;
   --color-slate-700: #333333;
-  --color-slate-800: #1F1F1F;
-  --color-slate-900: #111111;
+  --color-slate-800: #1B2C5C;
+  --color-slate-900: #11224E;
   --color-slate-950: #000000;
   --color-violet-50: #FAFAF9;
   --color-violet-100: #F4F3F0;
@@ -104,8 +104,8 @@
   --color-violet-500: #6B6B6B;
   --color-violet-600: #4A4A4A;
   --color-violet-700: #333333;
-  --color-violet-800: #1F1F1F;
-  --color-violet-900: #111111;
+  --color-violet-800: #1B2C5C;
+  --color-violet-900: #11224E;
   --color-violet-950: #000000;
   --color-purple-50: #FAFAF9;
   --color-purple-100: #F4F3F0;
@@ -115,8 +115,8 @@
   --color-purple-500: #6B6B6B;
   --color-purple-600: #4A4A4A;
   --color-purple-700: #333333;
-  --color-purple-800: #1F1F1F;
-  --color-purple-900: #111111;
+  --color-purple-800: #1B2C5C;
+  --color-purple-900: #11224E;
   --color-purple-950: #000000;
   --color-fuchsia-50: #FAFAF9;
   --color-fuchsia-100: #F4F3F0;
@@ -126,8 +126,8 @@
   --color-fuchsia-500: #6B6B6B;
   --color-fuchsia-600: #4A4A4A;
   --color-fuchsia-700: #333333;
-  --color-fuchsia-800: #1F1F1F;
-  --color-fuchsia-900: #111111;
+  --color-fuchsia-800: #1B2C5C;
+  --color-fuchsia-900: #11224E;
   --color-fuchsia-950: #000000;
   --color-pink-50: #FAFAF9;
   --color-pink-100: #F4F3F0;
@@ -137,8 +137,8 @@
   --color-pink-500: #6B6B6B;
   --color-pink-600: #4A4A4A;
   --color-pink-700: #333333;
-  --color-pink-800: #1F1F1F;
-  --color-pink-900: #111111;
+  --color-pink-800: #1B2C5C;
+  --color-pink-900: #11224E;
   --color-pink-950: #000000;
 
   /* Backgrounds */
@@ -182,12 +182,12 @@ body {
   font-weight: 500;
   font-size: var(--font-size-sm);
   transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1), transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 0 2px 4px rgba(17,17,17, 0.2);
+  box-shadow: 0 2px 4px rgba(17,34,78, 0.2);
 }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:hover {
   background-color: var(--color-primary-700);
-  box-shadow: 0 4px 8px rgba(17,17,17, 0.28);
+  box-shadow: 0 4px 8px rgba(17,34,78, 0.28);
 }
 
 .btn-secondary {
@@ -279,7 +279,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #111111;
+  color: #11224E;
 }
 
 .workspace-title {
@@ -371,7 +371,7 @@ body {
       rgb(15,15,15)      100%
     );
   box-shadow:
-    0 16px 40px rgba(17,17,17,0.38),
+    0 16px 40px rgba(17,34,78,0.38),
     0 6px 18px rgba(220,38,38,0.28),
     inset -8px -12px 22px rgba(15,15,15,0.44);
   animation: clea-orb-breathe 4.8s ease-in-out infinite;
@@ -396,7 +396,7 @@ body {
   background: radial-gradient(
     ellipse,
     rgb(154,152,147),
-    rgba(17,17,17,0.65) 55%,
+    rgba(17,34,78,0.65) 55%,
     transparent 78%
   );
   animation: clea-orb-current-one 5.6s ease-in-out infinite;
@@ -437,7 +437,7 @@ body {
     rgb(251,146,60)    54%,
     rgb(220,38,38)     64%,
     transparent        76%,
-    rgba(17,17,17,0.55) 88%,
+    rgba(17,34,78,0.55) 88%,
     transparent        96%
   );
   filter: blur(6px);
@@ -489,7 +489,7 @@ body {
 
 /* Constant tri-color glow — brightness never changes */
 .clea-orb-shell {
-  filter: drop-shadow(0 0 16px rgba(17,17,17,0.50)) drop-shadow(0 0 8px rgba(220,38,38,0.30));
+  filter: drop-shadow(0 0 16px rgba(17,34,78,0.50)) drop-shadow(0 0 8px rgba(220,38,38,0.30));
   animation: none;
 }
 
@@ -549,7 +549,7 @@ body {
   animation: clea-orb-ribbon-spin 6s linear infinite reverse;
   border-color: rgba(200,200,200,0.72);
   border-right-color: rgba(119,119,119,0.52);
-  border-bottom-color: rgba(17,17,17,0.42);
+  border-bottom-color: rgba(17,34,78,0.42);
 }
 .clea-orb-status--thinking .clea-orb-ripple {
   animation: clea-orb-ripple 2.2s ease-out infinite;
@@ -568,7 +568,7 @@ body {
   animation: clea-orb-speak-pulse 0.55s ease-in-out infinite alternate;
   box-shadow:
     0 0 0 2px rgba(154,152,147,0.55),
-    0 14px 36px rgba(17,17,17,0.48),
+    0 14px 36px rgba(17,34,78,0.48),
     0 4px 14px rgba(251,146,60,0.32),
     inset -8px -12px 22px rgba(15,15,15,0.44);
 }

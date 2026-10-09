@@ -25,8 +25,8 @@ type RelationFilter = KnowledgeGraphEdgeType | "ALL";
 type NodeFilter = Exclude<KnowledgeGraphNodeType, "SYSTEM"> | "ALL";
 
 const NODE_STYLES: Record<KnowledgeGraphNodeType, { color: string; label: string }> = {
-  SYSTEM: { color: "#111111", label: "System" },
-  DISEASE: { color: "#111111", label: "Disease" },
+  SYSTEM: { color: "#11224E", label: "System" },
+  DISEASE: { color: "#11224E", label: "Disease" },
   PRINCIPLE: { color: "#444444", label: "Principle" },
   DRUG: { color: "#D97706", label: "Drug" },
   PATHOGEN: { color: "#DC2626", label: "Pathogen" },
@@ -35,7 +35,7 @@ const NODE_STYLES: Record<KnowledgeGraphNodeType, { color: string; label: string
 };
 
 const SYSTEM_COLORS = [
-  "#111111", "#111111", "#444444", "#C026D3", "#C2321F", "#E11D48",
+  "#11224E", "#11224E", "#444444", "#C026D3", "#C2321F", "#E11D48",
   "#EA580C", "#D97706", "#65A30D", "#059669", "#222222", "#4F46E5",
   "#9333EA", "#BE185D", "#B91C1C", "#C2410C", "#A16207", "#15803D",
   "#0F766E", "#0369A1", "#1D4ED8", "#6D28D9", "#A21CAF", "#9F1239",
@@ -659,7 +659,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
             <button
               type="button"
               onClick={loadMoreSystemChildren}
-              className="absolute bottom-4 right-4 z-20 flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-[#111111] shadow-sm transition-colors hover:bg-cyan-50"
+              className="absolute bottom-4 right-4 z-20 flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-[#11224E] shadow-sm transition-colors hover:bg-cyan-50"
             >
               +{hiddenSystemChildrenCount} more, click to load
             </button>
@@ -723,7 +723,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
                       ))}
                     </ul>
                     {fullClues.length > 3 && (
-                      <button type="button" onClick={() => setShowAllClues((current) => !current)} className="mt-1.5 text-[11px] font-semibold text-[#111111] hover:underline">
+                      <button type="button" onClick={() => setShowAllClues((current) => !current)} className="mt-1.5 text-[11px] font-semibold text-[#11224E] hover:underline">
                         {showAllClues ? "Show fewer" : `Show all ${fullClues.length}`}
                       </button>
                     )}
@@ -744,7 +744,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
 
               <div className="space-y-2 pt-1">
                 {selectedNode.type !== "SYSTEM" && (
-                  <button type="button" onClick={() => expandNode(selectedNode.id)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111111] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#000000]">
+                  <button type="button" onClick={() => expandNode(selectedNode.id)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#11224E] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#000000]">
                     Expand connections
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -777,7 +777,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
             </div>
           ) : (
             <div className="flex min-h-52 flex-col items-center justify-center text-center xl:min-h-full">
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-cyan-50 text-[#111111]">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-cyan-50 text-[#11224E]">
                 <MagnifyingGlassIcon className="h-5 w-5" />
               </div>
               <h2 className="mt-3 text-sm! font-semibold text-neutral-800">Select a node</h2>

@@ -471,7 +471,7 @@ export default function CleaChat() {
       ) : (
         <div className="relative flex items-end justify-end">
           {micActive && (
-            <p className="absolute bottom-1 right-16 whitespace-nowrap rounded-full border border-[#dedede] bg-white px-3 py-1.5 text-xs font-semibold text-[#111111] shadow-[0_8px_24px_rgba(28,28,28,0.12)]" aria-live="polite">
+            <p className="absolute bottom-1 right-16 whitespace-nowrap rounded-full border border-[#dedede] bg-white px-3 py-1.5 text-xs font-semibold text-[#11224E] shadow-[0_8px_24px_rgba(28,28,28,0.12)]" aria-live="polite">
               Listening...
             </p>
           )}
@@ -479,7 +479,7 @@ export default function CleaChat() {
             type="button"
             onClick={() => setMode('chat')}
             aria-label="Open Clea study assistant"
-            className="group relative grid h-14 w-14 place-items-center rounded-full bg-[#444444] text-white shadow-[0_12px_32px_rgba(17,17,17,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#111111] hover:shadow-[0_16px_36px_rgba(17,17,17,0.32)] focus:outline-none focus:ring-2 focus:ring-[#444444] focus:ring-offset-2"
+            className="group relative grid h-14 w-14 place-items-center rounded-full bg-[#444444] text-white shadow-[0_12px_32px_rgba(17,34,78,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#11224E] hover:shadow-[0_16px_36px_rgba(17,34,78,0.32)] focus:outline-none focus:ring-2 focus:ring-[#444444] focus:ring-offset-2"
           >
             <ChatBubbleOvalLeftEllipsisIcon className="relative h-6 w-6 stroke-2" />
             {micActive && (
@@ -488,7 +488,7 @@ export default function CleaChat() {
                 className="absolute right-0 top-0 h-3.5 w-3.5 animate-pulse rounded-full border-[3px] border-[#F6F5F2] bg-[#EF4444]"
               />
             )}
-            <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md bg-[#111111] px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md bg-[#11224E] px-2.5 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
               Ask Clea
             </span>
           </button>
