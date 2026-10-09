@@ -1,6 +1,5 @@
 'use client';
 
-import { inkEllipse, inkPath } from '@/lib/hub/ink';
 import type { FindingType, Pick } from '@/lib/hub/types';
 import s from './hub.module.css';
 
@@ -44,13 +43,13 @@ export default function PatternWheel({ sector, counts, picks, labelOf, onSector,
     <div className={s.wheelWrap}>
       <svg className={s.wheelSvg} viewBox="0 0 320 320" role="group" aria-label="Pattern wheel: choose what kind of finding to list">
         <g className={s.stroke}>
-          <path d={inkEllipse(C, C, R_OUT, R_OUT, 'wheel-out-a', 1.4)} strokeWidth={2.2} />
-          <path d={inkEllipse(C, C, R_OUT, R_OUT, 'wheel-out-b', 2)} strokeWidth={1.1} opacity={0.55} />
-          <path d={inkEllipse(C, C, R_IN, R_IN, 'wheel-in-a', 1.2)} strokeWidth={2.2} />
-          <path d={inkEllipse(C, C, R_IN, R_IN, 'wheel-in-b', 1.8)} strokeWidth={1.1} opacity={0.55} />
-          {SECTORS.map((_, i) => (
-            <path key={i} d={inkPath([pt(R_IN, -90 + i * STEP), pt(R_OUT, -90 + i * STEP)], `div-${i}`, 1, false)} strokeWidth={2} />
-          ))}
+          <circle cx={C} cy={C} r={R_OUT} strokeWidth={1.5} />
+          <circle cx={C} cy={C} r={R_IN} strokeWidth={1.5} />
+          {SECTORS.map((_, i) => {
+            const [x1, y1] = pt(R_IN, -90 + i * STEP);
+            const [x2, y2] = pt(R_OUT, -90 + i * STEP);
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} strokeWidth={1.5} />;
+          })}
         </g>
         {SECTORS.map((sec, i) => {
           const [lx, ly] = pt((R_IN + R_OUT) / 2, -90 + i * STEP + STEP / 2);

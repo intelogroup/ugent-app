@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import { inkEllipse } from '@/lib/hub/ink';
 import { diseasesForRegion } from '@/lib/hub/browse';
 import { differentiators, leaders, type HubIndex } from '@/lib/hub/rank';
 import type { Region } from '@/lib/hub/regions';
@@ -28,15 +27,8 @@ interface Props {
   onPick: (id: string) => void;
 }
 
-function Circled({ id, children }: { id: string; children: React.ReactNode }) {
-  return (
-    <span className={s.diffLabel}>
-      <svg className={s.diffCircle} viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
-        <path className={s.draw} pathLength={1} d={inkEllipse(50, 20, 48, 17, `circ-${id}`, 1.4)} />
-      </svg>
-      {children}
-    </span>
-  );
+function Circled({ children }: { children: React.ReactNode }) {
+  return <span className={s.diffLabel}>{children}</span>;
 }
 
 export default function DxSheet({ idx, diseaseParents, region, yieldByDisease, picks, ranked, inPlay, next, expanded, labelOf, onExpand, onPick }: Props) {
@@ -128,7 +120,7 @@ export default function DxSheet({ idx, diseaseParents, region, yieldByDisease, p
             {diffs.map((d) => (
               <li key={d.id}>
                 <button className={s.diffItem} onClick={() => onPick(d.id)} aria-label={`${d.label}: in ${d.has.join(' and ')}, not in ${d.lacks.join(' and ')}. Click to add as a finding.`}>
-                  <Circled id={d.id}>{d.label}</Circled>
+                  <Circled>{d.label}</Circled>
                   <span className={s.diffWho}>in {d.has.join(', ')}. Not in {d.lacks.join(', ')}.</span>
                 </button>
               </li>
