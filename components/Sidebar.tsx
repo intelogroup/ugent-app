@@ -20,6 +20,7 @@ import {
   CalendarDaysIcon,
   DocumentTextIcon,
   Cog6ToothIcon,
+  UserIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import UgentLogo from './UgentLogo';
@@ -35,6 +36,7 @@ const primaryLinks = [
 const insightLinks = [
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Strategy Hub', href: '/strategy', icon: AcademicCapIcon },
+  { name: 'Body Hub', href: '/hub', icon: UserIcon },
   { name: 'Disease Reference', href: '/diseases', icon: DocumentTextIcon },
   { name: 'Leaderboard', href: '/leaderboard', icon: TrophyIcon },
 ];

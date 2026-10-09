@@ -10,6 +10,7 @@ const protectedPaths = [
   '/leaderboard',
   '/curriculum',
   '/strategy',
+  '/hub',
   '/settings',
 ]
 
