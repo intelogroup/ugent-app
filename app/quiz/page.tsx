@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -329,10 +330,17 @@ export function QuizContent() {
                   <div className="mt-4 space-y-3">
                     {currentQuestion.images.map((img, i) => (
                       <div key={i} className="rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50">
-                        <img
+                        {/* unoptimized: img.url is a dynamic remote URL with unknown
+                            dimensions, no remotePatterns in next.config */}
+                        <Image
                           src={img.url}
                           alt={img.caption || `Question image ${i + 1}`}
-                          className="w-full max-h-80 object-contain"
+                          width={0}
+                          height={0}
+                          sizes="100vw"
+                          unoptimized
+                          style={{ width: '100%', height: 'auto' }}
+                          className="max-h-80 object-contain"
                         />
                         {img.caption && (
                           <p className="px-3 py-2 text-xs text-neutral-500 border-t border-neutral-200">{img.caption}</p>
