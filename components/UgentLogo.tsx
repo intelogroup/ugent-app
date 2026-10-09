@@ -1,31 +1,17 @@
+/** Ugent mark: a U whose right stem stops short, with a signal dot above it. Reads as a person, a pulse, a cue. */
 export default function UgentLogo({ className = "w-10 h-10" }: { className?: string }) {
-  const primaryTeal = '#0E7490';
-
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Main rounded square */}
-      <rect
-        x="15"
-        y="15"
-        width="70"
-        height="70"
-        rx="16"
-        fill={primaryTeal}
-      />
-
-      {/* Minimalist U shape cutout */}
+    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ugent">
+      <rect x="4" y="4" width="92" height="92" rx="30" fill="#111111" />
       <path
-        d="M 35 35 L 35 55 Q 35 65 45 65 L 55 65 Q 65 65 65 55 L 65 35"
+        d="M35 26 V54 A15 15 0 0 0 65 54 V44"
         fill="none"
-        stroke="white"
-        strokeWidth="8"
+        stroke="#FFFFFF"
+        strokeWidth="11"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <circle cx="65" cy="27" r="7" fill="#F26B21" />
     </svg>
   );
 }
