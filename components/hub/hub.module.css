@@ -68,11 +68,10 @@
 .organ[data-lit='true'], .organLine[data-lit='true'] { fill: rgba(27, 42, 140, 0.26); opacity: 1; }
 .organLine[data-lit='true'] { stroke-width: 0.6; }
 .dot { cursor: pointer; }
-.dot:focus-visible { outline: none; }
+.dot:focus, .dot:focus-visible { outline: none; }
 .dot[data-disabled='true'] { opacity: 0.18; pointer-events: none; }
 .dotCore { fill: var(--ink); transition: r 160ms var(--ease); }
 .dot:not([data-disabled='true']):hover .dotCore, .dot:focus-visible .dotCore { r: 2.2; }
-.dot:focus-visible .dotHit { stroke: var(--ink); stroke-width: 0.4; }
 .dotHit { fill: transparent; stroke: transparent; }
 .dotLabel { font-family: var(--hand); font-size: 5.4px; fill: var(--ink); opacity: 0; transition: opacity 160ms; pointer-events: none; paint-order: stroke; stroke: var(--paper); stroke-width: 1.2px; stroke-linejoin: round; }
 .dot:hover .dotLabel, .dot:focus-visible .dotLabel, .dot[aria-pressed='true'] .dotLabel { opacity: 1; }

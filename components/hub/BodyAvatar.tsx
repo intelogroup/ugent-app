@@ -2,7 +2,6 @@
 
 import { BODY_ART } from '@/components/hub/body/body-art.generated';
 import { DRAWN } from '@/components/hub/body/organs';
-import { inkEllipse } from '@/lib/hub/ink';
 import { bodyDots, disabledFor, dotAt, regionById, type Sex } from '@/lib/hub/regions';
 import s from './hub.module.css';
 
@@ -50,8 +49,7 @@ export default function BodyAvatar({ sex, region, onRegion }: Props) {
             }}
           >
             <circle className={s.dotHit} cx={x} cy={y} r={2.8} />
-            <circle className={s.dotCore} cx={x} cy={y} r={DOT_R} />
-            {on && <path className={`${s.ring} ${s.draw}`} pathLength={1} d={inkEllipse(x, y, 3.2, 3.2, `ring-${r.id}`, 0.25)} />}
+            <circle className={s.dotCore} cx={x} cy={y} r={on ? 2.2 : DOT_R} />
             <text className={s.dotLabel} x={labelLeft ? x - 3.6 : x + 3.6} y={y + 0.9} textAnchor={labelLeft ? 'end' : 'start'}>
               {r.label}
             </text>
