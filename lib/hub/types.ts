@@ -6,6 +6,8 @@ export interface Finding {
   label: string;
   type: FindingType;
   systems: string[];
+  /** body sites (lib/hub/sites.ts); absent when untagged, then the organ systems decide */
+  sites?: string[];
   weight: FindingWeight;
   sourceHashes: string[];
   /** 'notes' = stated in a qbank row (sourceHashes set); 'knowledge' = standard textbook finding, no row cites it. */
