@@ -129,7 +129,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                     : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
                 }`}
               >
-                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
+                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#F26B21]' : 'text-[#8A8883]'}`} />
                 {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
               </Link>
             );
@@ -152,7 +152,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                       : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
                   }`}
                 >
-                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
+                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#F26B21]' : 'text-[#8A8883]'}`} />
                   {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
                 </Link>
               );
@@ -170,7 +170,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                 : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1B2C5C]'
             }`}
           >
-            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#11224E]' : 'text-[#8A8883]'}`} />
+            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#F26B21]' : 'text-[#8A8883]'}`} />
             {!collapsed && <span className="min-w-0 flex-1 truncate">Settings</span>}
           </Link>
         </div>

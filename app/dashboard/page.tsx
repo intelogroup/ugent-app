@@ -128,7 +128,7 @@ export default function Home() {
             href="/strategy"
             className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#11224E]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#FFF3EA] text-[#F26B21]">
               <DocumentTextIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0">
@@ -141,7 +141,7 @@ export default function Home() {
             href="/curriculum"
             className="group flex min-h-20 items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-4 transition-colors hover:border-cyan-700/30 hover:bg-cyan-50/40"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cyan-50 text-[#11224E]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#FFF3EA] text-[#F26B21]">
               <ChartPieIcon className="h-[18px] w-[18px]" />
             </span>
             <span className="min-w-0">
@@ -173,7 +173,7 @@ export default function Home() {
               </div>
               <p className="mt-2 text-2xl font-bold text-neutral-900">{blocksCompleted}{totalBlocks > 0 && <span className="ml-1 text-sm font-medium text-neutral-400">/ {totalBlocks}</span>}</p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-neutral-100">
-                <div className="h-full rounded-full bg-[#11224E]" style={{ width: `${curriculumProgress}%` }} />
+                <div className="h-full rounded-full bg-[#F26B21]" style={{ width: `${curriculumProgress}%` }} />
               </div>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function Home() {
                     </div>
                     <p className="mt-1 truncate text-[11px] text-neutral-400">{system.detail}</p>
                     <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100">
-                      <div className="h-full rounded-full bg-[#11224E]" style={{ width: `${system.progress}%` }} />
+                      <div className="h-full rounded-full bg-[#F26B21]" style={{ width: `${system.progress}%` }} />
                     </div>
                   </div>
                 ))}

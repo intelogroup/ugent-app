@@ -26,7 +26,7 @@ function Mark({ state }: { state?: Pick['state'] }) {
   return (
     <svg className={s.mark} viewBox="0 0 18 18" aria-hidden="true">
       <circle cx="9" cy="9" r="7.5" fill="none" stroke="currentColor" strokeWidth="1.2" opacity={state ? 0 : 0.45} />
-      {state === 'present' && <path className={s.stroke} d="M3 9.5L7.5 14L15.5 3.5" strokeWidth={2.2} />}
+      {state === 'present' && <path className={s.stroke} style={{ stroke: 'var(--accent)' }} d="M3 9.5L7.5 14L15.5 3.5" strokeWidth={2.2} />}
       {state === 'absent' && <path d="M3.5 3.5L14.5 14.5M14.5 3.5L3.5 14.5" stroke="var(--red)" strokeWidth="2.2" strokeLinecap="round" />}
     </svg>
   );

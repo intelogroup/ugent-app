@@ -9,6 +9,8 @@
   --wash: rgba(17,34,78, 0.05);
   --rule: #e7e5e1;
   --red: #c2321f;
+  --accent: #f26b21;
+  --accent-wash: rgba(242, 107, 33, 0.16);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
   position: relative;
@@ -28,7 +30,7 @@
 .root ::selection { background: var(--wash); color: var(--ink); }
 .root button, .root input { font: inherit; color: inherit; }
 .root button { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
-.root :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+.root :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
 /* header */
 .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.5rem; margin-bottom: 1rem; padding-right: 5.5rem; /* clear of the floating Clea avatar */ }
@@ -62,7 +64,8 @@
 .bodyLine { fill: none; stroke: var(--ink); stroke-width: 0.45; stroke-linecap: round; stroke-linejoin: round; }
 .organ { fill: rgba(17,34,78, 0.05); stroke: var(--ink); stroke-width: 0.22; stroke-linejoin: round; opacity: 0.8; transition: fill 160ms, opacity 160ms; }
 .organLine { fill: none; stroke: var(--ink); stroke-width: 0.3; stroke-linecap: round; opacity: 0.55; }
-.organ[data-lit='true'], .organLine[data-lit='true'] { fill: rgba(17,34,78, 0.22); opacity: 1; }
+.organ[data-lit='true'] { fill: rgba(242, 107, 33, 0.28); stroke: var(--accent); opacity: 1; }
+.organLine[data-lit='true'] { stroke: var(--accent); opacity: 1; }
 .organLine[data-lit='true'] { stroke-width: 0.6; }
 .dot { cursor: pointer; }
 .dot:focus, .dot:focus-visible { outline: none; }
@@ -71,6 +74,7 @@
 .dot:not([data-disabled='true']):hover .dotCore, .dot:focus-visible .dotCore { r: 2.2; }
 .dotHit { fill: transparent; stroke: transparent; }
 .dotLabel { font-size: 4.6px; font-weight: 600; fill: var(--ink); opacity: 0; transition: opacity 160ms; pointer-events: none; paint-order: stroke; stroke: var(--paper); stroke-width: 1.2px; stroke-linejoin: round; }
+.dot[aria-pressed='true'] .dotCore { fill: var(--accent); }
 .dot:hover .dotLabel, .dot:focus-visible .dotLabel, .dot[aria-pressed='true'] .dotLabel { opacity: 1; }
 .ring { fill: none; stroke: var(--ink); stroke-width: 0.5; stroke-linecap: round; }
 .sexToggle { display: inline-flex; gap: 0.25rem; }
@@ -89,7 +93,7 @@
 .wheelSvg { width: 100%; height: 100%; display: block; overflow: visible; }
 .sector { fill: transparent; cursor: pointer; transition: fill 160ms; }
 .sector:hover { fill: var(--wash); }
-.sector[aria-pressed='true'] { fill: rgba(17,34,78, 0.10); }
+.sector[aria-pressed='true'] { fill: var(--accent-wash); }
 .sector:focus-visible { outline: none; stroke: var(--ink); stroke-width: 2; }
 .sectorLabel { font-size: 13px; font-weight: 600; fill: var(--ink); pointer-events: none; }
 .sectorCount { font-size: 11px; fill: var(--ink-2); pointer-events: none; }

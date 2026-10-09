@@ -9,6 +9,13 @@
   --color-primary-100: #EFEDE8;
   --color-primary-50:  #F6F5F2;
 
+  /* Secondary accent: orange, the logo's dot. Balances the navy; used for active, progress and focus. */
+  --color-accent-700: #B8420A;
+  --color-accent-600: #D9560F;
+  --color-accent-500: #F26B21;
+  --color-accent-100: #FFE3D1;
+  --color-accent-50:  #FFF3EA;
+
   /* Accent status colors */
   --color-emerald-500: #10B981;
   --color-emerald-50:  #ECFDF5;
@@ -161,6 +168,12 @@
   --radius-xl:  16px;
   --radius-2xl: 20px;
   --radius-pill:9999px;
+}
+
+/* Keyboard focus in the secondary accent */
+:where(a, button, input, select, textarea, [role='button'], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
 }
 
 body {
