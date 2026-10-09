@@ -25,18 +25,18 @@ type RelationFilter = KnowledgeGraphEdgeType | "ALL";
 type NodeFilter = Exclude<KnowledgeGraphNodeType, "SYSTEM"> | "ALL";
 
 const NODE_STYLES: Record<KnowledgeGraphNodeType, { color: string; label: string }> = {
-  SYSTEM: { color: "#0E7490", label: "System" },
-  DISEASE: { color: "#2563EB", label: "Disease" },
-  PRINCIPLE: { color: "#7C3AED", label: "Principle" },
+  SYSTEM: { color: "#111111", label: "System" },
+  DISEASE: { color: "#111111", label: "Disease" },
+  PRINCIPLE: { color: "#444444", label: "Principle" },
   DRUG: { color: "#D97706", label: "Drug" },
   PATHOGEN: { color: "#DC2626", label: "Pathogen" },
-  SYNDROME: { color: "#DB2777", label: "Syndrome" },
-  CONCEPT: { color: "#64748B", label: "Concept" },
+  SYNDROME: { color: "#C2321F", label: "Syndrome" },
+  CONCEPT: { color: "#6B6B6B", label: "Concept" },
 };
 
 const SYSTEM_COLORS = [
-  "#0E7490", "#2563EB", "#7C3AED", "#C026D3", "#DB2777", "#E11D48",
-  "#EA580C", "#D97706", "#65A30D", "#059669", "#0891B2", "#4F46E5",
+  "#111111", "#111111", "#444444", "#C026D3", "#C2321F", "#E11D48",
+  "#EA580C", "#D97706", "#65A30D", "#059669", "#222222", "#4F46E5",
   "#9333EA", "#BE185D", "#B91C1C", "#C2410C", "#A16207", "#15803D",
   "#0F766E", "#0369A1", "#1D4ED8", "#6D28D9", "#A21CAF", "#9F1239",
 ];
@@ -412,7 +412,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
           size: edge.type === "SHARES_CONCEPT"
             ? Math.min(0.7 + Math.log2(edge.weight + 1) * 0.45, 3)
             : edge.type === "PREREQUISITE_FOR" ? 1.4 : 0.75,
-          color: edge.type === "PREREQUISITE_FOR" ? "#94A3B8" : "#CBD5E1",
+          color: edge.type === "PREREQUISITE_FOR" ? "#9A9893" : "#D4D2CD",
           type: edge.directed ? "arrow" : "line",
         };
 
@@ -448,10 +448,10 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
       try {
         renderer = new Sigma(displayGraph, containerRef.current, {
         allowInvalidContainer: false,
-        defaultNodeColor: "#64748B",
-        defaultEdgeColor: "#CBD5E1",
+        defaultNodeColor: "#6B6B6B",
+        defaultEdgeColor: "#D4D2CD",
         edgeProgramClasses: { arrow: EdgeArrowProgram },
-        labelColor: { color: "#334155" },
+        labelColor: { color: "#333333" },
         labelFont: "Inter, ui-sans-serif, system-ui, sans-serif",
         labelSize: compactCanvas ? 10 : 12,
         labelWeight: "600",
@@ -480,7 +480,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
           const active = source === selectedNodeId || target === selectedNodeId;
           return {
             ...data,
-            color: active ? "#06B6D4" : "#E6EBF0",
+            color: active ? "#444444" : "#E6EBF0",
             size: active ? Math.max(data.size ?? 1, 1.8) : 0.45,
             zIndex: active ? 2 : 1,
           };
@@ -629,7 +629,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
       </div>
 
       <div className="grid flex-1 xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="relative min-h-[560px] bg-[#F8FAFC] xl:min-h-0">
+        <div className="relative min-h-[560px] bg-[#FAF9F7] xl:min-h-0">
           <div ref={containerRef} className="absolute inset-0" aria-label="Interactive medical knowledge graph" />
           {(focusedSystemId || navigationHistory.length > 0) && (
             <div className="absolute left-4 top-4 z-20 flex max-w-[calc(100%-2rem)] flex-wrap items-center gap-1.5">
@@ -659,7 +659,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
             <button
               type="button"
               onClick={loadMoreSystemChildren}
-              className="absolute bottom-4 right-4 z-20 flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-[#0E7490] shadow-sm transition-colors hover:bg-cyan-50"
+              className="absolute bottom-4 right-4 z-20 flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-[#111111] shadow-sm transition-colors hover:bg-cyan-50"
             >
               +{hiddenSystemChildrenCount} more, click to load
             </button>
@@ -723,7 +723,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
                       ))}
                     </ul>
                     {fullClues.length > 3 && (
-                      <button type="button" onClick={() => setShowAllClues((current) => !current)} className="mt-1.5 text-[11px] font-semibold text-[#0E7490] hover:underline">
+                      <button type="button" onClick={() => setShowAllClues((current) => !current)} className="mt-1.5 text-[11px] font-semibold text-[#111111] hover:underline">
                         {showAllClues ? "Show fewer" : `Show all ${fullClues.length}`}
                       </button>
                     )}
@@ -744,7 +744,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
 
               <div className="space-y-2 pt-1">
                 {selectedNode.type !== "SYSTEM" && (
-                  <button type="button" onClick={() => expandNode(selectedNode.id)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0E7490] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#155E75]">
+                  <button type="button" onClick={() => expandNode(selectedNode.id)} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#111111] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#000000]">
                     Expand connections
                     <ChevronRightIcon className="h-4 w-4" />
                   </button>
@@ -777,7 +777,7 @@ export default function StrategyGraphExplorer({ graphData, questionBankClues = [
             </div>
           ) : (
             <div className="flex min-h-52 flex-col items-center justify-center text-center xl:min-h-full">
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-cyan-50 text-[#0E7490]">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-cyan-50 text-[#111111]">
                 <MagnifyingGlassIcon className="h-5 w-5" />
               </div>
               <h2 className="mt-3 text-sm! font-semibold text-neutral-800">Select a node</h2>

@@ -74,7 +74,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#E8EDF2] py-5 transition-[width,padding,transform] duration-200 lg:z-30 ${
+      className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#F6F5F2] py-5 transition-[width,padding,transform] duration-200 lg:z-30 ${
         collapsed ? 'w-[76px] px-3' : 'w-[264px] px-4'
       } ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
     >
@@ -95,26 +95,26 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
 
       <label className={`relative block ${collapsed ? 'hidden' : ''}`}>
         <span className="sr-only">Search</span>
-        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9AA0AE]" />
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A9893]" />
         <input
           type="search"
           placeholder="Search"
           readOnly
           onClick={onSearchOpen}
-          className="h-10 w-full rounded-lg border border-[#E4E6EC] bg-white px-9 text-sm font-medium text-[#20232B] outline-none transition placeholder:text-[#8F96A6] focus:border-[#C9CEDA] focus:ring-2 focus:ring-[#0E7490]/10"
+          className="h-10 w-full rounded-lg border border-[#E4E6EC] bg-white px-9 text-sm font-medium text-[#20232B] outline-none transition placeholder:text-[#8F96A6] focus:border-[#C9CEDA] focus:ring-2 focus:ring-[#111111]/10"
         />
         <span className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          <kbd className="rounded-md border border-[#E1E4EA] bg-[#F7F8FA] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9AA0AE]">
+          <kbd className="rounded-md border border-[#E7E5E1] bg-[#F8F7F5] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9A9893]">
             ⌘
           </kbd>
-          <kbd className="rounded-md border border-[#E1E4EA] bg-[#F7F8FA] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9AA0AE]">
+          <kbd className="rounded-md border border-[#E7E5E1] bg-[#F8F7F5] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-[#9A9893]">
             K
           </kbd>
         </span>
       </label>
 
       <nav className="mt-6 flex-1 overflow-y-auto pr-0.5 no-scrollbar" aria-label="Main navigation">
-        {!collapsed && <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9AA0AE]">Study</p>}
+        {!collapsed && <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9A9893]">Study</p>}
         <div className="space-y-1">
           {primaryLinks.map((item) => {
             const active = isActive(item.href);
@@ -125,11 +125,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                 aria-current={active ? 'page' : undefined}
                 className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${collapsed ? 'justify-center px-0' : ''} ${
                   active
-                    ? 'border border-[#E3E5EC] bg-white text-[#171A21] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
-                    : 'text-[#5E6472] hover:bg-white/80 hover:text-[#252934]'
+                    ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                    : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
                 }`}
               >
-                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#0E7490]' : 'text-[#8C93A3]'}`} />
+                <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
                 {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
               </Link>
             );
@@ -137,7 +137,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
         </div>
 
         <div className="mt-7">
-          {!collapsed && <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9AA0AE]">Insights</p>}
+          {!collapsed && <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9A9893]">Insights</p>}
           <div className="space-y-1">
             {insightLinks.map((item) => {
               const active = isActive(item.href);
@@ -148,11 +148,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
                   aria-current={active ? 'page' : undefined}
                   className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
                     active
-                      ? 'border border-[#E3E5EC] bg-white text-[#171A21] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
-                      : 'text-[#5E6472] hover:bg-white/80 hover:text-[#252934]'
+                      ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                      : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
                   }`}
                 >
-                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#0E7490]' : 'text-[#8C93A3]'}`} />
+                  <item.icon className={`h-4.5 w-4.5 ${active ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
                   {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
                 </Link>
               );
@@ -166,11 +166,11 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
             aria-current={isActive('/settings') ? 'page' : undefined}
             className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${collapsed ? 'justify-center px-0' : ''} ${
               isActive('/settings')
-                ? 'border border-[#E3E5EC] bg-white text-[#171A21] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
-                : 'text-[#5E6472] hover:bg-white/80 hover:text-[#252934]'
+                ? 'border border-[#E7E5E1] bg-white text-[#111111] shadow-[0_1px_2px_rgba(15,23,42,0.04)]'
+                : 'text-[#5F5F5F] hover:bg-white/80 hover:text-[#1F1F1F]'
             }`}
           >
-            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#0E7490]' : 'text-[#8C93A3]'}`} />
+            <Cog6ToothIcon className={`h-4.5 w-4.5 ${isActive('/settings') ? 'text-[#111111]' : 'text-[#8A8883]'}`} />
             {!collapsed && <span className="min-w-0 flex-1 truncate">Settings</span>}
           </Link>
         </div>
@@ -181,7 +181,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className={`flex h-14 w-full items-center gap-3 rounded-xl border border-[#E3E5EC] bg-white px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:bg-[#FBFCFD] ${collapsed ? 'justify-center px-0' : ''}`}
+            className={`flex h-14 w-full items-center gap-3 rounded-xl border border-[#E7E5E1] bg-white px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition hover:bg-[#FCFBFA] ${collapsed ? 'justify-center px-0' : ''}`}
           >
             <div className="relative">
               <Avatar
@@ -191,7 +191,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
               <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#16A34A]" />
             </div>
             {!collapsed && <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold leading-4 text-[#171A21]">{user?.email?.split('@')[0] ?? 'Student'}</p>
+              <p className="truncate text-sm font-bold leading-4 text-[#111111]">{user?.email?.split('@')[0] ?? 'Student'}</p>
               <p className="truncate text-[12px] font-medium leading-4 text-[#7D8492]">{user?.email ?? ''}</p>
             </div>}
             {!collapsed && <ChevronUpIcon
@@ -202,7 +202,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCollapsedChange, onMo
           </button>
 
           {isUserMenuOpen && (
-            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-[#E3E5EC] bg-white shadow-lg">
+            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-[#E7E5E1] bg-white shadow-lg">
               <button
                 type="button"
                 onClick={handleLogout}

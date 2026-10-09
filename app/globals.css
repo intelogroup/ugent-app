@@ -2,12 +2,12 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary — Teal Blue Accent */
-  --color-primary-700: #155E75;
-  --color-primary-600: #0E7490;
-  --color-primary-500: #06B6D4;
-  --color-primary-100: #CFFAFE;
-  --color-primary-50:  #ECFEFF;
+  /* Primary: black. Color is reserved for status accents below. */
+  --color-primary-700: #000000;
+  --color-primary-600: #111111;
+  --color-primary-500: #444444;
+  --color-primary-100: #EFEDE8;
+  --color-primary-50:  #F6F5F2;
 
   /* Accent status colors */
   --color-emerald-500: #10B981;
@@ -17,20 +17,89 @@
   --color-amber-500:   #F59E0B;
   --color-amber-50:    #FFFBEB;
 
-  /* Neutral — Slate Palette */
-  --color-neutral-900: #0F172A;
-  --color-neutral-800: #1E293B;
-  --color-neutral-700: #334155;
-  --color-neutral-500: #64748B;
-  --color-neutral-400: #94A3B8;
-  --color-neutral-300: #CBD5E1;
-  --color-neutral-200: #E2E8F0;
-  --color-neutral-100: #F8FAFC;
+  /* Neutral: true gray with a warm tilt */
+  --color-neutral-900: #111111;
+  --color-neutral-800: #1F1F1F;
+  --color-neutral-700: #333333;
+  --color-neutral-500: #6B6B6B;
+  --color-neutral-400: #9A9893;
+  --color-neutral-300: #D4D2CD;
+  --color-neutral-200: #E7E5E1;
+  --color-neutral-100: #F6F5F2;
   --color-neutral-50:  #FFFFFF;
+
+
+  /* Tailwind's blue-family palettes are remapped to gray so stray text-cyan-700 / bg-sky-50 stay on theme */
+  --color-cyan-50: #FAFAF9;
+  --color-cyan-100: #F4F3F0;
+  --color-cyan-200: #E7E5E1;
+  --color-cyan-300: #D4D2CD;
+  --color-cyan-400: #A3A19B;
+  --color-cyan-500: #6B6B6B;
+  --color-cyan-600: #4A4A4A;
+  --color-cyan-700: #333333;
+  --color-cyan-800: #1F1F1F;
+  --color-cyan-900: #111111;
+  --color-cyan-950: #000000;
+  --color-sky-50: #FAFAF9;
+  --color-sky-100: #F4F3F0;
+  --color-sky-200: #E7E5E1;
+  --color-sky-300: #D4D2CD;
+  --color-sky-400: #A3A19B;
+  --color-sky-500: #6B6B6B;
+  --color-sky-600: #4A4A4A;
+  --color-sky-700: #333333;
+  --color-sky-800: #1F1F1F;
+  --color-sky-900: #111111;
+  --color-sky-950: #000000;
+  --color-blue-50: #FAFAF9;
+  --color-blue-100: #F4F3F0;
+  --color-blue-200: #E7E5E1;
+  --color-blue-300: #D4D2CD;
+  --color-blue-400: #A3A19B;
+  --color-blue-500: #6B6B6B;
+  --color-blue-600: #4A4A4A;
+  --color-blue-700: #333333;
+  --color-blue-800: #1F1F1F;
+  --color-blue-900: #111111;
+  --color-blue-950: #000000;
+  --color-indigo-50: #FAFAF9;
+  --color-indigo-100: #F4F3F0;
+  --color-indigo-200: #E7E5E1;
+  --color-indigo-300: #D4D2CD;
+  --color-indigo-400: #A3A19B;
+  --color-indigo-500: #6B6B6B;
+  --color-indigo-600: #4A4A4A;
+  --color-indigo-700: #333333;
+  --color-indigo-800: #1F1F1F;
+  --color-indigo-900: #111111;
+  --color-indigo-950: #000000;
+  --color-teal-50: #FAFAF9;
+  --color-teal-100: #F4F3F0;
+  --color-teal-200: #E7E5E1;
+  --color-teal-300: #D4D2CD;
+  --color-teal-400: #A3A19B;
+  --color-teal-500: #6B6B6B;
+  --color-teal-600: #4A4A4A;
+  --color-teal-700: #333333;
+  --color-teal-800: #1F1F1F;
+  --color-teal-900: #111111;
+  --color-teal-950: #000000;
+  --color-slate-50: #FAFAF9;
+  --color-slate-100: #F4F3F0;
+  --color-slate-200: #E7E5E1;
+  --color-slate-300: #D4D2CD;
+  --color-slate-400: #A3A19B;
+  --color-slate-500: #6B6B6B;
+  --color-slate-600: #4A4A4A;
+  --color-slate-700: #333333;
+  --color-slate-800: #1F1F1F;
+  --color-slate-900: #111111;
+  --color-slate-950: #000000;
 
   /* Backgrounds */
   --color-background-primary:   #FFFFFF;
-  --color-background-secondary: #F8FAFC;
+  --color-background-secondary: #FFFFFF;
 
   /* Typography */
   --font-size-xs:  12px;
@@ -69,12 +138,12 @@ body {
   font-weight: 500;
   font-size: var(--font-size-sm);
   transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1), transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 0 2px 4px rgba(14, 116, 144, 0.2);
+  box-shadow: 0 2px 4px rgba(17,17,17, 0.2);
 }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:hover {
   background-color: var(--color-primary-700);
-  box-shadow: 0 4px 8px rgba(14, 116, 144, 0.28);
+  box-shadow: 0 4px 8px rgba(17,17,17, 0.28);
 }
 
 .btn-secondary {
@@ -86,7 +155,7 @@ body {
   font-size: var(--font-size-sm);
   border: 1px solid var(--color-neutral-200);
   transition: background-color 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 160ms cubic-bezier(0.23, 1, 0.32, 1), transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 2px rgba(15,23,42, 0.03);
 }
 .btn-secondary:active { transform: scale(0.98); }
 .btn-secondary:hover {
@@ -99,7 +168,7 @@ body {
   border-radius: var(--radius-xl);
   padding: 24px;
   border: 1px solid var(--color-neutral-200);
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 3px 0 rgba(15,23,42, 0.03), 0 1px 2px -1px rgba(15,23,42, 0.03);
 }
 
 .stat-card {
@@ -107,47 +176,41 @@ body {
   border-radius: var(--radius-xl);
   padding: 20px;
   border: 1px solid var(--color-neutral-200);
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 3px 0 rgba(15,23,42, 0.03);
 }
 
 /* Glassmorphism variants — translucent + blur, used on dashboard */
 .card-glass {
-  background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-neutral-200);
+  box-shadow: none;
   border-radius: var(--radius-xl);
   padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
 }
 
 .stat-card-glass {
-  background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-neutral-200);
+  box-shadow: none;
   border-radius: var(--radius-lg);
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
 }
 
 .pill-glass {
-  background-color: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-neutral-200);
+  box-shadow: none;
 }
 
 .pill-glass:hover {
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255,255,255, 0.8);
 }
 
 .menu-glass {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255,255,255, 0.9);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255,255,255, 0.5);
 }
 
 /* Dashboard surfaces: glass is reserved for hierarchy, not every nested element. */
@@ -172,7 +235,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #0e7490;
+  color: #111111;
 }
 
 .workspace-title {
@@ -186,20 +249,20 @@ body {
   max-width: 680px;
   font-size: 13px;
   line-height: 1.55;
-  color: #64748b;
+  color: #6B6B6B;
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.64);
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 55px rgba(51, 65, 85, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  background: rgba(255,255,255, 0.64);
+  border: 1px solid rgba(255,255,255, 0.78);
+  box-shadow: 0 18px 55px rgba(51,65,85, 0.08), inset 0 1px 0 rgba(255,255,255, 0.82);
   -webkit-backdrop-filter: blur(22px) saturate(135%);
   backdrop-filter: blur(22px) saturate(135%);
 }
 
 .glass-quiet {
-  background: rgba(248, 250, 252, 0.6);
-  border: 1px solid rgba(226, 232, 240, 0.72);
+  background: rgba(248,250,252, 0.6);
+  border: 1px solid rgba(226,232,240, 0.72);
 }
 
 .pressable {
@@ -256,15 +319,15 @@ body {
   /* cobalt apex → deep blue → purple → burnt-orange → ember-red → void */
   background:
     radial-gradient(circle at 36% 30%,
-      rgb(56,189,248)    0%   8%,
-      rgb(37,99,235)     28%,
+      rgb(154,152,147)    0%   8%,
+      rgb(17,17,17)     28%,
       rgb(88,28,135)     48%,
       rgb(194,65,12)     65%,
       rgb(220,38,38)     80%,
       rgb(10,10,20)      100%
     );
   box-shadow:
-    0 16px 40px rgba(37,99,235,0.38),
+    0 16px 40px rgba(17,17,17,0.38),
     0 6px 18px rgba(220,38,38,0.28),
     inset -8px -12px 22px rgba(10,10,20,0.44);
   animation: clea-orb-breathe 4.8s ease-in-out infinite;
@@ -288,8 +351,8 @@ body {
   height: 44px;
   background: radial-gradient(
     ellipse,
-    rgb(56,189,248),
-    rgba(37,99,235,0.65) 55%,
+    rgb(154,152,147),
+    rgba(17,17,17,0.65) 55%,
     transparent 78%
   );
   animation: clea-orb-current-one 5.6s ease-in-out infinite;
@@ -324,13 +387,13 @@ body {
   background: conic-gradient(
     from 35deg,
     transparent        0%  10%,
-    rgb(37,99,235)     20%,
-    rgb(56,189,248)    30%,
+    rgb(17,17,17)     20%,
+    rgb(154,152,147)    30%,
     transparent        42%,
     rgb(251,146,60)    54%,
     rgb(220,38,38)     64%,
     transparent        76%,
-    rgba(37,99,235,0.55) 88%,
+    rgba(17,17,17,0.55) 88%,
     transparent        96%
   );
   filter: blur(6px);
@@ -382,7 +445,7 @@ body {
 
 /* Constant tri-color glow — brightness never changes */
 .clea-orb-shell {
-  filter: drop-shadow(0 0 16px rgba(37,99,235,0.50)) drop-shadow(0 0 8px rgba(220,38,38,0.30));
+  filter: drop-shadow(0 0 16px rgba(17,17,17,0.50)) drop-shadow(0 0 8px rgba(220,38,38,0.30));
   animation: none;
 }
 
@@ -442,7 +505,7 @@ body {
   animation: clea-orb-ribbon-spin 6s linear infinite reverse;
   border-color: rgba(147,197,253,0.72);
   border-right-color: rgba(99,44,194,0.52);
-  border-bottom-color: rgba(37,99,235,0.42);
+  border-bottom-color: rgba(17,17,17,0.42);
 }
 .clea-orb-status--thinking .clea-orb-ripple {
   animation: clea-orb-ripple 2.2s ease-out infinite;
@@ -460,14 +523,14 @@ body {
 .clea-orb-status--speaking .clea-orb-core {
   animation: clea-orb-speak-pulse 0.55s ease-in-out infinite alternate;
   box-shadow:
-    0 0 0 2px rgba(56,189,248,0.55),
-    0 14px 36px rgba(37,99,235,0.48),
+    0 0 0 2px rgba(154,152,147,0.55),
+    0 14px 36px rgba(17,17,17,0.48),
     0 4px 14px rgba(251,146,60,0.32),
     inset -8px -12px 22px rgba(10,10,20,0.44);
 }
 .clea-orb-status--speaking .clea-orb-ribbon {
   animation: clea-orb-ribbon-spin 1.2s linear infinite;
-  border-color: rgba(56,189,248,0.88);
+  border-color: rgba(154,152,147,0.88);
   border-right-color: rgba(251,146,60,0.82);
   border-bottom-color: rgba(220,38,38,0.68);
 }

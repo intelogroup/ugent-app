@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <WatchProvider>
       <CleaAgentProvider>
-        <div className="flow-root min-h-screen overscroll-y-none bg-[radial-gradient(circle_at_12%_8%,rgba(14,116,144,0.10),transparent_28%),radial-gradient(circle_at_88%_4%,rgba(56,189,248,0.08),transparent_24%),#E8EDF2] lg:h-screen lg:overflow-hidden">
+        <div className="flow-root min-h-screen overscroll-y-none bg-[#F6F5F2] lg:h-screen lg:overflow-hidden">
           {/* Sidebar: desktop only */}
           <Sidebar
             collapsed={sidebarCollapsed}
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <FloatingAvatar />
           {/* Main content: offset by sidebar on md+, with a rounded desktop surface */}
           <main
-            className={`min-h-[calc(100vh-3.5rem)] bg-white/72 backdrop-blur-xl transition-[margin] duration-200 lg:my-4 lg:mr-4 lg:h-[calc(100vh-2rem)] lg:min-h-0 lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-white/70 lg:shadow-[0_24px_70px_rgba(51,65,85,0.10)] ${
+            className={`min-h-[calc(100vh-3.5rem)] bg-white transition-[margin] duration-200 lg:my-4 lg:mr-4 lg:h-[calc(100vh-2rem)] lg:min-h-0 lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-[#E7E5E1] ${
               sidebarCollapsed ? 'lg:ml-[76px]' : 'lg:ml-[264px]'
             }`}
           >
@@ -91,7 +91,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       key={item.href}
                       href={item.href}
                       onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-                      className="flex items-center rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-cyan-50 hover:text-[#0E7490]"
+                      className="flex items-center rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-cyan-50 hover:text-[#111111]"
                     >
                       {item.name}
                     </Link>
