@@ -65,6 +65,7 @@ jobs:
   # components (new lint rules, files predate them). Run it as a non-blocking
   # signal until those files are migrated; does not gate the PR.
   lint:
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
